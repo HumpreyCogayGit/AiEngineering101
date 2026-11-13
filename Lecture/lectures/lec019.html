@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Embeddings and Similarity</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="19">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>Embeddings and Similarity</h1>
+  <p class="lede">"How do I get my money back?" and "refund policy" share no words but mean the same thing.
+    Embeddings let a computer measure that, and they're the foundation of RAG.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>Module 4 teaches <strong>Retrieval-Augmented Generation (RAG)</strong>: answering questions from <em>your</em>
+  documents. Step one is semantic search, finding text by meaning rather than by keyword. An <strong>embedding
+  model</strong> makes that possible by turning text into vectors.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>Text → vector</h3>
+<pre><code class="language-python">client.embeddings.create(model="text-embedding-3-small", input=["You can return beans within 30 days."])
+# -> [0.0123, -0.0456, 0.0789, ...]     1536 numbers</code></pre>
+<p>An embedding model is trained so that texts with similar <em>meaning</em> get vectors pointing in similar
+  <em>directions</em> in a high-dimensional space. You can't interpret individual numbers; only distances between vectors carry meaning.</p>
+<div class="mermaid">flowchart LR
+  A["'How do I get my money back?'"] --> E[Embedding model]
+  B["'Return beans within 30 days for a refund'"] --> E
+  C["'Cold brew steeps 16 hours'"] --> E
+  E --> V["vectors: A and B point the same way;<br/>C points elsewhere"]</div>
+
+<h3>Cosine similarity</h3>
+<pre><code class="language-text">cos(θ) = (a · b) / (|a| × |b|)
+
+ 1.0  same direction    → same meaning
+ 0.0  perpendicular     → unrelated
+-1.0  opposite</code></pre>
+<pre><code class="language-python">import numpy as np
+def cosine_similarity(a, b):
+    a, b = np.asarray(a), np.asarray(b)
+    return float(a @ b / (np.linalg.norm(a) * np.linalg.norm(b)))</code></pre>
+<p>It ignores vector length and compares only direction. In practice, scores between related texts are often
+  0.3–0.7 rather than near 1. Compare scores against each other; don't rely on absolute thresholds.</p>
+
+<h3>Semantic search in three steps</h3>
+<ol>
+  <li><strong>Index</strong> (once): embed every document chunk and store the vectors.</li>
+  <li><strong>Query</strong> (per question): embed the question with the <em>same model</em>.</li>
+  <li><strong>Rank</strong>: compute similarity to every stored vector and return the top k.</li>
+</ol>
+<p>Step 3 is a brute-force loop here. Vector databases (Lecture 021) do it fast for millions of vectors.</p>
+
+<h3>Embeddings vs chat models</h3>
+<table>
+  <tr><th></th><th>Embedding model</th><th>Chat model</th></tr>
+  <tr><td>Output</td><td>A vector</td><td>Text</td></tr>
+  <tr><td>Cost</td><td>Very cheap</td><td>Much more</td></tr>
+  <tr><td>Used for</td><td>Search, clustering, deduplication, recommendation</td><td>Generating answers</td></tr>
+</table>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>A tiny semantic search over eight sentences about Nimbus Coffee. You'll check that "How do I get my money back?"
+  finds the refund sentence and "When can I take a holiday from work?" finds the vacation sentence, though neither shares words with its match.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Explain what an embedding is and why similar meanings give similar vectors.</li>
+  <li>Create embeddings in batches with the Azure embedding deployment.</li>
+  <li>Implement cosine similarity and top-k search.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>"How do I get my money back?" finds the refund sentence, though no words match</li>
+  <li>"When can I take a holiday from work?" finds the vacation sentence</li>
+  <li>You can state the dimension of your embedding vectors</li>
+  <li>All 5 checks pass</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li>Deploy <code>text-embedding-3-small</code> in Foundry and set <code>AZURE_OPENAI_EMBEDDING_DEPLOYMENT</code>.</li>
+  <li><code>embed_texts</code>: one request for the whole list is far faster than one per text.</li>
+  <li>Test <code>cosine_similarity</code> on tiny vectors first: <code>[1, 0]</code> vs <code>[0, 1]</code> should be 0.</li>
+  <li>Add your own queries and sentences. Try a query in Filipino or Spanish: multilingual embedding models match across languages.</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Mixing embedding models</summary><div>
+  <p>Vectors from different models (or different dimensions) are not comparable. Re-embed everything if you change models. The course's shared index includes the deployment name in its collection name for this reason.</p></div></details>
+<details class="pitfall"><summary>Expecting keyword precision</summary><div>
+  <p>Embeddings capture meaning, so they can miss exact codes like "BL-2026-0412" or rare names. Lecture 023 adds keyword search to cover this.</p></div></details>
+<details class="pitfall"><summary>Embedding very long texts</summary><div>
+  <p>One vector for a 20-page document blurs all its topics together. That's why we chunk (Lecture 020).</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>Is "similar" the same as "relevant"?</p>
+  <p>No. "What is your refund policy?" is similar to "What is your shipping policy?", but it's not relevant to it.
+  Similarity is a proxy for relevance, which is why retrieval needs evaluation (Lectures 023 and 024).</p></div>
+<div class="qa"><p>Where else are embeddings useful?</p>
+  <p>Duplicate ticket detection, clustering feedback by topic, recommendations ("customers who liked this…"), and routing questions to the right team.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://learn.microsoft.com/azure/ai-foundry/openai/how-to/embeddings">Azure OpenAI: Embeddings</a></li>
+  <li><a href="https://learn.microsoft.com/azure/ai-foundry/openai/concepts/understand-embeddings">Understand embeddings</a></li>
+  <li><a href="https://numpy.org/doc/stable/user/absolute_beginners.html">NumPy for absolute beginners</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

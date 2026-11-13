@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loading and Chunking</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="20">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>Loading and Chunking</h1>
+  <p class="lede">RAG quality is decided before any model is called. Good answers need clean text, useful metadata,
+    and chunks that each hold one complete idea.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>The ingestion pipeline turns a folder of files into chunks ready to embed. It's unglamorous and it matters
+  enormously: navigation menus in your HTML, page numbers lost from PDFs, or a chunk that cuts a policy in half all
+  become wrong answers later. We'll use the Nimbus Coffee knowledge base in <code>data/knowledge_base/</code>.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<div class="mermaid">flowchart LR
+  F["files<br/>.md .html .pdf"] --> L[Load + clean] --> D["Documents<br/>text + metadata"] --> S[Split into chunks] --> C["Chunks<br/>+ chunk_id"] --> E[Embed and store<br/>Lecture 021]</div>
+
+<h3>The Document</h3>
+<pre><code class="language-python">Document(
+    page_content="Full-time employees receive 15 days of paid vacation ...",
+    metadata={"source": "employee_handbook.pdf", "page": 1},
+)</code></pre>
+<p>Metadata travels with every chunk. It powers citations ("handbook, page 1"), filters ("only HR documents"),
+  and debugging ("which file did that wrong answer come from?").</p>
+
+<h3>Loading per format</h3>
+<table>
+  <tr><th>Format</th><th>Tool</th><th>Watch out for</th></tr>
+  <tr><td>Markdown / text</td><td>read the file</td><td>Encoding: always <code>utf-8</code></td></tr>
+  <tr><td>HTML</td><td>BeautifulSoup</td><td>Scripts, styles, navigation and footers are noise. Remove them.</td></tr>
+  <tr><td>PDF</td><td>pypdf, one Document per page</td><td>Keep page numbers. Scanned PDFs have no text and need OCR.</td></tr>
+</table>
+
+<h3>Why chunk?</h3>
+<ul>
+  <li><strong>Precision</strong>: one vector per topic. A whole-document vector averages all its topics into mush.</li>
+  <li><strong>Context budget</strong>: you put the top-k chunks in the prompt, and small chunks leave room for more sources.</li>
+  <li><strong>Citations</strong>: point to the exact passage.</li>
+</ul>
+
+<h3>Chunk size and overlap</h3>
+<table>
+  <tr><th>Size</th><th>Pros</th><th>Cons</th></tr>
+  <tr><td>Small (~200 chars)</td><td>Precise matches</td><td>Fragments lose context ("it costs ₱250": what does?)</td></tr>
+  <tr><td>Medium (~500–1000)</td><td>Usually a good balance</td><td></td></tr>
+  <tr><td>Large (~1500+)</td><td>Full context</td><td>Blurry vectors; fewer fit in the prompt; more irrelevant text</td></tr>
+</table>
+<p><strong>Overlap</strong> repeats the end of one chunk at the start of the next, so a sentence near a boundary isn't
+  stranded. 10–20% of the chunk size is typical.</p>
+
+<h3>Recursive splitting</h3>
+<p><code>RecursiveCharacterTextSplitter</code> tries the most meaningful separator first and only falls back to smaller ones when a piece is still too big:</p>
+<pre><code class="language-python">separators=["\n## ", "\n# ", "\n\n", "\n", ". ", " ", ""]
+#            sections, titles, paragraphs, lines, sentences, words, characters</code></pre>
+<p>Splitting on Markdown headings first keeps "## Damaged or wrong items" and its paragraph together.</p>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p><code>ingest.py</code> loads all 8 knowledge-base files into 9 documents (the PDF gives one document per page),
+  cleans the HTML, keeps page numbers, chunks everything, and prints statistics for three chunk sizes so you can
+  see the trade-off.</p>
+<h3>Sample run</h3>
+<p class="file-label">uv run python EXER020/solution/ingest.py</p>
+<pre><code class="language-text">Loaded 9 documents:
+  brewing_guide.md          1002 chars  {'source': 'brewing_guide.md'}
+  careers.html               621 chars  {'source': 'careers.html', 'title': 'Careers at Nimbus Coffee Co.'}
+  company_faq.md             886 chars  {'source': 'company_faq.md'}
+  employee_handbook.pdf      462 chars  {'source': 'employee_handbook.pdf', 'page': 1}
+  employee_handbook.pdf      344 chars  {'source': 'employee_handbook.pdf', 'page': 2}
+  ...
+
+chunk_size=200, overlap=0: {'count': 64, 'min': 10, 'max': 196, 'mean': 108.9, 'sources': 8}
+chunk_size=600, overlap=100: {'count': 19, 'min': 17, 'max': 598, 'mean': 376.1, 'sources': 8}
+chunk_size=1500, overlap=200: {'count': 9, 'min': 343, 'max': 1152, 'mean': 785.4, 'sources': 8}</code></pre>
+<p>Captured from a real run. Your wording, numbers and timings will differ; the shape should match.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Load Markdown, HTML and PDF into Documents with useful metadata.</li>
+  <li>Clean HTML of non-content elements.</li>
+  <li>Chunk with a recursive splitter and explain size and overlap trade-offs.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>9 documents are loaded from 8 files</li>
+  <li>The HTML text contains no navigation, script or footer text</li>
+  <li>PDF chunks keep their page number</li>
+  <li>You can explain the trade-off between chunk sizes 200, 600 and 1500</li>
+  <li>All 7 checks pass (offline, no API key needed)</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li>Open <code>careers.html</code> in a text editor and spot the noise: <code>&lt;nav&gt;</code>, <code>&lt;script&gt;</code>, <code>&lt;footer&gt;</code>.</li>
+  <li><code>soup(["script", "style", "nav", "footer"])</code> finds all those tags; <code>.decompose()</code> removes each one.</li>
+  <li><code>splitter.split_documents(docs)</code> copies each document's metadata onto its chunks. Then add <code>chunk_id</code>.</li>
+  <li>Print a few chunks at size 200 and read them. Would you understand them without context?</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Tables and lists split mid-row</summary><div>
+  <p>The shipping table may be cut across chunks. Structure-aware splitting, or keeping tables whole, helps.</p></div></details>
+<details class="pitfall"><summary>Duplicate content</summary><div>
+  <p>The same paragraph in five documents fills the top-k with copies. Deduplicate during ingestion.</p></div></details>
+<details class="pitfall"><summary>Throwing metadata away</summary><div>
+  <p>Without source and page you can't cite or debug. Add more if useful: title, section heading, date, access level.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>Is there a "best" chunk size?</p>
+  <p>No. It depends on the documents and the questions. Pick a sensible default (≈600 characters, 100 overlap), then
+  measure retrieval quality (Lecture 024) for a few sizes.</p></div>
+<div class="qa"><p>What about documents that change?</p>
+  <p>Re-ingest only what changed. Content-based ids (Lecture 021) make re-ingestion safe; deleting chunks of removed documents needs the source in metadata.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://python.langchain.com/docs/concepts/text_splitters/">LangChain: Text splitters</a></li>
+  <li><a href="https://www.crummy.com/software/BeautifulSoup/bs4/doc/">Beautiful Soup documentation</a></li>
+  <li><a href="https://pypdf.readthedocs.io/">pypdf documentation</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

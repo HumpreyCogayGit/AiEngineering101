@@ -1,0 +1,22 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Course runtime data
+.chroma/
+*.sqlite
+*.sqlite3
+*.db
+EXER*/**/output/
+notes_store.json
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/
+.aicourse_cache.json

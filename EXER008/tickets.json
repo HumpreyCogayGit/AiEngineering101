@@ -1,0 +1,18 @@
+[
+  {"text": "I was charged twice for my subscription this month, please refund one of them.", "label": "billing"},
+  {"text": "The app crashes every time I open the settings page on my Android phone.", "label": "technical"},
+  {"text": "How do I change the email address on my profile?", "label": "account"},
+  {"text": "Do you have a physical store in Cebu?", "label": "other"},
+  {"text": "My invoice shows the wrong company name, can you fix it for our accounting?", "label": "billing"},
+  {"text": "I keep getting error 503 when uploading files larger than 10 MB.", "label": "technical"},
+  {"text": "I forgot my password and the reset link never arrives.", "label": "account"},
+  {"text": "Are you hiring interns for next summer?", "label": "other"},
+  {"text": "Why did my card get declined when I tried to upgrade to the Pro plan?", "label": "billing"},
+  {"text": "Sync between my laptop and phone stopped working after the last update.", "label": "technical"},
+  {"text": "Please delete my account and all my personal data.", "label": "account"},
+  {"text": "Just wanted to say your support team was amazing last week. Thanks!", "label": "other"},
+  {"text": "Can I get a receipt for the payment I made on March 3rd?", "label": "billing"},
+  {"text": "The dashboard takes over a minute to load since yesterday.", "label": "technical"},
+  {"text": "I want to add a second admin user to our team workspace.", "label": "account"},
+  {"text": "What are your office hours during the holidays?", "label": "other"}
+]

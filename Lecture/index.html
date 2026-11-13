@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Engineer: Zero to Hero</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<script src="assets/js/course.js"></script>
+<script defer src="assets/vendor/highlight.min.js"></script>
+<script defer src="assets/js/app.js"></script>
+</head>
+<body data-root="./">
+<main>
+  <section class="hero">
+    <div class="kicker">Hands-on course</div>
+    <h1>AI Engineer: Zero to Hero</h1>
+    <p class="lede">Go from your first LLM API call to production-style agents with RAG, tools, MCP,
+      memory, guardrails and evaluation, one runnable exercise at a time.</p>
+    <p><a class="btn" id="continue-link" href="lectures/lec001.html">Start with Lecture 001 →</a>
+       <a class="btn secondary" href="setup.html">Setup guide</a></p>
+  </section>
+
+  <div class="stats">
+    <div class="stat"><b data-total-lectures>37</b><span>lectures &amp; exercises</span></div>
+    <div class="stat"><b>8</b><span>modules</span></div>
+    <div class="stat"><b>~<span data-total-hours>40</span> h</b><span>of focused work</span></div>
+    <div class="stat"><b data-progress>0</b><span>completed</span></div>
+  </div>
+
+  <h2 id="how">How this course works</h2>
+  <p>Every lecture pairs with an exercise folder of the same number: <code>lec005.html</code> ↔ <code>EXER005/</code>.
+    Each lecture explains the <strong>concept</strong>, describes the <strong>project</strong>, lists the
+    <strong>goal</strong> and <strong>success criteria</strong>, and discusses the trade-offs and pitfalls.</p>
+  <pre><code class="language-text">EXER005/
+├── README.md     the brief: tasks, how to run, success criteria
+├── starter/      YOUR code — complete the TODOs here
+├── solution/     a reference solution (try first, peek later)
+└── check.py      automated checks for the success criteria</code></pre>
+  <pre><code class="language-bash"># always run from the repository root
+uv run python EXER005/starter/chatbot.py      # run your code
+uv run python EXER005/check.py                # check your code
+uv run python EXER005/check.py --solution     # check the reference solution</code></pre>
+  <div class="callout info"><span class="title">Two principles</span>
+    <p><strong>Raw first, framework second.</strong> You call the API with plain HTTP before using the SDK,
+      and write a tool loop by hand before LangChain does it for you. You'll know what the framework hides.</p>
+    <p><strong>Measure, don't guess.</strong> Checks marked <code>[live API]</code> call your real Azure deployment;
+      others run offline with fake models. From Module 4 on you build your own evaluations.</p>
+  </div>
+
+  <h2 id="stack">The stack</h2>
+  <table>
+    <tr><th>Layer</th><th>Tool</th><th>Used from</th></tr>
+    <tr><td>Model endpoint</td><td>Azure Foundry (Azure OpenAI v1 API)</td><td>Module 0</td></tr>
+    <tr><td>Raw access</td><td><code>httpx</code>, then the <code>openai</code> SDK</td><td>Modules 0–1</td></tr>
+    <tr><td>Framework</td><td>LangChain</td><td>Module 2</td></tr>
+    <tr><td>Agents</td><td>LangGraph</td><td>Module 5</td></tr>
+    <tr><td>Vector store</td><td>Chroma (local)</td><td>Module 4</td></tr>
+    <tr><td>Tool protocol</td><td>MCP (Python SDK + LangChain adapters)</td><td>Module 6</td></tr>
+    <tr><td>Web UI / CLI</td><td>Streamlit / Typer</td><td>Modules 1–2</td></tr>
+  </table>
+
+  <h2 id="modules">Modules</h2>
+  <div id="module-list"></div>
+
+  <h2 id="prereqs">Before you start</h2>
+  <p>You need a computer with macOS, Linux or Windows, basic comfort with a terminal, and an Azure
+    subscription. Little Python experience is fine: Lecture 002 covers what you need. Follow the
+    <a href="setup.html">setup guide</a> first.</p>
+</main>
+</body>
+</html>

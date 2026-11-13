@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multi-Agent Systems</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="31">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>Multi-Agent Systems</h1>
+  <p class="lede">Split work across specialist agents coordinated by a supervisor, and learn when that's worth its
+    considerable cost.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>One agent with twenty tools and a two-page system prompt gets confused. A common response is to split it: specialist
+  agents with focused prompts and tools, and a coordinator that routes work between them. LangGraph makes each
+  specialist a subgraph and the coordination a graph.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>The supervisor pattern</h3>
+<div class="mermaid">flowchart LR
+  S((START)) --> SUP{supervisor}
+  SUP -->|research| R[researcher<br/>agent + search tool]
+  SUP -->|write| W[writer<br/>agent, no tools]
+  R --> SUP
+  W --> SUP
+  SUP -->|FINISH| E((END))</div>
+<pre><code class="language-python">class Route(BaseModel):
+    next: Literal["researcher", "writer", "FINISH"]
+    instruction: str                  # what the chosen worker should do
+
+def supervise(state):
+    if len(state["steps"]) >= MAX_STEPS:          # hard stop in code
+        return {"next": "FINISH", ...}
+    route = llm.with_structured_output(Route).invoke([SystemMessage(SUPERVISOR_PROMPT)] + state["messages"])
+    if route.next == "FINISH" and "writer" not in state["steps"]:   # invariant in code
+        return {"next": "writer" if "researcher" in state["steps"] else "researcher", ...}
+    return {"next": route.next, "instruction": route.instruction}</code></pre>
+<div class="callout"><span class="title">Prompts ask, code guarantees</span>
+  The supervisor prompt says "choose FINISH only after the writer has replied". Some models still finish as soon as
+  the research reads like an answer, and the customer gets bullet points instead of a reply. Any rule that must
+  hold on every run (an order of steps, a step limit, a permission) is checked in code. The prompt is there to make
+  the right choice likely; the code is there to make the wrong one impossible.</div>
+
+<h3>Workers as subgraphs</h3>
+<p>Each worker is a full agent (<code>create_agent</code>) with its own prompt and tools. A wrapper node runs it on the
+  shared conversation plus the supervisor's instruction, and adds only the worker's <strong>final message</strong> back
+  to the shared state, named after the worker. Its internal tool calls stay private, which keeps the shared context small.</p>
+
+<h3>Handoffs: passing control without a coordinator</h3>
+<p>In the supervisor pattern every worker reports back, so each step costs an extra model call just to decide what
+  happens next. With a <strong>handoff</strong>, the agent that is working names its successor itself. In LangGraph a
+  node does that by returning a <code>Command</code>, which carries a state update <em>and</em> the next node:</p>
+<pre><code class="language-python">from langgraph.types import Command
+
+def research(state) -> Command:
+    result = researcher.invoke({"messages": state["messages"]})
+    used_search = any(isinstance(m, ToolMessage) for m in result["messages"])
+    note = AIMessage(content=result["messages"][-1].text, name="researcher")
+    return Command(
+        goto="writer" if used_search else END,        # the handoff decision
+        update={"messages": [note], "steps": ["researcher"]},
+    )
+
+builder.add_node("researcher", research, destinations=("writer", END))   # no conditional edge needed</code></pre>
+<div class="mermaid">flowchart LR
+  S((START)) --> R[researcher]
+  R -->|"Command(goto=writer)"| W[writer]
+  R -->|nothing to research| E((END))
+  W --> E</div>
+<table>
+  <tr><th></th><th>Supervisor</th><th>Handoff</th></tr>
+  <tr><td>Who decides the next step</td><td>One coordinator, every turn</td><td>The agent that just worked</td></tr>
+  <tr><td>Model calls for research + write</td><td>5 or more (3 routing decisions)</td><td>3</td></tr>
+  <tr><td>Where the routing logic lives</td><td>One prompt, easy to read and change</td><td>Spread across the agents</td></tr>
+  <tr><td>Fits</td><td>Order varies per request; workers may repeat</td><td>A known path with a few branches</td></tr>
+</table>
+<p>A <code>Command</code> replaces the conditional edge: routing moves from the graph definition into the node. That
+  is convenient, and also why handoff systems get hard to follow as they grow. Declare <code>destinations</code>
+  so the graph can still be drawn and reviewed.</p>
+
+<h3>Other patterns</h3>
+<table>
+  <tr><th>Pattern</th><th>How it works</th><th>Good for</th></tr>
+  <tr><td>Supervisor</td><td>A coordinator routes to workers, who report back</td><td>Clear division of labour, central control</td></tr>
+  <tr><td>Handoffs / swarm</td><td>Agents transfer control directly to each other (above)</td><td>Customer-service style flows (sales → support)</td></tr>
+  <tr><td>Hierarchical</td><td>Supervisors of supervisors</td><td>Large systems; rarely needed</td></tr>
+  <tr><td>Fixed pipeline</td><td>Research → write, always</td><td>When the order never changes; no LLM routing needed</td></tr>
+</table>
+
+<h3>When <em>not</em> to use multi-agent</h3>
+<div class="callout warn"><span class="title">Multi-agent is expensive</span>
+  Every hop is another LLM call: supervisor, worker, supervisor, worker, supervisor. Latency and cost often triple,
+  and failures become harder to debug. Try first: a better prompt, fewer tools, a fixed workflow (Lecture 026), or one agent with good tools.
+  Choose multi-agent when tasks need truly separate tools, permissions, or context.</div>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>A support team for a two-part customer email (a broken grinder, plus "can I bring my dog?"): a researcher with
+  knowledge-base search, a writer who drafts the reply from the research, and a supervisor that coordinates them. The trace shows every routing decision.</p>
+<h3>Sample run</h3>
+<p class="file-label">uv run python EXER031/solution/team.py</p>
+<pre><code class="language-text">[supervisor] next=researcher: Find company policies for a grinder that arrived damaged, including replacement eligibility, required evidence and timing. Also find the café pet policy.
+[researcher] - A grinder arriving broken qualifies as a damaged item. It must be reported within **7 days of delivery**, with a **photo**. ...
+
+[supervisor] next=writer: Draft the customer reply using the research provided. Be empathetic about the broken grinder; explain the free replacement process ...
+[writer] Hi! I'm sorry your grinder arrived broken. We'll provide a free replacement—please email returns@nimbuscoffee.example within 7 days ...
+
+[supervisor] next=FINISH: The writer has produced the final customer reply using the researched policies.
+
+=== The same request with handoffs (no supervisor) ===
+steps: researcher -&gt; writer
+Hi! I'm sorry your grinder arrived broken. Please send us a photo within 7 days of delivery, and we'll ship a free
+replacement—there's no need to return the damaged grinder.
+
+If you're visiting our BGC café, dogs are welcome at the outdoor tables. ...
+
+Warmly,
+Nimbus Support</code></pre>
+<p>Captured from a real run. Your wording, numbers and timings will differ; the shape should match.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Build a supervisor that routes with structured output.</li>
+  <li>Wrap specialist agents as nodes that share only their final output.</li>
+  <li>Bound multi-agent loops with a step limit, and enforce ordering rules in code.</li>
+  <li>Pass control directly between agents with <code>Command</code> (a handoff).</li>
+  <li>Judge when multi-agent is worth the cost.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>The trace shows supervisor decisions and each worker's output</li>
+  <li>The final reply answers both questions (broken grinder, dog) from the documents</li>
+  <li>A supervisor that never says FINISH is stopped by <code>MAX_STEPS</code>, and one that says FINISH too early is sent back to the missing worker</li>
+  <li>The handoff team produces the same reply in fewer steps</li>
+  <li>All 10 checks pass</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li>Create both sub-agents with <code>create_agent(..., name=...)</code>. The writer has no tools.</li>
+  <li><code>supervise</code>: check the step limit first, then ask the router, then apply the guard: no FINISH before the writer has replied.</li>
+  <li>The worker wrapper appends a <code>HumanMessage</code> with the instruction for the sub-agent only, and returns only an <code>AIMessage(name=...)</code>.</li>
+  <li><code>build_handoff_team</code>: the same two agents, each node returning <code>Command(goto=..., update=...)</code>.</li>
+  <li>Count the LLM calls in both versions, then estimate the cost compared with a single agent.</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Sharing every internal message</summary><div>
+  <p>If workers dump all their tool calls into shared state, context explodes and the supervisor gets confused. Share results, not process.</p></div></details>
+<details class="pitfall"><summary>Ping-pong</summary><div>
+  <p>The supervisor sends work back and forth endlessly. Clear "FINISH" criteria in the prompt plus a hard step limit fix it.</p></div></details>
+<details class="pitfall"><summary>Workers that do each other's jobs</summary><div>
+  <p>A researcher that writes the final email makes the writer redundant. Make the boundaries explicit in each prompt.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>Could this task be done by one agent?</p>
+  <p>Almost certainly, and more cheaply. That's worth saying out loud. The pattern pays off when workers need different
+  permissions (a writer that can't touch the database), different models, or very different instructions.</p></div>
+<div class="qa"><p>How would you evaluate a multi-agent system?</p>
+  <p>End to end (is the final reply correct?) and per worker (is the research complete? is the writer faithful to it?). Traces (Lecture 035) are essential.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://docs.langchain.com/oss/python/langchain/multi-agent">LangChain: Multi-agent</a></li>
+  <li><a href="https://www.anthropic.com/engineering/multi-agent-research-system">How we built our multi-agent research system</a></li>
+  <li><a href="https://www.anthropic.com/engineering/building-effective-agents">Building effective agents</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

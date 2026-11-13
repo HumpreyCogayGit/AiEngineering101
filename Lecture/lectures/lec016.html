@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tool Calling by Hand</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="16">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>Tool Calling by Hand</h1>
+  <p class="lede">Models can't check the weather, query a database or do exact math. They can <em>ask your code</em>
+    to do it. Tool calling turns a text generator into something that acts.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>Tool calling (also "function calling") is the foundation of agents. You describe functions to the model; when a
+  question needs one, the model replies with a structured <em>request</em> to call it. Your code runs the function,
+  sends the result back, and the model writes the final answer. We build the whole loop by hand with the raw SDK.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>The loop</h3>
+<div class="mermaid">sequenceDiagram
+  participant C as Your code
+  participant M as Model
+  C->>M: messages + tools (JSON schemas)
+  M-->>C: assistant message with tool_calls:<br/>get_weather({"city": "Tokyo"}) id=call_1
+  Note over C: run get_weather("Tokyo")
+  C->>M: messages + assistant(tool_calls) + tool(call_1): {"temp_c": 18}
+  M-->>C: "It's 18°C and clear in Tokyo."</div>
+<div class="callout warn"><span class="title">The model never executes anything</span>
+  It only produces JSON that <em>asks</em> for a call. Your code decides whether to run it, which is where all the
+  safety controls live (Lecture 018).</div>
+
+<h3>Describing a tool</h3>
+<pre><code class="language-python">{
+  "type": "function",
+  "function": {
+    "name": "get_weather",
+    "description": "Get the current weather for a city.",      # when to use it
+    "parameters": {                                              # JSON Schema of the arguments
+      "type": "object",
+      "properties": {"city": {"type": "string", "description": "City name, e.g. Tokyo"}},
+      "required": ["city"],
+      "additionalProperties": False,
+    },
+  },
+}</code></pre>
+<p>The model chooses tools based on their <strong>name and description</strong>. Treat them like prompts: clear, specific, with examples where useful.</p>
+
+<h3>The messages involved</h3>
+<pre><code class="language-python"># 1. the model's request (keep it in the history!)
+{"role": "assistant", "content": None,
+ "tool_calls": [{"id": "call_1", "type": "function",
+                 "function": {"name": "get_weather", "arguments": "{\"city\": \"Tokyo\"}"}}]}
+# 2. your answer, linked by tool_call_id
+{"role": "tool", "tool_call_id": "call_1", "content": "{\"city\": \"Tokyo\", \"temp_c\": 18}"}</code></pre>
+<ul>
+  <li><code>arguments</code> is a JSON <em>string</em>. Parse it with <code>json.loads</code>, and expect it to be invalid sometimes.</li>
+  <li>A model can request <strong>several calls at once</strong> (parallel tool calls). Answer every one.</li>
+  <li>Return errors as tool results (<code>{"error": "..."}</code>) instead of crashing. The model can read them and recover.</li>
+</ul>
+
+<h3>Never <code>eval()</code> model output</h3>
+<p><code>calculate</code> uses Python's <code>ast</code> module to walk the expression and allow only numbers and arithmetic
+  operators. <code>eval("__import__('os').system('rm -rf ~')")</code> shows why <code>eval</code> is off-limits.</p>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>An assistant with <code>get_weather(city)</code> (fake data) and <code>calculate(expression)</code>, a dispatcher that
+  runs tools safely, and the conversation loop with a round limit.</p>
+<pre><code class="language-text">Q: Is it warmer in Manila or London right now, and by how many degrees?
+  -> get_weather({"city": "Manila"}) = {"city": "Manila", "temp_c": 31, ...}
+  -> get_weather({"city": "London"}) = {"city": "London", "temp_c": 11, ...}
+  -> calculate({"expression": "31 - 11"}) = 20
+A: Manila is warmer, by 20°C.</code></pre>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Describe tools with JSON Schema.</li>
+  <li>Implement the request → execute → respond loop, including parallel calls.</li>
+  <li>Return tool errors to the model instead of crashing.</li>
+  <li>Bound the loop with a maximum number of rounds.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>Weather questions call <code>get_weather</code>; math questions call <code>calculate</code></li>
+  <li>"Is it warmer in Manila or London?" triggers <strong>two</strong> tool calls in one turn</li>
+  <li>The otter question is answered without any tool</li>
+  <li>All 6 checks pass</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li>Write both schemas in <code>TOOLS</code>. Run with <code>verbose=True</code> to watch the calls.</li>
+  <li><code>run_tool</code>: one <code>try</code> around parse + call, with an <code>except Exception</code> that returns the error as JSON. This is one of the few places a broad except is right: errors must go back to the model.</li>
+  <li><code>message.model_dump(exclude_none=True)</code> turns the SDK's message object into a dict you can append to <code>messages</code>.</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Missing the assistant message before the tool results</summary><div>
+  <p>A <code>tool</code> message must follow the assistant message that requested it. Otherwise the API returns 400.</p></div></details>
+<details class="pitfall"><summary>Not answering every tool call</summary><div>
+  <p>If the model asked for two calls, send two tool messages, one per <code>tool_call_id</code>.</p></div></details>
+<details class="pitfall"><summary>Infinite loops</summary><div>
+  <p>A confused model can call tools forever. Always cap the rounds.</p></div></details>
+<details class="pitfall"><summary>Vague descriptions</summary><div>
+  <p>"Does stuff with data" leads to wrong or missing calls. Say what the tool does, when to use it, and what its arguments mean.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>Why does the model sometimes do math in its head instead of calling <code>calculate</code>?</p>
+  <p>It decides based on the description and the system prompt. "Use for <em>any</em> math" in the description, or a rule in the system prompt, makes calls more reliable. <code>tool_choice</code> can force a call.</p></div>
+<div class="qa"><p>What makes a tool <em>dangerous</em>?</p>
+  <p>Side effects: sending, buying, deleting, running code. Read-only tools are low-risk; tools that act need confirmation and limits (Lectures 018 and 029).</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://learn.microsoft.com/azure/ai-foundry/openai/how-to/function-calling">Azure OpenAI: Function calling</a></li>
+  <li><a href="https://json-schema.org/learn/getting-started-step-by-step">JSON Schema: Getting started</a></li>
+  <li><a href="https://docs.python.org/3/library/ast.html">Python ast module</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

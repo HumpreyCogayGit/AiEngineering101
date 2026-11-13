@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build Your Own MCP Server</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="33">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>Build Your Own MCP Server</h1>
+  <p class="lede">With FastMCP, a decorated Python function becomes a tool that any MCP host can discover and call.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>You'll build a <strong>notes</strong> server: create, list, search and delete notes; read a note as a resource; and
+  offer a prompt that summarizes them. The check script then acts as an MCP host: it starts your server as a subprocess
+  and tests it through the protocol, exactly as a desktop app or agent would.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>FastMCP</h3>
+<pre><code class="language-python">from mcp.server.fastmcp import FastMCP
+mcp = FastMCP("notes")
+
+@mcp.tool()
+def search_notes(query: str) -> list[dict]:
+    """Find notes whose title or content contains the query (case-insensitive)."""
+    ...
+
+@mcp.resource("notes://{note_id}")          # a resource TEMPLATE: {note_id} becomes an argument
+def read_note(note_id: str) -> str: ...
+
+@mcp.prompt()
+def summarize_notes(tag: str = "") -> str: ...
+
+if __name__ == "__main__":
+    mcp.run()                                # stdio by default</code></pre>
+<p>As with LangChain's <code>@tool</code>, type hints become the JSON schema and the docstring becomes the description.
+  The protocol plumbing (handshake, discovery, serialization, errors) is handled for you.</p>
+
+<h3>Designing tools for models</h3>
+<table>
+  <tr><th>Principle</th><th>In the notes server</th></tr>
+  <tr><td>Clear names and descriptions</td><td><code>search_notes</code>: "Find notes whose title or content contains…"</td></tr>
+  <tr><td>Small, typed arguments</td><td><code>tag: str | None = None</code></td></tr>
+  <tr><td>Compact results</td><td>List and search return id, title and tags, not full content; read a note via the resource</td></tr>
+  <tr><td>Errors the model can act on</td><td>"No note with id abc. Use list_notes to see valid ids."</td></tr>
+  <tr><td>Destructive operations separate</td><td><code>delete_note</code> is its own tool, so hosts can block it (Lecture 034)</td></tr>
+</table>
+
+<h3>Errors</h3>
+<p>Raise an exception (e.g. <code>ValueError</code>) in a tool, and FastMCP returns a result with <code>isError: true</code> and your
+  message. The host and model see it as a normal tool result, and the server keeps running.</p>
+
+<h3>Configuration and state</h3>
+<p>The server reads its storage path from the <code>NOTES_FILE</code> environment variable, which hosts set when they
+  launch it. That's how the checks give every test a fresh, empty notes file.</p>
+
+<h3>Connecting it to other hosts</h3>
+<p>Most MCP hosts are configured with a small JSON block naming the command to start your server, for example:</p>
+<pre><code class="language-json">{
+  "mcpServers": {
+    "notes": {
+      "command": "uv",
+      "args": ["run", "--project", "/path/to/AiEngineerCourse", "python", "EXER033/solution/notes_server.py"],
+      "env": {"NOTES_FILE": "/path/to/my-notes.json"}
+    }
+  }
+}</code></pre>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>Complete <code>notes_server.py</code>: three tools (<code>add_note</code> is given), a resource template and a prompt.
+  The checks connect over stdio and exercise every capability.</p>
+<h3>Sample run</h3>
+<p class="file-label">uv run python EXER033/check.py --solution</p>
+<pre><code class="language-text">  PASS  the server exposes add_note, list_notes, search_notes and delete_note (0.4s)
+  PASS  list_notes filters by tag (0.2s)
+  PASS  search_notes is case-insensitive across title and content (0.2s)
+  PASS  delete_note removes a note; unknown ids give an error result (0.2s)
+  PASS  resource template notes://{note_id} returns the note text (0.2s)
+  PASS  prompt summarize_notes includes the notes (0.2s)
+
+6/6 checks passed</code></pre>
+<p>Captured from a real run. Your wording, numbers and timings will differ; the shape should match.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Create an MCP server with FastMCP tools, resource templates and prompts.</li>
+  <li>Design tool interfaces and error messages that models use well.</li>
+  <li>Configure a server through environment variables.</li>
+  <li>Test a server through the protocol.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>All four tools work, and errors come back as error results, not crashes</li>
+  <li><code>notes://&lt;id&gt;</code> returns the note text</li>
+  <li><code>summarize_notes</code> builds a prompt that contains the notes</li>
+  <li>All 6 checks pass</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li>Follow the pattern of <code>add_note</code> for the other tools.</li>
+  <li>Use <code>load()</code> and <code>save()</code> for storage, and <code>summary()</code> for compact results.</li>
+  <li>Run the checks after each capability. The first check stays "TODO" until all three tools exist.</li>
+  <li>Bonus: register the server in an MCP host you use and let it keep notes for you.</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Docstrings written for humans only</summary><div>
+  <p>The model reads them to decide when to call. Say what the tool does, when to use it, and what it returns.</p></div></details>
+<details class="pitfall"><summary>Returning everything</summary><div>
+  <p>A <code>list_notes</code> that returns full contents of 500 notes floods the context. Return summaries.</p></div></details>
+<details class="pitfall"><summary>Concurrent writes</summary><div>
+  <p>A JSON file is fine for one user. Several clients writing at once need a database.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>Tool, resource or prompt?</p>
+  <p>If the model should decide when to fetch it, make it a tool. If the app or user picks what to load into context,
+  make it a resource. If it's a reusable task the user triggers, make it a prompt.</p></div>
+<div class="qa"><p>How would you make this server multi-user and remote?</p>
+  <p>Streamable HTTP transport, authentication (OAuth is part of the MCP spec), and per-user storage keyed by the authenticated identity.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://modelcontextprotocol.io/docs/develop/build-server">MCP: Build a server</a></li>
+  <li><a href="https://github.com/modelcontextprotocol/python-sdk">MCP Python SDK (FastMCP)</a></li>
+  <li><a href="https://modelcontextprotocol.io/docs/tools/inspector">MCP Inspector</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

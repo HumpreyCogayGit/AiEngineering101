@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tools in LangChain</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="17">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>Tools in LangChain</h1>
+  <p class="lede">A decorator writes the JSON schema for you, <code>bind_tools</code> attaches it, and
+    <code>create_agent</code> runs the loop you wrote by hand in Lecture 016.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>Writing JSON schemas by hand is tedious and error-prone. LangChain generates them from ordinary Python functions,
+  standardizes tool calls across providers, and ships a ready-made agent loop. You'll use all three layers and see how
+  they map to Lecture 016.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3><code>@tool</code>: schema from signature and docstring</h3>
+<pre><code class="language-python">@tool
+def convert_currency(amount: float, from_currency: str, to_currency: str) -> str:
+    """Convert an amount between currencies. Currencies are ISO codes like USD, EUR, PHP."""
+    ...
+
+convert_currency.name         # 'convert_currency'
+convert_currency.description  # the docstring
+convert_currency.args         # {'amount': {'type': 'number'}, 'from_currency': {'type': 'string'}, ...}</code></pre>
+<p>Type hints become JSON types; the docstring becomes the description. Your Python code is now your tool specification.</p>
+
+<h3>Three levels of abstraction</h3>
+<table>
+  <tr><th>Level</th><th>Code</th><th>You handle</th></tr>
+  <tr><td>Bind</td><td><code>llm.bind_tools(TOOLS).invoke(msgs)</code></td><td>Executing calls and looping</td></tr>
+  <tr><td>Your loop</td><td>check <code>ai_msg.tool_calls</code>, run tools, append <code>ToolMessage</code>s</td><td>Everything, with nicer types</td></tr>
+  <tr><td>Agent</td><td><code>create_agent(llm, TOOLS, system_prompt=...)</code></td><td>Nothing: the loop is built in (it's a LangGraph graph)</td></tr>
+</table>
+<pre><code class="language-python">ai_msg = llm.bind_tools(TOOLS).invoke(messages)
+ai_msg.tool_calls     # [{'name': 'get_weather', 'args': {'city': 'Tokyo'}, 'id': 'call_1'}]   ← args already parsed
+tool_msg = get_weather.invoke(ai_msg.tool_calls[0])   # invoking with a tool call returns a ToolMessage</code></pre>
+<div class="mermaid">flowchart LR
+  subgraph create_agent
+    M[model with bound tools] -->|tool_calls| T[execute tools]
+    T -->|ToolMessages| M
+  end
+  U[user message] --> M
+  M -->|no tool_calls| A[final answer]</div>
+
+<h3>Parallel tool calls</h3>
+<p>A model can ask for several tools in a single reply. "How much is 2500 PHP in EUR, and what's the weather in
+  Tokyo?" needs two independent facts, so the model requests both at once instead of taking two round trips:</p>
+<pre><code class="language-python">ai_msg.tool_calls
+# [{'name': 'convert_currency', 'args': {'amount': 2500, 'from_currency': 'PHP', 'to_currency': 'EUR'}, 'id': 'call_a'},
+#  {'name': 'get_weather',      'args': {'city': 'Tokyo'},                                              'id': 'call_b'}]</code></pre>
+<p>Three rules follow from this:</p>
+<ul>
+  <li><strong>Loop over <code>tool_calls</code>, never read only the first one.</strong> Code that handles
+    <code>tool_calls[0]</code> works in every demo and breaks on the first compound question.</li>
+  <li><strong>Answer every call before calling the model again.</strong> Each call needs its own
+    <code>ToolMessage</code> whose <code>tool_call_id</code> matches. A missing answer is a 400 error from the API.</li>
+  <li><strong>The calls are independent, so you may run them concurrently.</strong> Your loop runs them one after
+    another, which is fine for fast tools. <code>create_agent</code> runs them in parallel for you.</li>
+</ul>
+<p>When the calls must <em>not</em> be issued together (the second needs the result of the first, or the tool
+  has side effects you want one at a time), turn the feature off: <code>llm.bind_tools(TOOLS, parallel_tool_calls=False)</code>.
+  The model then requests one tool per turn.</p>
+
+<h3>Reading the answer: <code>.text</code>, not <code>.content</code></h3>
+<p>Once tools are involved, <code>AIMessage.content</code> is not reliably a string. Depending on the model and the
+  API LangChain uses for it, it can be a list of content blocks. <code>ai_msg.text</code> always gives you the
+  text, so use it whenever you want the answer as a string (Lecture 012 explains why).</p>
+
+<h3>Error handling differs by layer</h3>
+<p>In your own loop you decide what happens when a tool raises. You'll catch the exception and return an error
+  <code>ToolMessage</code>. Prebuilt agents have their own policies: <code>create_agent</code> re-raises tool exceptions
+  by default, while LangGraph's <code>ToolNode(handle_tool_errors=True)</code> returns them to the model (Lecture 027).
+  Know which one you're using.</p>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>A travel helper with <code>get_weather</code>, <code>convert_currency</code> and <code>word_count</code>. You answer
+  "How much is 2500 PHP in EUR, and what's the weather in Tokyo?" twice: with your own loop (printing the message
+  trace) and with <code>create_agent</code>.</p>
+<h3>Sample run</h3>
+<p class="file-label">uv run python EXER017/solution/lc_tools.py</p>
+<pre><code class="language-text">Tool schema generated from the function:
+  convert_currency - Convert an amount between currencies. Currencies are ISO codes like USD, EUR, PHP, JPY, GBP.
+  {'amount': {'title': 'Amount', 'type': 'number'}, 'from_currency': {'title': 'From Currency', 'type': 'string'}, ...}
+
+Q: How much is 2500 PHP in EUR, and what's the weather in Tokyo?
+A: - **2,500 PHP ≈ 40.51 EUR**
+- **Tokyo weather:** 18°C
+
+Message trace:
+  SystemMessage  'You are a helpful assistant. Use tools when they help.'
+  HumanMessage   "How much is 2500 PHP in EUR, and what's the weather in Tokyo?"
+  AIMessage      tool_calls=['convert_currency', 'get_weather'] ''
+  ToolMessage    '2500.0 PHP = 40.51 EUR'
+  ToolMessage    'Tokyo: 18°C'
+  AIMessage      '- **2,500 PHP ≈ 40.51 EUR**\n- **Tokyo weather:** 18°C'</code></pre>
+<p>Captured from a real run. Your wording, numbers and timings will differ; the shape should match.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Define tools with <code>@tool</code>, type hints and docstrings.</li>
+  <li>Use <code>bind_tools</code>, <code>AIMessage.tool_calls</code> and <code>ToolMessage</code>.</li>
+  <li>Handle parallel tool calls: several requests in one model reply.</li>
+  <li>Use the prebuilt <code>create_agent</code>, and know what it does for you.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>The script prints the auto-generated schema of <code>convert_currency</code></li>
+  <li>One question triggers both <code>convert_currency</code> and <code>get_weather</code>, and the trace shows one <code>ToolMessage</code> per tool call</li>
+  <li>Your loop and <code>create_agent</code> give equivalent answers</li>
+  <li>All 7 checks pass</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li>Decorate <code>convert_currency</code>, add the type hints and a docstring, and implement it. Raise <code>ValueError</code> for unknown currencies.</li>
+  <li>Add <code>word_count</code> and put all three in <code>TOOLS</code>.</li>
+  <li><code>run_tool_loop</code> is the Lecture 016 loop with LangChain types. Compare the two side by side.
+    Make the inner loop handle every entry of <code>ai_msg.tool_calls</code>.</li>
+  <li><code>build_agent</code> is a single line.</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Missing type hints or docstring</summary><div>
+  <p>Without hints, argument types become vague; without a docstring, <code>@tool</code> raises an error. Both are the model's only guide.</p></div></details>
+<details class="pitfall"><summary>Handling only the first tool call</summary><div>
+  <p><code>ai_msg.tool_calls[0]</code> silently drops the others. The next model call then fails with
+  "tool_call_id ... did not have response messages". Loop over all of them.</p></div></details>
+<details class="pitfall"><summary>Returning huge objects from tools</summary><div>
+  <p>Everything a tool returns goes into the context window. Return what the model needs, not whole database rows.</p></div></details>
+<details class="pitfall"><summary>An uncaught tool exception ends the agent run</summary><div>
+  <p>Validate inputs and return friendly errors from tools, or use error handling in the tool node.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>When would you write your own loop instead of using <code>create_agent</code>?</p>
+  <p>When you need custom control: approval before certain tools, special routing, custom state. LangGraph
+  (Module 5) is the structured way to do that.</p></div>
+<div class="qa"><p>How many tools can one agent handle?</p>
+  <p>Tool selection gets less accurate as the list grows, and every schema costs tokens on every call. Keep toolsets
+  focused, or split them across agents (Lecture 031).</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://docs.langchain.com/oss/python/langchain/tools">LangChain: Tools</a></li>
+  <li><a href="https://docs.langchain.com/oss/python/langchain/agents">LangChain: Agents (create_agent)</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

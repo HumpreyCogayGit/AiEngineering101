@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agentic RAG</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="30">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>Agentic RAG</h1>
+  <p class="lede">Plain RAG always retrieves once and always answers. Agentic RAG checks its own work: is retrieval
+    needed, is what came back relevant, and should it try a better search?</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>The RAG chain from Lecture 022 is a straight line, and it fails quietly: it retrieves for "hi there", answers from
+  irrelevant chunks, and never retries a bad search. Graphs let us add decisions and a retry loop around retrieval,
+  combining Module 4 and Module 5.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<div class="mermaid">flowchart TB
+  S((START)) --> R[route]
+  R -->|small talk| D[direct_answer] --> E((END))
+  R -->|needs documents| RT[retrieve]
+  RT --> G[grade each chunk]
+  G -->|some relevant| GEN[generate] --> E
+  G -->|none relevant, retries left| RW[rewrite query] --> RT
+  G -->|none relevant, no retries| F[fallback: I don't know] --> E</div>
+<h3>The decisions</h3>
+<table>
+  <tr><th>Node</th><th>Decision</th><th>Implementation</th></tr>
+  <tr><td>route</td><td>Does this need the documents?</td><td>Structured output: <code>RouteDecision(needs_retrieval: bool)</code></td></tr>
+  <tr><td>grade</td><td>Is each chunk relevant to the question?</td><td>Structured output per chunk: <code>RelevanceGrade(relevant: bool)</code></td></tr>
+  <tr><td>after_grade</td><td>Generate, rewrite, or give up?</td><td>Plain code: count relevant chunks and rewrites</td></tr>
+  <tr><td>rewrite</td><td>A better search query</td><td>LLM, given the question and the failed query</td></tr>
+</table>
+<p>Note the mix: LLMs make <em>judgments</em> (relevant? needs retrieval?); deterministic code makes
+  <em>control decisions</em> (retry limit). Keeping limits in code guarantees termination.</p>
+
+<h3>Custom state, not just messages</h3>
+<pre><code class="language-python">class RAGState(TypedDict, total=False):
+    question: str              # never changes
+    query: str                 # what we search for, may be rewritten
+    docs: list[Document]       # retrieved
+    relevant: list[Document]   # graded relevant
+    answer: str
+    rewrites: int
+    path: list[str]            # which nodes ran: your debugging trail</code></pre>
+<p>Separating <code>question</code> from <code>query</code> matters: the rewrite changes the search, but the answer
+  must still address what the user actually asked.</p>
+
+<h3>Cost</h3>
+<p>Grading is one LLM call per chunk. Use a small, fast model for grading and routing, batch the grading calls, or
+  grade only when retrieval scores are borderline. Measure whether the quality gain justifies the latency.</p>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>An agentic RAG graph over the Nimbus knowledge base. The demo prints each question's <code>path</code>:</p>
+<pre><code class="language-text">Q: Hi there! How are you?                 path: route -> direct_answer
+Q: Can I bring my dog to the café?        path: route -> retrieve -> grade -> generate
+Q: something about beans going back       path: route -> retrieve -> grade -> generate
+Q: What is the GDP of France?             path: route -> retrieve -> grade -> rewrite -> retrieve -> grade -> rewrite -> retrieve -> grade -> fallback
+A: I don't know based on the available documents.</code></pre>
+<p>The last question is the important one. The model knows France's GDP, and a router that sent "anything not about
+  coffee" straight to <code>direct_answer</code> would happily answer it from memory, with no source. So the router
+  sends <em>every</em> request for information to retrieval and lets the documents decide; only greetings and small
+  talk skip it, and the <code>direct_answer</code> prompt forbids stating facts. A vague question takes the
+  <code>rewrite</code> loop only when the first search finds nothing the grader accepts, so that path depends on
+  your model's judgments.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Add routing, relevance grading and query rewriting to RAG.</li>
+  <li>Build a retry loop with a guaranteed limit and an honest fallback.</li>
+  <li>Design custom graph state for a non-chat workflow.</li>
+  <li>Weigh quality gains against extra calls and latency.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>"Hi there!" skips retrieval</li>
+  <li>"something about beans going back" gets an answer with a citation (directly, or after a rewrite when the first search finds nothing relevant: the path tells you which)</li>
+  <li>"What is the GDP of France?" is sent to retrieval, not answered from the model's own knowledge, and ends in the honest fallback after 2 rewrites</li>
+  <li>The printed <code>path</code> explains every decision</li>
+  <li>All 5 checks pass</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li><code>decide</code> and <code>after_grade</code> are routers: they return node names.</li>
+  <li><code>grade</code> is a list comprehension calling <code>grader.invoke(...)</code> per document.</li>
+  <li>Wire the edges from the diagram. The <code>rewrite → retrieve</code> edge creates the loop.</li>
+  <li>The offline checks script the fake model's judgments, so you can verify every path deterministically.</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Unbounded retries</summary><div>
+  <p>Never let an LLM decide whether to keep looping without a hard cap in code.</p></div></details>
+<details class="pitfall"><summary>Answering the rewritten query</summary><div>
+  <p>Generate with the original <code>question</code>. The rewrite exists only to search better.</p></div></details>
+<details class="pitfall"><summary>A grader that's too strict</summary><div>
+  <p>If it marks partially useful chunks as irrelevant, everything ends in fallback. Check grader decisions against a few labelled examples.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>Agentic RAG or a better retriever?</p>
+  <p>Fix retrieval first (Lecture 023). It's cheaper per question. Agentic loops help with the remaining hard cases and with deciding when <em>not</em> to retrieve.</p></div>
+<div class="qa"><p>Could the agent choose between several knowledge sources?</p>
+  <p>Yes: the router can pick a source (policies, product catalog, web search), or retrieval becomes a tool the agent calls with its own queries.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://docs.langchain.com/oss/python/langgraph/agentic-rag">LangGraph: Agentic RAG</a></li>
+  <li><a href="https://arxiv.org/abs/2401.15884">Yan et al. (2024): Corrective RAG</a></li>
+  <li><a href="https://arxiv.org/abs/2310.11511">Asai et al. (2023): Self-RAG</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

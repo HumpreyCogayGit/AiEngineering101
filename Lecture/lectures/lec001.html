@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Setup and First Check</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="1">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>Setup and First Check</h1>
+  <p class="lede">Before talking to any model you need a reproducible environment and a safe place for secrets.
+    This lecture sets both up, and explains why professionals care so much about them.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>An AI application is ordinary software plus a remote model. Most early frustration comes not from the model
+  but from the environment: the wrong Python, a missing package, a key pasted in the wrong place.
+  We fix that once, at the root of the repository, so all 37 exercises share one configuration.</p>
+<p>You will meet four ideas: <strong>virtual environments</strong>, <strong>dependency locking</strong>,
+  <strong>configuration through environment variables</strong>, and <strong>Azure deployments</strong>.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>Virtual environments and uv</h3>
+<p>A <em>virtual environment</em> is a private folder of Python packages for one project, so projects
+  don't fight over versions. <code>uv</code> creates it (<code>.venv/</code>), installs the exact versions
+  pinned in <code>uv.lock</code>, and runs commands inside it with <code>uv run</code>. Two people who run
+  <code>uv sync</code> on the same lockfile get the same packages.</p>
+<pre><code class="language-text">pyproject.toml   what we need     ("langchain", "streamlit", ...)
+uv.lock          exactly what we got  (langchain==1.5.0, ...)  ← reproducibility
+.python-version  which Python     (3.12)
+.venv/           the installed environment (never commit it)</code></pre>
+
+<h3>Configuration lives outside the code</h3>
+<p>Endpoints, deployment names and keys change between machines and environments (dev, test, prod).
+  The <a href="https://12factor.net/config">twelve-factor</a> rule is: <em>store config in the environment</em>.
+  Locally we use a <code>.env</code> file that is loaded into environment variables and never committed.</p>
+<div class="mermaid">flowchart LR
+  E[".env (git-ignored)"] --> S["aicourse/settings.py<br/>validate + normalize"]
+  V["real environment variables<br/>(win over .env)"] --> S
+  S --> X1[EXER001] & X2[EXER002] & X3["... EXER037"]</div>
+<p><code>aicourse/settings.py</code> uses <strong>pydantic-settings</strong> to read and validate the
+  values. It fails early with a readable message (for example "AZURE_OPENAI_API_KEY: is missing") instead of
+  a confusing 401 deep inside a request.</p>
+
+<h3>Azure Foundry: resource, deployment, endpoint</h3>
+<table>
+  <tr><th>Term</th><th>Meaning</th></tr>
+  <tr><td>Resource</td><td>Your Azure account object that hosts models. It has an <strong>endpoint</strong> URL and <strong>keys</strong>.</td></tr>
+  <tr><td>Model</td><td>A model family/version, e.g. <code>gpt-4.1-mini</code>.</td></tr>
+  <tr><td>Deployment</td><td>A named instance of a model in your resource, with its own quota. <strong>Your code addresses the deployment name.</strong></td></tr>
+</table>
+<p>We use Azure's <strong>OpenAI-compatible v1 API</strong>: <code>https://&lt;resource&gt;.openai.azure.com/openai/v1/</code>.
+  Because it speaks the same protocol as OpenAI, the standard <code>openai</code> SDK and LangChain's
+  <code>ChatOpenAI</code> work with only a different <code>base_url</code>.</p>
+
+<h3>Secrets hygiene</h3>
+<ul>
+  <li>Never hard-code keys in source files, notebooks or screenshots.</li>
+  <li>Never print a key. Print a masked version: <code>abcd****wxyz</code>.</li>
+  <li>If a key leaks, <strong>rotate it</strong> (regenerate in the portal). Deleting the commit is not enough.</li>
+  <li>In production, prefer keyless authentication (Microsoft Entra ID / managed identity) and a key vault.</li>
+</ul>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>A small script, <code>check_setup.py</code>, that confirms the Python version, loads and validates your
+  settings, and prints them with the key masked. It's the first thing to run whenever something seems broken.</p>
+<pre><code class="language-text">Python 3.12.14  ->  OK
+Endpoint          : https://my-resource.openai.azure.com
+API base URL      : https://my-resource.openai.azure.com/openai/v1/
+Chat deployment   : gpt-4.1-mini
+Embedding deploy. : text-embedding-3-small
+API key           : 8f3a****91bc</code></pre>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Install the course environment with <code>uv sync</code> and run code with <code>uv run</code>.</li>
+  <li>Create a chat model deployment in Azure Foundry and find its endpoint and key.</li>
+  <li>Configure <code>.env</code> and understand how settings flow into every exercise.</li>
+  <li>Handle secrets safely: mask, ignore, rotate.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li><code>uv sync</code> completes and <code>uv run python --version</code> shows 3.12.x</li>
+  <li><code>.env</code> exists at the repository root and is ignored by git</li>
+  <li><code>check_setup.py</code> prints your endpoint and deployment, with the key masked</li>
+  <li>All checks in <code>check.py</code> pass</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li>Follow the <a href="../setup.html">setup guide</a> to install uv, run <code>uv sync</code>, deploy a model and fill in <code>.env</code>.</li>
+  <li>Open <code>EXER001/starter/check_setup.py</code>. Each TODO function raises <code>NotImplementedError</code> until you replace it.</li>
+  <li><code>python_version_ok()</code>: <code>sys.version_info</code> is a tuple like <code>(3, 12, 14, 'final', 0)</code>, and tuples compare element by element.</li>
+  <li><code>masked_key()</code>: string slicing. <code>key[:4]</code> gives the first four characters, <code>key[-4:]</code> the last four.</li>
+  <li><code>load_config()</code>: one line. The heavy lifting is in <code>aicourse/settings.py</code>, which is worth reading.</li>
+  <li>Run the script, then the checks. Run <code>check.py --solution</code> to see the reference pass.</li>
+</ol>
+<div class="callout tip"><span class="title">How the checks work</span>
+  <code>check.py</code> imports <em>your</em> file from <code>starter/</code> and calls your functions.
+  A <span style="color:var(--warn)">TODO</span> line means the function still raises <code>NotImplementedError</code>.
+  Add <code>-v</code> to see full tracebacks.</div>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Running from inside the exercise folder</summary><div>
+  <p>Commands assume the repository root (<code>uv run python EXER001/check.py</code>). <code>uv</code> finds the
+  project from there, and <code>settings.py</code> finds <code>.env</code> next to <code>pyproject.toml</code>.</p></div></details>
+<details class="pitfall"><summary>Using the model name instead of the deployment name</summary><div>
+  <p>If you named your deployment <code>my-chat</code>, then <code>AZURE_OPENAI_CHAT_DEPLOYMENT=my-chat</code>, even though the model is gpt-4.1-mini.</p></div></details>
+<details class="pitfall"><summary>Quotes or spaces around values in .env</summary><div>
+  <p><code>KEY = "abc"</code> can work with some loaders and not others. Write <code>KEY=abc</code>.</p></div></details>
+<details class="pitfall"><summary>Committing .env "just once"</summary><div>
+  <p>Git history keeps it forever, and bots scan public repositories for keys within minutes. Rotate the key.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>Why validate configuration at startup instead of when it's first used?</p>
+  <p>Fail fast. A missing key found at startup gives a clear message. Found mid-request, it surfaces as a
+  confusing HTTP error, possibly after the program has already done half its work.</p></div>
+<div class="qa"><p>Why does Azure separate "model" and "deployment"?</p>
+  <p>You may run several deployments of the same model with different quotas, versions or content-filter
+  settings (e.g. one for production, one for experiments) and switch between them without changing code.</p></div>
+<div class="qa"><p>What would change in production?</p>
+  <p>Keys would live in Azure Key Vault or be replaced by managed identity, and configuration would come from the
+  hosting platform's environment variables rather than a file.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://docs.astral.sh/uv/">uv documentation</a></li>
+  <li><a href="https://learn.microsoft.com/azure/ai-foundry/">Azure AI Foundry documentation</a></li>
+  <li><a href="https://learn.microsoft.com/azure/ai-foundry/openai/api-version-lifecycle">Azure OpenAI v1 API and versioning</a></li>
+  <li><a href="https://docs.pydantic.dev/latest/concepts/pydantic_settings/">pydantic-settings</a></li>
+  <li><a href="https://12factor.net/config">The Twelve-Factor App: Config</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

@@ -1,0 +1,14 @@
+BRIGHTLEAF OFFICE SUPPLIES INC.
+123 Ayala Ave, Makati City
+
+INVOICE #: BL-2026-0412
+Date: April 12, 2026
+Bill to: Nimbus Coffee Co.
+
+Item                               Qty    Unit Price
+A4 copy paper (ream)               10       $4.50
+Black ballpoint pens (box of 12)    3       $6.00
+Stapler, heavy duty                 1      $18.75
+
+TOTAL DUE: $81.75
+Payment terms: Net 30

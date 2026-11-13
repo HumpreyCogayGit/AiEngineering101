@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The RAG Chain</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="22">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>The RAG Chain</h1>
+  <p class="lede">Retrieve the right passages, put them in the prompt, and require the model to answer only from
+    them, with citations and an honest "I don't know".</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>A model alone knows nothing about Nimbus Coffee's refund policy, and if asked it will make one up. RAG fixes that
+  by giving it the relevant facts at question time. It's the most widely deployed LLM pattern, because it works with
+  private, changing data without retraining anything.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<div class="mermaid">flowchart LR
+  Q[Question] --> R[Retriever<br/>top-k chunks]
+  R --> F["format_docs<br/>[1] (source: ...) text"]
+  Q --> P[Grounding prompt]
+  F --> P
+  P --> M[Chat model] --> A["Answer with [n] citations"]
+  R --> S[Sources for the UI]</div>
+
+<h3>The grounding prompt</h3>
+<pre><code class="language-text">You are the customer assistant of Nimbus Coffee Co.
+Answer the question using ONLY the numbered context passages below.
+Rules:
+- Cite the passages you used with their number in square brackets, e.g. [1] or [2][3].
+- If the answer is not in the context, reply exactly: I don't know based on the available documents.
+- Never use outside knowledge. Be concise.
+
+Context:
+[1] (source: refund_policy.md)
+You can return unopened coffee beans and equipment within **30 days** ...
+[2] (source: shipping.md)
+...</code></pre>
+<p>Each rule has a job: <strong>only</strong> limits hallucination, <strong>citations</strong> make answers verifiable,
+  and the <strong>exact refusal sentence</strong> makes "I don't know" detectable by code.</p>
+
+<h3>The chain in LCEL</h3>
+<pre><code class="language-python">generate = (
+    RunnableLambda(lambda x: {"context": format_docs(x["docs"]), "question": x["question"]})
+    | RAG_PROMPT | llm | StrOutputParser()
+)
+rag_chain = (
+    RunnableParallel(docs=retriever, question=RunnablePassthrough())   # retrieve + keep the question
+    | RunnablePassthrough.assign(answer=generate)                       # add the answer
+)
+rag_chain.invoke("How long do I have to return unopened beans?")
+# {"question": "...", "docs": [Document, ...], "answer": "You have 30 days ... [1]"}</code></pre>
+<p>Returning the <code>docs</code> as well as the answer lets the UI show sources, and lets you evaluate retrieval separately from generation.</p>
+
+<h3>Failure modes to recognise</h3>
+<table>
+  <tr><th>Symptom</th><th>Likely cause</th><th>Fix</th></tr>
+  <tr><td>"I don't know" for an answerable question</td><td>Retrieval missed the chunk</td><td>Better retrieval (Lecture 023), chunking</td></tr>
+  <tr><td>Confident wrong answer</td><td>Irrelevant chunks plus weak grounding</td><td>Stricter prompt, grading (Lecture 030)</td></tr>
+  <tr><td>Answer mixes in outside facts</td><td>Prompt allows world knowledge</td><td>"ONLY the context"; evaluate faithfulness (Lecture 024)</td></tr>
+  <tr><td>Citations to the wrong passage</td><td>Model sloppiness</td><td>Check citations in code; evaluate</td></tr>
+</table>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>A question-answering CLI over the Nimbus knowledge base that prints each answer with its cited source files, and
+  refuses out-of-scope questions with the exact phrase.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Write a grounding prompt with citation and refusal rules.</li>
+  <li>Build a RAG chain that returns the answer and its source documents.</li>
+  <li>Map citations back to sources in code.</li>
+  <li>Diagnose whether a bad answer is a retrieval or a generation problem.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>Policy questions are answered correctly with <code>[n]</code> citations</li>
+  <li>Sources are printed under each answer</li>
+  <li>"What is the capital of Peru?" gets the exact "I don't know" reply</li>
+  <li>All 7 checks pass</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li>Read <code>aicourse/rag.py</code>: it has the loading, chunking and store code you wrote in Lectures 020–021.</li>
+  <li>Write the prompt with <code>{context}</code> in the system message and <code>{question}</code> in the human message.</li>
+  <li>When an answer is wrong, print <code>result["docs"]</code> <em>first</em>. Was the right chunk retrieved?</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>The model "helpfully" answers from general knowledge</summary><div>
+  <p>Capital of Peru? Lima. Correct, but not grounded. For a company assistant that's a bug: next time it'll "know" a refund policy you don't have.</p></div></details>
+<details class="pitfall"><summary>Too many chunks</summary><div>
+  <p>k=20 floods the prompt with noise and costs tokens. Start around k=4 and measure.</p></div></details>
+<details class="pitfall"><summary>Missing source names in context</summary><div>
+  <p>Without them the model can't cite and you can't debug. Always include metadata in <code>format_docs</code>.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>RAG or fine-tuning for company knowledge?</p>
+  <p>RAG for facts that change and must be cited. Fine-tuning for style, format or narrow skills. Fine-tuning doesn't
+  reliably teach facts and can't be updated daily.</p></div>
+<div class="qa"><p>Should a customer bot ever say "I don't know"?</p>
+  <p>Yes, preferably with a next step ("contact support at …"). A wrong policy stated confidently costs more than an honest handoff.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://docs.langchain.com/oss/python/langchain/rag">LangChain: Build a RAG app</a></li>
+  <li><a href="https://learn.microsoft.com/azure/search/retrieval-augmented-generation-overview">Azure: RAG overview</a></li>
+  <li><a href="https://arxiv.org/abs/2005.11401">Lewis et al. (2020): Retrieval-Augmented Generation</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

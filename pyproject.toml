@@ -1,0 +1,48 @@
+[project]
+name = "aicourse"
+version = "0.1.0"
+description = "AI Engineer Course: Zero to Hero — shared configuration and helpers for all exercises"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    # Configuration
+    "python-dotenv",
+    "pydantic",
+    "pydantic-settings",
+    # Raw HTTP + SDK (Modules 0-1, 3)
+    "httpx",
+    "openai",
+    "tiktoken",
+    # CLI (EXER010, EXER018)
+    "typer",
+    "rich",
+    # LangChain / LangGraph (Modules 2-7)
+    "langchain",
+    "langchain-core",
+    "langchain-openai",
+    "langchain-community",
+    "langchain-text-splitters",
+    "langchain-chroma",
+    "langgraph",
+    "langgraph-checkpoint-sqlite",
+    # RAG (Module 4)
+    "chromadb",
+    "pypdf",
+    "numpy",
+    "rank-bm25",
+    "beautifulsoup4",
+    # MCP (Module 6)
+    "mcp",
+    "langchain-mcp-adapters",
+    # Web UI
+    "streamlit",
+    # Tests / checks
+    "pytest",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["aicourse"]

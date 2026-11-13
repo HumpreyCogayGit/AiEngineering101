@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LangChain Chat Models</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="12">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>LangChain Chat Models</h1>
+  <p class="lede">You've built everything by hand. Now meet the framework, and see exactly which of your code it replaces.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>LangChain is a library of standard interfaces and integrations for LLM applications. Its central abstraction is
+  the <strong>chat model</strong>: one interface (<code>invoke</code>, <code>stream</code>, <code>batch</code>) whether
+  the model is on Azure, OpenAI, Anthropic, or running locally. Everything else in Modules 2–7 builds on it.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>Why a framework?</h3>
+<ul>
+  <li><strong>Provider independence</strong>: switching models is a one-line change.</li>
+  <li><strong>Typed messages</strong>: <code>SystemMessage</code>, <code>HumanMessage</code>, <code>AIMessage</code>, <code>ToolMessage</code> instead of dicts.</li>
+  <li><strong>Composability</strong>: models, prompts and parsers plug together (Lecture 013).</li>
+  <li><strong>Ecosystem</strong>: tools, retrievers, vector stores, LangGraph agents and tracing all speak the same interface.</li>
+</ul>
+<p>The cost is an extra layer to learn and debug. That's why you built the raw version first.</p>
+
+<h3>From raw SDK to LangChain</h3>
+<div class="two-col">
+<div><p class="file-label">Module 1 (openai SDK)</p>
+<pre><code class="language-python">client = OpenAI(base_url=..., api_key=...)
+r = client.chat.completions.create(
+    model=dep,
+    messages=[
+      {"role": "system", "content": "Be brief"},
+      {"role": "user", "content": "Hi"},
+    ])
+r.choices[0].message.content</code></pre></div>
+<div><p class="file-label">LangChain</p>
+<pre><code class="language-python">llm = ChatOpenAI(model=dep, base_url=..., api_key=...)
+reply = llm.invoke([
+    SystemMessage("Be brief"),
+    HumanMessage("Hi"),
+])
+reply.text             # the answer as a string
+reply.usage_metadata   # tokens, standardized</code></pre></div>
+</div>
+<div class="callout info"><span class="title">Why <code>ChatOpenAI</code> and not <code>AzureChatOpenAI</code>?</span>
+  <code>AzureChatOpenAI</code> targets Azure's older, versioned API (<code>api_version=…</code>). With the
+  OpenAI-compatible v1 endpoint, the standard <code>ChatOpenAI</code> with a <code>base_url</code> is simpler and
+  recommended. Both work.</div>
+
+<h3><code>.text</code> or <code>.content</code>?</h3>
+<p>An <code>AIMessage</code> has both, and they are not the same thing:</p>
+<table>
+  <tr><th>Attribute</th><th>What you get</th><th>Use it for</th></tr>
+  <tr><td><code>reply.text</code></td><td>Always a string: the text of the answer</td><td>Printing, parsing, comparing, storing the answer</td></tr>
+  <tr><td><code>reply.content</code></td><td>A string <em>or</em> a list of content blocks, depending on the model</td><td>Passing a message on unchanged; reading non-text blocks</td></tr>
+</table>
+<pre><code class="language-python">reply = llm.invoke("Say hi")
+reply.content   # classic model:   'Hi'
+                # reasoning model: [{'type': 'text', 'text': 'Hi', 'annotations': [], 'id': 'msg_...'}]
+reply.text      # 'Hi' on both</code></pre>
+<p>The reason is underneath LangChain. For newer OpenAI models (the gpt-5 family) <code>ChatOpenAI</code> talks to the
+  <em>Responses API</em> instead of the Chat Completions API you used in Module 1, and that API returns answers as
+  blocks. The same is true for streamed chunks. Code that does <code>reply.content.lower()</code> works on one model and
+  raises <code>AttributeError: 'list' object has no attribute 'lower'</code> on the next. <strong>Read answers with
+  <code>.text</code> everywhere</strong> and your code survives a model change.</p>
+
+<h3>The Runnable interface</h3>
+<table>
+  <tr><th>Method</th><th>Input → output</th><th>Module 1 equivalent</th></tr>
+  <tr><td><code>invoke(x)</code></td><td>one input → one <code>AIMessage</code></td><td><code>create()</code></td></tr>
+  <tr><td><code>stream(x)</code></td><td>one input → iterator of <code>AIMessageChunk</code></td><td><code>create(stream=True)</code></td></tr>
+  <tr><td><code>batch([x1, x2])</code></td><td>many inputs → list, run in parallel</td><td>your <code>complete_many</code></td></tr>
+  <tr><td><code>ainvoke</code>, <code>astream</code>, <code>abatch</code></td><td>async versions</td><td>AsyncOpenAI</td></tr>
+</table>
+<p>Inputs are flexible: a string (becomes a <code>HumanMessage</code>), a list of messages, or a list of
+  <code>(role, content)</code> tuples.</p>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>Rebuild Module 1 with LangChain: <code>make_llm()</code>, <code>ask()</code> with typed messages,
+  <code>batch_ask()</code>, <code>stream_print()</code> and the EXER005 chatbot as <code>LCConversation</code>.</p>
+<h3>Sample run</h3>
+<p class="file-label">uv run python EXER012/solution/lc_chat.py</p>
+<pre><code class="language-text">LangChain is an open-source framework for building applications powered by large language models,
+including agents, chatbots, and retrieval-augmented generation systems.
+
+An AIMessage carries metadata too:
+  type          : AIMessage
+  usage_metadata: {'input_tokens': 8, 'output_tokens': 6, 'total_tokens': 14, ...}
+
+Batch: ['4', 'Rome', 'Cold']
+
+Stream: Mercury, Venus, Earth, Mars, Jupiter
+
+Memory: Your favourite colour is teal.</code></pre>
+<p>Captured from a real run. Your wording, numbers and timings will differ; the shape should match.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Create a LangChain chat model for your Azure deployment.</li>
+  <li>Use typed message classes and read <code>AIMessage</code> metadata.</li>
+  <li>Use <code>invoke</code>, <code>stream</code> and <code>batch</code>.</li>
+  <li>Map each LangChain call to the raw code it replaces.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>The script answers, shows <code>usage_metadata</code>, batches 3 questions, streams, and remembers a colour</li>
+  <li>You can explain which Module 1 code each LangChain call replaces</li>
+  <li>You read answers with <code>.text</code> (always a string), not <code>.content</code> (a string or a list of blocks)</li>
+  <li>All 8 checks pass</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li><code>make_llm</code> builds the same configuration as <code>aicourse.llm.get_chat_model()</code>, which later exercises use.</li>
+  <li>The checks use a <strong>fake chat model</strong> (<code>aicourse/fakes.py</code>) that returns scripted replies. LangChain's standard interface is what makes this swap possible.</li>
+  <li>Print <code>reply.response_metadata</code> too: finish reason, model name, Azure filter results.</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Outdated tutorials</summary><div>
+  <p>LangChain changed a lot between versions. Old imports (<code>from langchain.chat_models import …</code>) and classes (<code>LLMChain</code>, <code>ConversationChain</code>) are legacy. This course uses LangChain 1.x with <code>langchain_core</code> and <code>langchain_openai</code>.</p></div></details>
+<details class="pitfall"><summary><code>content</code> isn't always a string</summary><div>
+  <p>On reasoning, multimodal and tool-using models, <code>AIMessage.content</code> is a list of blocks, so string methods fail on it. Use <code>.text</code> whenever you need the answer as a string, including on streamed chunks.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>When would you <em>not</em> use LangChain?</p>
+  <p>A single, simple call in a small script, or when you need provider features the abstraction doesn't expose yet.
+  The raw SDK is always an option, and you know how to use it.</p></div>
+<div class="qa"><p>What does provider independence really buy you?</p>
+  <p>The ability to evaluate a cheaper or better model by changing one line, and to fall back to another provider during an outage.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://docs.langchain.com/oss/python/langchain/models">LangChain: Models</a></li>
+  <li><a href="https://docs.langchain.com/oss/python/langchain/messages">LangChain: Messages</a></li>
+  <li><a href="https://docs.langchain.com/oss/python/integrations/chat/azure_chat_openai">LangChain: Azure OpenAI integration</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

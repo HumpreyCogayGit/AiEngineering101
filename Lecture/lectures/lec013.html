@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prompts and Chains</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="13">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>Prompts and Chains</h1>
+  <p class="lede">Prompt templates, models and output parsers all share one interface, so the pipe operator
+    <code>|</code> can join them into a chain that is itself a runnable.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>Real features are rarely one call. "Summarize, then translate" or "extract, then classify" are pipelines. LangChain
+  Expression Language (LCEL) lets you declare such pipelines from small, testable pieces, and you get
+  <code>stream</code>, <code>batch</code> and async on the whole pipeline for free.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>Prompt templates</h3>
+<pre><code class="language-python">summary_prompt = ChatPromptTemplate.from_messages([
+    ("system", "You summarize news articles accurately and neutrally."),
+    ("human", "Summarize the following article in at most {max_words} words:\n\n{text}"),
+])
+summary_prompt.input_variables          # ['max_words', 'text']
+summary_prompt.invoke({"text": "...", "max_words": 40})   # -> filled-in messages</code></pre>
+<p>Templates separate the <em>fixed</em> part of a prompt from the <em>variables</em>, so the prompt can be reviewed,
+  versioned and tested on its own.</p>
+
+<h3>The pipe</h3>
+<pre><code class="language-python">chain = summary_prompt | llm | StrOutputParser()
+chain.invoke({"text": article, "max_words": 40})     # -> "The council approved ..."</code></pre>
+<div class="mermaid">flowchart LR
+  I["{text, max_words}"] --> P[ChatPromptTemplate] -->|messages| M[Chat model] -->|AIMessage| O[StrOutputParser] --> S["str"]</div>
+<p>Each step's output is the next step's input. <code>StrOutputParser</code> turns an <code>AIMessage</code> into a plain string.</p>
+
+<h3>Passing data along: <code>RunnablePassthrough.assign</code></h3>
+<p>Step 2 often needs both the original input and step 1's output. <code>assign</code> keeps the input dict and adds a new key:</p>
+<pre><code class="language-python">pipeline = (
+    RunnablePassthrough.assign(summary=summary_chain)          # adds "summary"
+    | RunnablePassthrough.assign(translation=translate_chain)  # uses "summary", adds "translation"
+)
+pipeline.invoke({"text": article, "max_words": 40, "language": "Filipino"})
+# {"text": ..., "max_words": 40, "language": "Filipino", "summary": "...", "translation": "..."}</code></pre>
+<div class="mermaid">flowchart LR
+  A["{text, max_words, language}"] --> B["assign(summary=...)"] --> C["{..., summary}"] --> D["assign(translation=...)"] --> E["{..., summary, translation}"]</div>
+
+<h3>Other building blocks you'll meet</h3>
+<table>
+  <tr><th>Runnable</th><th>Does</th></tr>
+  <tr><td><code>RunnableLambda(fn)</code></td><td>Wrap any Python function as a step</td></tr>
+  <tr><td><code>RunnableParallel(a=..., b=...)</code></td><td>Run branches on the same input in parallel and return a dict (used in RAG, Lecture 022)</td></tr>
+  <tr><td><code>RunnablePassthrough()</code></td><td>Pass the input through unchanged</td></tr>
+</table>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>A news pipeline: summarize an article in at most N words, then translate the summary, returning a dict with both.
+  The script also batch-translates one summary into three languages.</p>
+<h3>Sample run</h3>
+<p class="file-label">uv run python EXER013/solution/chains.py</p>
+<pre><code class="language-text">The prompt template expects: ['max_words', 'text']
+
+Filled-in prompt:
+ [SystemMessage(content='You summarize news articles accurately and neutrally.'),
+  HumanMessage(content='Summarize the following article in at most 20 words:\n\nTEXT')]
+
+Summary: The council approved converting three downtown garages into mixed-use buildings with 600
+affordable homes, shops and rooftop gardens. ...
+
+Translation: Inaprubahan ng konseho ang pagpapalit ng tatlong garahe sa sentro ng lungsod bilang mga
+gusaling may iba't ibang gamit, ...
+
+Batch translate into 3 languages:
+ - El ayuntamiento aprobó la conversión de tres estacionamientos del centro en edificios de uso mixto ...
+ - 市議会は、中心街にある3つの立体駐車場を、600戸の手頃な価格の住宅、店舗、屋上庭園を備えた ...
+ - Der Stadtrat genehmigte den Umbau von drei Parkhäusern in der Innenstadt zu gemischt genutzten ...</code></pre>
+<p>Captured from a real run. Your wording, numbers and timings will differ; the shape should match.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Write <code>ChatPromptTemplate</code>s with variables.</li>
+  <li>Compose prompt, model and parser with <code>|</code>.</li>
+  <li>Chain steps where later steps use earlier outputs, using <code>RunnablePassthrough.assign</code>.</li>
+  <li>Use <code>batch</code> on a chain.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>The script shows the template variables, a summary, a translation and a 3-language batch</li>
+  <li>The pipeline output contains the original inputs plus <code>summary</code> and <code>translation</code></li>
+  <li>All 5 checks pass</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li>Write both templates first and print <code>.input_variables</code> to confirm them.</li>
+  <li>Each chain is one line with <code>|</code>.</li>
+  <li>For the pipeline, pipe two <code>assign</code> calls. The check confirms the translation step received the summary.</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Literal braces in templates</summary><div>
+  <p><code>{</code> starts a variable. To show JSON examples in a template, double the braces: <code>{{"key": "value"}}</code>.</p></div></details>
+<details class="pitfall"><summary>Key mismatches</summary><div>
+  <p>The translate template expects <code>{summary}</code>; if the previous step produces <code>"summ"</code>, you get a missing-variable error. Name keys consistently.</p></div></details>
+<details class="pitfall"><summary>Long chains are hard to debug</summary><div>
+  <p>Test each piece alone first. Tracing (Lecture 035) shows each step's input and output.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>Is one big prompt ("summarize and translate") better than two steps?</p>
+  <p>One call is cheaper and faster. Two steps are easier to test, cache and reuse, and each prompt does one job well.
+  For complex tasks, decomposition usually wins on quality.</p></div>
+<div class="qa"><p>When do chains stop being enough?</p>
+  <p>When the flow needs loops or decisions at runtime: retry, branch, call tools until done. That's what LangGraph is for (Module 5).</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://python.langchain.com/docs/concepts/lcel/">LangChain: LCEL concepts</a></li>
+  <li><a href="https://python.langchain.com/docs/concepts/prompt_templates/">LangChain: Prompt templates</a></li>
+  <li><a href="https://python.langchain.com/docs/concepts/runnables/">LangChain: Runnable interface</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

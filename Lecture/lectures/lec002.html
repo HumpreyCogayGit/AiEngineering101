@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Python Primer for AI Engineers</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="2">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>Python Primer for AI Engineers</h1>
+  <p class="lede">LLM APIs speak JSON. In Python, JSON becomes dicts and lists. This lecture covers the
+    small slice of Python you'll use in every later exercise.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>You don't need to be a Python expert to build AI applications, but you do need to read and build nested
+  data fluently, write small functions, handle errors, and validate data. That is the scope of this primer.
+  Everything here runs offline: no API key needed.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>JSON ⇄ Python</h3>
+<table>
+  <tr><th>JSON</th><th>Python</th><th>Example</th></tr>
+  <tr><td>object <code>{}</code></td><td><code>dict</code></td><td><code>{"role": "user"}</code></td></tr>
+  <tr><td>array <code>[]</code></td><td><code>list</code></td><td><code>[1, 2, 3]</code></td></tr>
+  <tr><td>string / number</td><td><code>str</code> / <code>int</code>, <code>float</code></td><td><code>"hi"</code>, <code>42</code></td></tr>
+  <tr><td><code>true</code> / <code>false</code> / <code>null</code></td><td><code>True</code> / <code>False</code> / <code>None</code></td><td></td></tr>
+</table>
+<p>A chat API response is a dict containing a list of dicts containing a dict. To get the text you chain lookups:</p>
+<pre><code class="language-python">response["choices"][0]["message"]["content"]
+#        dict key   list  dict key   dict key</code></pre>
+
+<h3>Functions with type hints</h3>
+<pre><code class="language-python">def build_request(deployment: str, user_text: str, system_text: str | None = None) -> dict:
+    messages: list[dict] = []
+    if system_text:                      # None and "" are both "falsy"
+        messages.append({"role": "system", "content": system_text})
+    messages.append({"role": "user", "content": user_text})
+    return {"model": deployment, "messages": messages}</code></pre>
+<p>Type hints (<code>str</code>, <code>str | None</code>, <code>-&gt; dict</code>) aren't enforced at runtime, but
+  they document intent and let your editor catch mistakes. Frameworks also read them: LangChain builds tool
+  schemas from them (Lecture 017) and FastMCP builds MCP schemas from them (Lecture 033).</p>
+
+<h3>Exceptions</h3>
+<p>Real data is messy. A response might have no <code>choices</code>, or a <code>message</code> might be
+  <code>None</code>. Instead of crashing, catch the specific errors you expect:</p>
+<pre><code class="language-python">try:
+    return response["choices"][0]["message"]["content"]
+except (KeyError, IndexError, TypeError):   # missing key, empty list, None["..."]
+    return None</code></pre>
+<div class="callout warn"><span class="title">Never use a bare <code>except:</code></span>
+  It also catches typos in your own code and Ctrl+C. Name the exceptions you expect.</div>
+
+<h3>Pydantic: validated data</h3>
+<p>A Pydantic model is a class that checks its data when created. This is the backbone of structured
+  outputs (Lecture 009), tool arguments and settings.</p>
+<pre><code class="language-python">from typing import Literal
+from pydantic import BaseModel
+
+class Message(BaseModel):
+    role: Literal["system", "user", "assistant"]
+    content: str
+
+Message(role="user", content="hi")        # ok
+Message(role="robot", content="beep")     # raises ValidationError
+Message(**{"role": "user", "content": "x"})  # ** unpacks a dict into keyword arguments</code></pre>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>A set of helper functions around a realistic API response (<code>EXER002/sample_response.json</code>):
+  read it, extract the reply and token count, survive malformed responses, build request bodies, and validate
+  messages with Pydantic. The request body you build here is the one you'll send over HTTP in Lecture 003.</p>
+<h3>Sample run</h3>
+<p class="file-label">uv run python EXER002/solution/primer.py</p>
+<pre><code class="language-text">Reply       : The capital of France is Paris.
+Tokens used : 32
+Request body: {
+  "model": "gpt-4.1-mini",
+  "messages": [
+    {"role": "system", "content": "Be brief."},
+    {"role": "user", "content": "Hi!"}
+  ]
+}
+Validation caught a bad role: Input should be 'system', 'user' or 'assistant'</code></pre>
+<p>Captured from a real run. Your wording, numbers and timings will differ; the shape should match.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Navigate nested JSON confidently with dict/list indexing.</li>
+  <li>Write small typed functions that build JSON request bodies.</li>
+  <li>Handle malformed data with targeted <code>try/except</code>.</li>
+  <li>Validate data with a Pydantic model and recognise a <code>ValidationError</code>.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li><code>primer.py</code> prints the reply text, the token count and a request body</li>
+  <li><code>safe_get_reply</code> returns <code>None</code> for <code>{}</code>, <code>{"choices": []}</code> and a <code>None</code> message</li>
+  <li>A message with <code>role: "robot"</code> is rejected by Pydantic</li>
+  <li>All 8 checks pass</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li>Open <code>sample_response.json</code> and trace the path to <code>"The capital of France is Paris."</code> with your finger.</li>
+  <li><code>load_response</code>: <code>with open(path, encoding="utf-8") as f: return json.load(f)</code>. The <code>with</code> block closes the file for you.</li>
+  <li>Experiment in a REPL: <code>uv run python</code>, then <code>import json; d = json.load(open("EXER002/sample_response.json"))</code>, and explore with <code>d.keys()</code>.</li>
+  <li>For <code>Message</code>, add the two annotated fields. Pydantic does the rest.</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Mixing up <code>json.load</code> and <code>json.loads</code></summary><div>
+  <p><code>load</code> reads from a file object; <code>loads</code> (load <em>string</em>) parses a string. Same for <code>dump</code>/<code>dumps</code>.</p></div></details>
+<details class="pitfall"><summary>Mutating shared data by accident</summary><div>
+  <p>Lists and dicts are passed by reference. If a function appends to a list it received, the caller's list changes too. You'll see why <code>Conversation.to_api()</code> returns a copy in Lecture 005.</p></div></details>
+<details class="pitfall"><summary>Catching too much</summary><div>
+  <p><code>except Exception</code> around a big block hides bugs. Keep <code>try</code> blocks small and the exception list specific.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>When should a function return <code>None</code>, and when should it raise?</p>
+  <p>Return <code>None</code> when "no value" is a normal outcome the caller should handle. Raise when it signals
+  a real problem the caller probably can't continue past. <code>safe_get_reply</code> is for situations where a missing reply is expected.</p></div>
+<div class="qa"><p>Why does AI engineering lean so heavily on Pydantic?</p>
+  <p>Models produce text, and programs need typed data. Pydantic is the bridge: describe the shape once, and get
+  validation, error messages and a JSON Schema the model can be constrained to.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://docs.python.org/3/tutorial/datastructures.html">Python tutorial: Data Structures</a></li>
+  <li><a href="https://docs.python.org/3/tutorial/errors.html">Python tutorial: Errors and Exceptions</a></li>
+  <li><a href="https://docs.python.org/3/library/json.html">The json module</a></li>
+  <li><a href="https://docs.pydantic.dev/latest/concepts/models/">Pydantic: Models</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

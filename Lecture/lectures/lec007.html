@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Streaming</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="7">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>Streaming</h1>
+  <p class="lede">A 20-second answer feels slow; the same answer appearing word by word after 0.5 seconds
+    feels fast. Streaming doesn't make the model faster, but users experience it as much faster.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>Models generate one token at a time. Without streaming, the server waits until the last token, then sends
+  everything at once. With <code>stream=True</code> it sends each piece as soon as it exists. This lecture covers
+  the wire format, how to consume it in Python with generators, and how to get usage data from a stream.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>Server-Sent Events (SSE)</h3>
+<p>The HTTP response stays open and the server writes lines like these:</p>
+<pre><code class="language-text">data: {"choices":[{"delta":{"role":"assistant","content":""}}]}
+data: {"choices":[{"delta":{"content":"Rivers"}}]}
+data: {"choices":[{"delta":{"content":" wind"}}]}
+data: {"choices":[{"delta":{"content":" through"}}]}
+data: {"choices":[{"delta":{},"finish_reason":"stop"}]}
+data: {"choices":[],"usage":{"prompt_tokens":14,"completion_tokens":152,...}}   ← only with include_usage
+data: [DONE]</code></pre>
+<p>Each <strong>chunk</strong> carries a <strong>delta</strong>, the new piece only. You assemble the full text by concatenating deltas.</p>
+
+<h3>Consuming a stream with a generator</h3>
+<pre><code class="language-python">def stream_reply(client, messages):
+    stream = client.chat.completions.create(model=..., messages=messages, stream=True)
+    for chunk in stream:
+        if not chunk.choices:          # usage chunk, Azure content-filter chunk
+            continue
+        delta = chunk.choices[0].delta.content
+        if delta:                      # role-only and final chunks have no content
+            yield delta
+
+for piece in stream_reply(client, messages):
+    print(piece, end="", flush=True)   # flush: show it NOW, don't buffer</code></pre>
+<p>A function with <code>yield</code> is a <strong>generator</strong>. It produces values lazily, one at a time,
+  which is a natural fit for streams. The same generator can feed a terminal, a web UI (Lecture 015) or an API endpoint.</p>
+
+<h3>Latency: TTFT vs total time</h3>
+<pre><code class="language-text">time →         0s        1s        2s   ...   7s        8s
+Non-streaming  [ waiting, nothing on screen .................. ] full answer appears
+Streaming      [.] first token (TTFT ≈ 0.5s)
+                  Rivers wind through ancient valleys, carving ... ...  done</code></pre>
+<p><strong>Time to first token (TTFT)</strong> is what users feel. Total time is roughly the same either way.</p>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>A streaming chatbot for the terminal, plus <code>stream_with_usage()</code> (token counts from a stream) and a
+  measurement that prints time-to-first-token against total time.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Explain SSE, chunks and deltas.</li>
+  <li>Write a generator that yields text deltas and handles chunks without content.</li>
+  <li>Get token usage from a stream with <code>stream_options={"include_usage": True}</code>.</li>
+  <li>Measure TTFT and explain why streaming improves perceived latency.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>Answers appear progressively in the terminal, not all at once</li>
+  <li>On exit the script prints time-to-first-token and total time; the first is much smaller</li>
+  <li>Chunks without <code>choices</code> (Azure content-filter / usage chunks) don't crash your code</li>
+  <li>All 5 checks pass</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li>Write <code>stream_reply</code> as above; the check verifies it's a real generator.</li>
+  <li><code>collect</code> is the "consumer" side: call <code>on_token</code> for each piece and join everything at the end.</li>
+  <li>For <code>stream_with_usage</code>, remember the usage arrives in a final chunk whose <code>choices</code> list is <em>empty</em>.</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary><code>IndexError</code> on <code>chunk.choices[0]</code></summary><div>
+  <p>Azure may send a first chunk with prompt filter results and no choices, and the usage chunk also has none. Always check.</p></div></details>
+<details class="pitfall"><summary>Text appears all at once anyway</summary><div>
+  <p>The terminal buffers output. Use <code>print(..., end="", flush=True)</code>.</p></div></details>
+<details class="pitfall"><summary>Forgetting to store the streamed reply in history</summary><div>
+  <p>Collect the pieces and append the full text as the assistant message, or your bot forgets what it just said.</p></div></details>
+<details class="pitfall"><summary>Content filtering mid-stream</summary><div>
+  <p>Azure screens output as it's generated. A stream can stop with <code>finish_reason="content_filter"</code> after some text has already been shown. Handle that case in the UI.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>When should you <em>not</em> stream?</p>
+  <p>When code consumes the output: JSON for a parser, a classification label, a tool call. You need the complete
+  answer before you can use it, so streaming only adds complexity.</p></div>
+<div class="qa"><p>How does streaming interact with guardrails?</p>
+  <p>Output checks need the whole text, but you've already shown part of it. Options: check chunks incrementally,
+  buffer a sentence before showing it, or accept the risk for low-stakes content.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://developer.mozilla.org/docs/Web/API/Server-sent_events/Using_server-sent_events">MDN: Using server-sent events</a></li>
+  <li><a href="https://docs.python.org/3/howto/functional.html#generators">Python HOWTO: Generators</a></li>
+  <li><a href="https://learn.microsoft.com/azure/ai-foundry/openai/concepts/content-filter">Azure OpenAI content filtering (including streaming)</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

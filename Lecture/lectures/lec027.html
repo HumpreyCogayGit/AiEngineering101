@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>An Agent from Scratch</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="27">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>An Agent from Scratch</h1>
+  <p class="lede">An agent is a loop: think, act, observe, repeat. In LangGraph that's two nodes and one conditional
+    edge, and once you've built it yourself, every agent framework becomes readable.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>You've written the tool loop with the raw SDK (016) and used <code>create_agent</code> (017). Now you build the
+  same agent as an explicit graph. This gives you a place to add custom behaviour (approval, memory, routing), which
+  the next lectures do.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>The ReAct loop</h3>
+<p><strong>Re</strong>ason + <strong>Act</strong>: the model reasons about the task, acts by calling tools, observes the
+  results, and repeats until it can answer.</p>
+<div class="mermaid">flowchart LR
+  S((START)) --> A[agent<br/>model with tools]
+  A -->|tool_calls| T[tools<br/>ToolNode]
+  T --> A
+  A -->|no tool_calls| E((END))</div>
+<pre><code class="language-python">def agent(state: MessagesState) -> dict:
+    response = llm_with_tools.invoke([SystemMessage(SYSTEM)] + state["messages"])
+    return {"messages": [response]}                 # appended by the MessagesState reducer
+
+def should_continue(state: MessagesState) -> str:
+    return "tools" if state["messages"][-1].tool_calls else END
+
+builder = StateGraph(MessagesState)
+builder.add_node("agent", agent)
+builder.add_node("tools", ToolNode(TOOLS, handle_tool_errors=True))
+builder.add_edge(START, "agent")
+builder.add_conditional_edges("agent", should_continue, ["tools", END])
+builder.add_edge("tools", "agent")                  # ← the loop</code></pre>
+
+<h3>Design notes</h3>
+<ul>
+  <li><strong>System prompt outside state</strong>: it's added at call time, so it isn't stored in the
+    conversation and can change between runs.</li>
+  <li><strong><code>ToolNode</code></strong> runs every requested tool (in parallel when there are several) and returns <code>ToolMessage</code>s.
+    With <code>handle_tool_errors=True</code>, exceptions become error messages the model can react to, instead of crashing the run.</li>
+  <li><strong>Recursion limit</strong>: each node execution is a "step". Invoke with <code>{"recursion_limit": 12}</code>;
+    exceeding it raises <code>GraphRecursionError</code>, your guard against runaway loops (and runaway bills).</li>
+</ul>
+
+<h3>A trace of one question</h3>
+<pre><code class="language-text">Q: 3 bags of Barako Bold and 2 of Mount Apo Sunrise. Total in pesos?
+[agent] lookup_product({'name': 'Barako Bold'}), lookup_product({'name': 'Mount Apo Sunrise'})
+[tools] Barako Bold: ₱390 per 250 g, dark roast, from Batangas
+[tools] Mount Apo Sunrise: ₱520 per 250 g, light roast, from Davao
+[agent] calculator({'expression': '3*390 + 2*520'})
+[tools] 2210
+[agent] The total is ₱2,210.</code></pre>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>A Nimbus Coffee assistant with three tools (<code>calculator</code>, <code>lookup_product</code>,
+  <code>current_time</code>) built as an explicit graph, streamed step by step, with a recursion limit.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Explain the ReAct loop and map it to a graph.</li>
+  <li>Build an agent with <code>MessagesState</code>, a model node, a <code>ToolNode</code> and a conditional edge.</li>
+  <li>Protect the loop with a recursion limit and tool error handling.</li>
+  <li>Read a step-by-step trace of an agent run.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>The script prints each step: tool calls, tool results and the final answer</li>
+  <li>The order total (₱2,210) is computed by tools, not by the model's mental math</li>
+  <li>A model that never stops calling tools is halted by the recursion limit</li>
+  <li>All 6 checks pass</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li><code>should_continue</code> first. Use <code>getattr(last, "tool_calls", None)</code>, because not all message types have that attribute.</li>
+  <li>Build the graph exactly as in the diagram.</li>
+  <li><code>run</code>: catch <code>GraphRecursionError</code> and return a polite message.</li>
+  <li>Compare your graph's Mermaid output with <code>create_agent(...).get_graph().draw_mermaid()</code>.</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Forgetting <code>tools → agent</code></summary><div>
+  <p>The run ends after the tools execute and the model never sees the results.</p></div></details>
+<details class="pitfall"><summary>Binding tools to the model but not to the ToolNode (or vice versa)</summary><div>
+  <p>The model requests a tool the node doesn't have. Use the same list for both.</p></div></details>
+<details class="pitfall"><summary>Very high recursion limits "to be safe"</summary><div>
+  <p>A stuck agent at limit 1000 burns money. Set the lowest limit that fits your hardest legitimate task.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>How does the model know when it's done?</p>
+  <p>It decides: when it replies without tool calls, the loop ends. That's flexible but not guaranteed, which is why the recursion limit exists.</p></div>
+<div class="qa"><p>When would you replace the free loop with a fixed workflow?</p>
+  <p>When the steps are always the same (look up, then compute, then answer). Fixed graphs are faster, cheaper and
+  more predictable. Agents shine when the path genuinely depends on intermediate results.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://arxiv.org/abs/2210.03629">Yao et al. (2022): ReAct</a></li>
+  <li><a href="https://docs.langchain.com/oss/python/langgraph/workflows-agents">LangGraph: Workflows and agents</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

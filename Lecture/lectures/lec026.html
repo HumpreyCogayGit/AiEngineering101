@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LangGraph Basics</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="26">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>LangGraph Basics</h1>
+  <p class="lede">Chains run in a straight line. Real workflows branch, loop and pause. LangGraph models them as a
+    graph of steps that share state.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>LangGraph is LangChain's library for stateful, controllable workflows and agents. <code>create_agent</code> from
+  Lecture 017 is itself a LangGraph graph. Before adding LLMs, we learn the mechanics with plain Python functions: a
+  support-ticket router with no model at all.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>Three building blocks</h3>
+<table>
+  <tr><th>Block</th><th>What it is</th><th>In code</th></tr>
+  <tr><td><strong>State</strong></td><td>A typed dict shared by all nodes</td><td><code>class TicketState(TypedDict): ...</code></td></tr>
+  <tr><td><strong>Node</strong></td><td>A function: reads state, returns a <em>partial update</em></td><td><code>def classify(state) -&gt; dict</code></td></tr>
+  <tr><td><strong>Edge</strong></td><td>What runs next: fixed, or decided by a router function</td><td><code>add_edge</code> / <code>add_conditional_edges</code></td></tr>
+</table>
+<pre><code class="language-python">def classify(state: TicketState) -> dict:
+    ...
+    return {"category": "billing", "steps": ["classify"]}     # only the keys that change
+
+def route_by_category(state: TicketState) -> str:
+    return state["category"]                                 # the NAME of the next node
+
+builder = StateGraph(TicketState)
+builder.add_node("classify", classify)
+builder.add_edge(START, "classify")
+builder.add_conditional_edges("prioritize", route_by_category)
+graph = builder.compile()
+graph.invoke({"ticket": "I was charged twice!"})</code></pre>
+
+<h3>Reducers: how updates merge</h3>
+<p>By default a node's update <em>replaces</em> the key's value. A <strong>reducer</strong> changes that:</p>
+<pre><code class="language-python">steps: Annotated[list[str], operator.add]     # updates are APPENDED: ["classify"] + ["prioritize"] + ...</code></pre>
+<p>That's how <code>MessagesState</code> works: its <code>messages</code> key has a reducer that appends new messages (and replaces messages with the same id).</p>
+
+<h3>The graph we build</h3>
+<div class="mermaid">flowchart LR
+  S((START)) --> C[classify] --> P[prioritize]
+  P -->|billing| B[billing]
+  P -->|technical| T[technical]
+  P -->|general| G[general]
+  B & T & G -->|high| E[escalate] --> X((END))
+  B & T & G -->|normal| X</div>
+
+<h3>Seeing inside</h3>
+<ul>
+  <li><code>graph.get_graph().draw_mermaid()</code> prints a diagram of <em>your</em> graph.</li>
+  <li><code>graph.stream(input, stream_mode="updates")</code> yields each node's update as it happens, which is ideal for progress displays and debugging.</li>
+</ul>
+
+<h3>Why graphs instead of plain Python?</h3>
+<p>For a ticket router, plain <code>if</code> statements would do. Graphs earn their keep with what's coming next:
+  loops with tools (027), persistence and resuming (028), pausing for humans (029), and streaming every step. All of these come from the framework.</p>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>A ticket router: keyword classification, priority detection, a handler per category, and escalation for urgent
+  tickets. The <code>steps</code> list records the exact path each ticket took.</p>
+<h3>Sample run</h3>
+<p class="file-label">uv run python EXER026/solution/ticket_graph.py</p>
+<pre><code class="language-text">I was charged twice for my order, please refund ASAP!
+  -&gt; billing/high  steps=['classify', 'prioritize', 'billing', 'escalate']
+  Our billing team will review your account within 24 hours. A supervisor has been notified.
+
+The app crashes when I open my cart.
+  -&gt; technical/normal  steps=['classify', 'prioritize', 'technical']
+  Please try updating the app; a technician will follow up.
+
+Do you have a store in Cebu?
+  -&gt; general/normal  steps=['classify', 'prioritize', 'general']
+  Thanks for reaching out! We'll get back to you soon.
+
+Streaming the updates of each node:
+   {'classify': {'category': 'technical', 'steps': ['classify']}}
+   {'prioritize': {'priority': 'high', 'steps': ['prioritize']}}
+   {'technical': {'response': 'Please try updating the app; a technician will follow up.', 'steps': ['technical']}}
+   {'escalate': {'response': '... A supervisor has been notified.', 'steps': ['escalate']}}</code></pre>
+<p>Captured from a real run. Your wording, numbers and timings will differ; the shape should match.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Define typed state and nodes that return partial updates.</li>
+  <li>Use a reducer to accumulate values across nodes.</li>
+  <li>Route with conditional edges.</li>
+  <li>Visualize a graph and stream node updates.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>The script prints a Mermaid diagram of your graph</li>
+  <li><code>steps</code> shows the exact path each ticket took</li>
+  <li>Urgent tickets pass through <code>escalate</code>; normal ones don't</li>
+  <li>All 6 checks pass (offline)</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li>Add the <code>steps</code> reducer, then implement <code>classify</code> and <code>prioritize</code>.</li>
+  <li>Routers return node names; for the end, return <code>END</code>.</li>
+  <li>Wire edges exactly as in the diagram, then paste your printed Mermaid into <a href="https://mermaid.live">mermaid.live</a> and compare.</li>
+  <li>Extension: replace keyword <code>classify</code> with an LLM using structured output. The graph doesn't change at all.</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Returning the whole state from a node</summary><div>
+  <p>With a reducer, returning the full <code>steps</code> list appends it again and doubles it. Return only what changed.</p></div></details>
+<details class="pitfall"><summary>Mutating <code>state</code> in place</summary><div>
+  <p><code>state["steps"].append(...)</code> bypasses LangGraph and breaks persistence and streaming. Return updates instead.</p></div></details>
+<details class="pitfall"><summary>Router returns a name that isn't a node</summary><div>
+  <p>The run fails at that point. Annotate routers with <code>Literal[...]</code> so the graph knows the possible destinations.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>Which decisions should be code, and which LLM?</p>
+  <p>Use code when rules are clear and testable (priority keywords, thresholds); use an LLM when judgment over
+  language is needed. Graphs make mixing both natural, with a deterministic skeleton and LLM decisions where they add value.</p></div>
+<div class="qa"><p>"Workflow" or "agent"?</p>
+  <p>A workflow has paths you designed; an agent's path is chosen by the model at runtime. Prefer workflows when you
+  can: they're predictable, cheaper and easier to test. Use agent loops where flexibility is genuinely needed.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://docs.langchain.com/oss/python/langgraph/overview">LangGraph overview</a></li>
+  <li><a href="https://docs.langchain.com/oss/python/langgraph/graph-api">LangGraph: Graph API (state, nodes, edges, reducers)</a></li>
+  <li><a href="https://www.anthropic.com/engineering/building-effective-agents">Building effective agents (workflows vs agents)</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

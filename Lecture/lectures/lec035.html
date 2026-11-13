@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Observability and Cost</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="35">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>Observability and Cost</h1>
+  <p class="lede">An agent run is a tree of model calls and tool calls. If you can't see it, you can't debug it,
+    speed it up, or afford it.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>"The agent gave a weird answer" is impossible to fix without knowing what happened: which tools it called, with
+  which arguments, what came back, how long each step took, and how many tokens it used. That's
+  <strong>observability</strong>. We build a tracer with LangChain callbacks, then look at hosted options.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>Traces and spans</h3>
+<p>A <strong>trace</strong> is one run (one user question). It's made of <strong>spans</strong>: timed steps such as a model
+  call or a tool call, each linked to its parent by a run id.</p>
+<pre><code class="language-text">Trace: "What is the refund window, and is shipping free?"
+├─ LLM  gpt-4.1-mini   0.84s  in=412  out=38   → calls search_kb, search_kb
+├─ TOOL search_kb      0.21s  {'query': 'refund window unopened beans'}
+├─ TOOL search_kb      0.19s  {'query': 'free shipping'}
+└─ LLM  gpt-4.1-mini   1.32s  in=1288 out=96   → answer
+Totals: 2 LLM calls, 2 tool calls, 1,834 tokens, $0.0008, 2.6s</code></pre>
+<p>Notice the second model call's input: the tool results made it three times bigger. Traces make costs like that visible.</p>
+
+<h3>Callbacks</h3>
+<pre><code class="language-python">class UsageTracker(BaseCallbackHandler):
+    def on_chat_model_start(self, serialized, messages, *, run_id, parent_run_id=None, **kw): ...
+    def on_llm_end(self, response, *, run_id, **kw):          # usage_metadata lives here
+    def on_tool_start(self, serialized, input_str, *, run_id, **kw): ...
+    def on_tool_end(self, output, *, run_id, **kw): ...
+    def on_tool_error(self, error, *, run_id, **kw): ...
+
+agent.invoke(inputs, {"callbacks": [tracker]})    # propagates to every nested model and tool call</code></pre>
+<p>Pass the handler in the run config and LangChain calls it for every nested step automatically. That's how
+  LangSmith and other tracing tools hook in.</p>
+
+<h3>What to measure</h3>
+<table>
+  <tr><th>Metric</th><th>Why</th></tr>
+  <tr><td>Tokens in/out per call and per run</td><td>Cost, and spotting bloated context</td></tr>
+  <tr><td>Latency per span</td><td>Finding the slow step (often a tool, not the model)</td></tr>
+  <tr><td>Number of LLM calls per run</td><td>Agent loops and multi-agent hops multiply cost</td></tr>
+  <tr><td>Errors and their types</td><td>Reliability (Lecture 011)</td></tr>
+  <tr><td>Cost per question, per user, per day</td><td>Budgets and pricing decisions</td></tr>
+</table>
+
+<h3>Hosted tracing</h3>
+<p><strong>LangSmith</strong> (LangChain's platform) records every trace with no code changes: set
+  <code>LANGSMITH_TRACING=true</code> and <code>LANGSMITH_API_KEY</code> in <code>.env</code>. On Azure,
+  <strong>OpenTelemetry</strong> traces can go to Application Insights / Azure Monitor, and Azure AI Foundry has tracing
+  built in. The concepts are the same as your tracker.</p>
+<div class="callout warn"><span class="title">Traces contain user data</span>
+  Prompts and tool results may include personal information. Decide what to log, mask sensitive fields, and set retention limits.</div>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>A <code>UsageTracker</code> callback handler that records spans with timing, tokens, decisions and errors, then prints
+  a timeline and a cost report for an agent with a knowledge-base tool and a deliberately failing inventory tool.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Explain traces and spans, and what to measure in LLM apps.</li>
+  <li>Write a LangChain callback handler for model and tool events.</li>
+  <li>Compute cost per run from token usage.</li>
+  <li>Know how to switch to hosted tracing (LangSmith or OpenTelemetry).</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>The timeline shows each model call (with tokens and its decision) and each tool call</li>
+  <li>The failing inventory tool appears with ❌ and its error</li>
+  <li>The report gives the total cost of the run in USD</li>
+  <li>All 5 checks pass (offline)</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li>Read the given <code>on_chat_model_start</code> to see how a span is created; mirror it in <code>on_tool_start</code>.</li>
+  <li><code>on_llm_end</code>: the message is at <code>response.generations[0][0].message</code>; tokens are in <code>usage_metadata</code>.</li>
+  <li>The checks use fake models that report token usage, so you can verify the arithmetic exactly.</li>
+  <li>Optional: enable LangSmith and compare its trace with your timeline.</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Streaming without usage</summary><div>
+  <p>Streamed calls only report tokens if usage is requested (<code>stream_options</code>; LangChain's <code>stream_usage=True</code>). Otherwise your cost report reads zero.</p></div></details>
+<details class="pitfall"><summary>Averages hide spikes</summary><div>
+  <p>Average cost per question may be fine while 1% of questions loop 30 times. Look at the distribution and the maximum.</p></div></details>
+<details class="pitfall"><summary>Logging secrets</summary><div>
+  <p>Tool inputs may contain keys or personal data. Mask before you store.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>Your agent costs $0.02 per question. Is that a lot?</p>
+  <p>It depends on what the answer is worth. For a support ticket that would cost $5 to handle by hand, it's cheap. For a
+  free consumer feature with 10 million queries a day, it's $200,000 a day. Cost per question needs a business context.</p></div>
+<div class="qa"><p>Which step would you optimise first?</p>
+  <p>The one the trace shows is biggest. Usually it's input tokens from long tool results or history, not the model's output.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://python.langchain.com/docs/concepts/callbacks/">LangChain: Callbacks</a></li>
+  <li><a href="https://docs.smith.langchain.com/">LangSmith documentation</a></li>
+  <li><a href="https://learn.microsoft.com/azure/ai-foundry/how-to/develop/trace-application">Azure AI Foundry: Tracing</a></li>
+  <li><a href="https://opentelemetry.io/docs/concepts/signals/traces/">OpenTelemetry: Traces</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Setup Guide — AI Engineer Course</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<script src="assets/js/course.js"></script>
+<script defer src="assets/vendor/highlight.min.js"></script>
+<script defer src="assets/vendor/mermaid.min.js"></script>
+<script defer src="assets/js/app.js"></script>
+</head>
+<body data-root="./">
+<main>
+  <header class="lecture-header">
+    <div class="kicker">Before Lecture 001</div>
+    <h1>Setup Guide</h1>
+    <p class="lede">Three things: the Python toolchain, an Azure Foundry model deployment, and a <code>.env</code> file.
+      Budget about 30–45 minutes the first time.</p>
+  </header>
+
+  <h2 id="tools">1. Install the tools</h2>
+  <h3>uv (Python and packages)</h3>
+  <p><a href="https://docs.astral.sh/uv/">uv</a> installs the right Python version and every package for the course with one command.</p>
+  <pre><code class="language-bash"># macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+# or on macOS with Homebrew
+brew install uv
+
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"</code></pre>
+  <h3>Install the course dependencies</h3>
+  <pre><code class="language-bash">cd AiEngineerCourse        # the repository root
+uv sync                    # downloads Python 3.12 if needed and installs everything
+uv run python --version    # should print Python 3.12.x</code></pre>
+  <div class="callout tip"><span class="title">Why one root environment?</span>
+    All 37 exercises share the root <code>pyproject.toml</code>, <code>uv.lock</code> and <code>.env</code>.
+    You install once, configure once, and every exercise just works. Always run commands from the repository root.</div>
+  <h3>Optional</h3>
+  <ul>
+    <li><strong>VS Code</strong> with the Python extension. Select the interpreter in <code>.venv/</code>.</li>
+    <li><strong>Node.js</strong>, only to use the MCP Inspector in Module 6 (<code>npx @modelcontextprotocol/inspector</code>).</li>
+  </ul>
+
+  <h2 id="azure">2. Create a model deployment in Azure Foundry</h2>
+  <div class="mermaid">flowchart LR
+  A[Azure subscription] --> B[Foundry resource]
+  B --> C[Chat model deployment<br/>e.g. gpt-4.1-mini]
+  B --> D[Embedding deployment<br/>e.g. text-embedding-3-small]
+  C --> E[Endpoint + API key]
+  D --> E</div>
+  <ol>
+    <li>Sign in at <a href="https://ai.azure.com">ai.azure.com</a> (Azure AI Foundry) with your Azure account.</li>
+    <li>Create a project (this also creates a Foundry resource). Pick a region close to you that offers the models below.</li>
+    <li>Open <strong>Models + endpoints → Deploy model → Deploy base model</strong> and deploy
+      <strong><code>gpt-4.1-mini</code></strong>. The <em>deployment name</em> you choose is what your code will send as <code>model</code>.</li>
+    <li>Deploy an embedding model too: <strong><code>text-embedding-3-small</code></strong> (needed from Lecture 019).</li>
+    <li>Open the chat deployment's page. Copy the <strong>endpoint</strong> (the base URL, e.g.
+      <code>https://my-resource.openai.azure.com</code>) and a <strong>key</strong>.</li>
+  </ol>
+  <div class="callout info"><span class="title">Why gpt-4.1-mini?</span>
+    It supports everything the course uses: tool calling, structured outputs, image input and the
+    <code>temperature</code> parameter, and it's cheap.</div>
+  <div class="callout info"><span class="title">Using a newer model instead</span>
+    The course also runs on reasoning models (gpt-5 family, o-series); every exercise is tested on both kinds.
+    Those models only accept the default <code>temperature</code>, so the course detects that once and leaves the
+    parameter out for you. Lecture 004 explains the difference. Whatever you deploy needs tool calling, structured
+    outputs and image input.</div>
+  <div class="callout warn"><span class="title">Cost</span>
+    The whole course typically costs a few US dollars with a mini model. Set a budget alert in the Azure portal
+    (Cost Management → Budgets) anyway. That's a good habit for any AI project.</div>
+
+  <h2 id="env">3. Configure <code>.env</code></h2>
+  <pre><code class="language-bash">cp .env.example .env      # Windows: copy .env.example .env</code></pre>
+  <p>Open <code>.env</code> and fill in your values:</p>
+  <pre><code class="language-ini">AZURE_OPENAI_ENDPOINT=https://my-resource.openai.azure.com
+AZURE_OPENAI_API_KEY=your-key-here
+AZURE_OPENAI_CHAT_DEPLOYMENT=gpt-4.1-mini
+AZURE_OPENAI_EMBEDDING_DEPLOYMENT=text-embedding-3-small</code></pre>
+  <p>All course code reads these through <code>aicourse/settings.py</code>, which normalizes the endpoint and
+    builds the API base URL <code>&lt;endpoint&gt;/openai/v1/</code>. That is Azure's <em>OpenAI-compatible v1 API</em>,
+    so the standard <code>openai</code> SDK and LangChain's <code>ChatOpenAI</code> work against Azure unchanged.</p>
+  <div class="callout danger"><span class="title">Never commit your key</span>
+    <code>.env</code> is listed in <code>.gitignore</code>. If a key ever leaks (pushed to GitHub, pasted in a chat),
+    regenerate it immediately in the Azure portal.</div>
+
+  <h2 id="verify">4. Verify</h2>
+  <pre><code class="language-bash">uv run python EXER001/solution/check_setup.py   # prints your config with the key masked
+uv run python EXER003/solution/raw_call.py      # makes a real call to your deployment</code></pre>
+  <p>If both work, you're ready for <a href="lectures/lec001.html">Lecture 001</a>.</p>
+
+  <h2 id="trouble">Troubleshooting</h2>
+  <details class="pitfall"><summary>401 Access denied / invalid subscription key</summary><div>
+    <p>The key doesn't belong to the endpoint's resource, or has a stray space or quote. Copy both values again from the same deployment page.</p></div></details>
+  <details class="pitfall"><summary>404 DeploymentNotFound / model not found</summary><div>
+    <p><code>AZURE_OPENAI_CHAT_DEPLOYMENT</code> must be the <em>deployment</em> name, which may differ from the model name. A new deployment can take a minute or two to become available.</p></div></details>
+  <details class="pitfall"><summary>429 Too Many Requests</summary><div>
+    <p>Your deployment's tokens-per-minute quota is low. Raise it in the deployment settings, or wait. Lecture 011 teaches retries with backoff.</p></div></details>
+  <details class="pitfall"><summary>Connection errors / name resolution failure</summary><div>
+    <p>Check the endpoint spelling, your network or VPN, and whether the resource uses private networking.</p></div></details>
+  <details class="pitfall"><summary>"Course configuration problem: … is missing"</summary><div>
+    <p>The <code>.env</code> file is missing, in the wrong folder (it must be at the repository root), or a variable name is misspelled.</p></div></details>
+</main>
+</body>
+</html>

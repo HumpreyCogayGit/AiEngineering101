@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glossary — AI Engineer Course</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<script src="assets/js/course.js"></script>
+<script defer src="assets/js/app.js"></script>
+<style>
+  dl.glossary dt { font-weight: 700; margin-top: 18px; }
+  dl.glossary dd { margin: 4px 0 0; }
+  dl.glossary dd .see { color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body data-root="./">
+<main>
+  <header class="lecture-header">
+    <div class="kicker">Reference</div>
+    <h1>Glossary</h1>
+    <p class="lede">The vocabulary of AI engineering, in plain words. The number in brackets is the lecture that covers it.</p>
+  </header>
+  <dl class="glossary">
+    <dt>Agent</dt><dd>A loop in which a model decides on actions (tool calls), observes the results and decides again until the task is done. <span class="see">[017, 027]</span></dd>
+    <dt>Agentic RAG</dt><dd>RAG where the system decides whether to retrieve, grades what it retrieved, and can rewrite the query and retry. <span class="see">[030]</span></dd>
+    <dt>API key</dt><dd>A secret string that authenticates your requests. Treat it like a password. <span class="see">[001]</span></dd>
+    <dt>Backoff (exponential)</dt><dd>Waiting longer after each failed attempt (1 s, 2 s, 4 s …) before retrying, usually with random jitter. <span class="see">[011]</span></dd>
+    <dt>BM25</dt><dd>A classic keyword-ranking algorithm. Good at exact terms, names and codes, which vector search can miss. <span class="see">[023]</span></dd>
+    <dt>Callback</dt><dd>A function LangChain calls on events (model start/end, tool start/end/error). It's the basis of tracing. <span class="see">[035]</span></dd>
+    <dt>Checkpointer</dt><dd>LangGraph component that saves graph state after every step, keyed by <code>thread_id</code>. It provides conversation memory and pause/resume. <span class="see">[028]</span></dd>
+    <dt>Chunk / chunking</dt><dd>Splitting documents into smaller passages before embedding them. Chunk size and overlap are key RAG settings. <span class="see">[020]</span></dd>
+    <dt>Command (LangGraph)</dt><dd>A value a node returns to update the state and name the next node in one step. It is how one agent hands control to another. <span class="see">[031]</span></dd>
+    <dt>Completion</dt><dd>The model's generated output for a request. "Chat completion" is the message the model returns. <span class="see">[003]</span></dd>
+    <dt>Content block</dt><dd>One typed part of a message's content (text, image …). Lets a single message mix modalities. <span class="see">[006]</span></dd>
+    <dt>Content filter</dt><dd>Azure's safety system that can block harmful prompts or outputs, returned as an HTTP 400 with code <code>content_filter</code>. <span class="see">[036]</span></dd>
+    <dt>Context window</dt><dd>The maximum number of tokens (input + output) a model can handle in one request. <span class="see">[006]</span></dd>
+    <dt>Cosine similarity</dt><dd>A measure of how closely two vectors point in the same direction (1 = same, 0 = unrelated). <span class="see">[019]</span></dd>
+    <dt>Deployment (Azure)</dt><dd>A named instance of a model in your Azure resource. On Azure, the request's <code>model</code> field is the deployment name. <span class="see">[001]</span></dd>
+    <dt>Embedding</dt><dd>A vector of numbers representing the meaning of a text. Similar meanings give nearby vectors. <span class="see">[019]</span></dd>
+    <dt>Faithfulness</dt><dd>Whether every claim in an answer is supported by the retrieved context. The opposite is hallucination. <span class="see">[024]</span></dd>
+    <dt>Few-shot prompting</dt><dd>Including worked examples (input → output) in the prompt to show the model the task. <span class="see">[008]</span></dd>
+    <dt>Finish reason</dt><dd>Why generation stopped: <code>stop</code> (natural end), <code>length</code> (token limit), <code>tool_calls</code>, <code>content_filter</code>. <span class="see">[004]</span></dd>
+    <dt>Grounding</dt><dd>Restricting the model to answer from provided sources, ideally with citations. <span class="see">[022]</span></dd>
+    <dt>Hallucination</dt><dd>Fluent output that is false or unsupported. <span class="see">[022, 024]</span></dd>
+    <dt>Handoff</dt><dd>One agent passing control directly to another, without a supervisor deciding in between. Fewer model calls; routing logic is spread across the agents. <span class="see">[031]</span></dd>
+    <dt>Hit rate</dt><dd>The share of test questions for which retrieval returns the expected document in the top k. <span class="see">[023]</span></dd>
+    <dt>Human in the loop (HITL)</dt><dd>Pausing an agent so a person can approve, edit or reject an action before it happens. <span class="see">[029]</span></dd>
+    <dt>Idempotent</dt><dd>Safe to run twice: running again does not change the result (e.g. re-ingesting without duplicates). <span class="see">[021]</span></dd>
+    <dt>Interrupt</dt><dd>LangGraph's <code>interrupt()</code>: pause a graph mid-node and resume later with <code>Command(resume=…)</code>. <span class="see">[029]</span></dd>
+    <dt>JSON mode</dt><dd>A setting that guarantees the reply is valid JSON, though not that it matches your schema. <span class="see">[009]</span></dd>
+    <dt>JSON Schema</dt><dd>A standard way to describe the shape of JSON data. Used for tool parameters and structured outputs. <span class="see">[009, 016]</span></dd>
+    <dt>LCEL</dt><dd>LangChain Expression Language: composing runnables with the pipe operator <code>|</code>. <span class="see">[013]</span></dd>
+    <dt>Least privilege</dt><dd>Giving an agent only the tools and permissions its task needs. <span class="see">[034, 036]</span></dd>
+    <dt>LLM-as-judge</dt><dd>Using a model with a scoring rubric to grade outputs that simple string matching can't evaluate. <span class="see">[024]</span></dd>
+    <dt>MCP (Model Context Protocol)</dt><dd>An open standard connecting AI applications (hosts/clients) to servers that expose tools, resources and prompts. <span class="see">[032]</span></dd>
+    <dt>MMR (Maximal Marginal Relevance)</dt><dd>A retrieval method that balances relevance with diversity, avoiding near-duplicate results. <span class="see">[023]</span></dd>
+    <dt>MRR (Mean Reciprocal Rank)</dt><dd>The average of 1/rank of the first correct result. Rewards putting the right document first. <span class="see">[024]</span></dd>
+    <dt>Multimodal</dt><dd>Handling more than one type of input, e.g. text and images. <span class="see">[006]</span></dd>
+    <dt>Parallel tool calls</dt><dd>Several tool requests in a single model reply. Each one needs its own tool result, matched by id, before the model is called again. <span class="see">[016, 017]</span></dd>
+    <dt>Prompt injection</dt><dd>Instructions hidden in untrusted text (emails, web pages, tool results) that try to override yours. <span class="see">[036]</span></dd>
+    <dt>RAG (Retrieval-Augmented Generation)</dt><dd>Retrieving relevant passages and putting them in the prompt so the model answers from your data. <span class="see">[022]</span></dd>
+    <dt>Rate limit</dt><dd>A cap on requests or tokens per minute. Exceeding it returns HTTP 429. <span class="see">[011]</span></dd>
+    <dt>ReAct</dt><dd>The "reason + act" agent pattern: think, call a tool, observe, repeat. <span class="see">[027]</span></dd>
+    <dt>Reasoning model</dt><dd>A model family (gpt-5, o-series) that thinks before answering. It only accepts the default temperature and is steered by the prompt and a reasoning-effort setting. <span class="see">[004]</span></dd>
+    <dt>Reducer</dt><dd>In LangGraph, a function that defines how a state key is updated, e.g. append instead of replace. <span class="see">[026]</span></dd>
+    <dt>Reranking</dt><dd>Reordering retrieved candidates with a stronger (slower) relevance model. <span class="see">[023]</span></dd>
+    <dt>Responses API</dt><dd>OpenAI's newer API, which LangChain uses for recent models. Answers arrive as a list of content blocks, so read them with <code>.text</code>. <span class="see">[012]</span></dd>
+    <dt>RRF (Reciprocal Rank Fusion)</dt><dd>Merging several ranked lists by summing 1/(k + rank) for each document. <span class="see">[023]</span></dd>
+    <dt>Runnable</dt><dd>LangChain's universal interface with <code>invoke</code>, <code>stream</code> and <code>batch</code>. Models, prompts, parsers and chains are all runnables. <span class="see">[012]</span></dd>
+    <dt>Session state</dt><dd>Streamlit's per-browser-session storage that survives script re-runs. <span class="see">[015]</span></dd>
+    <dt>SSE (Server-Sent Events)</dt><dd>The HTTP streaming format the API uses to send tokens as they are generated. <span class="see">[007]</span></dd>
+    <dt>Stateless</dt><dd>The model remembers nothing between requests. Your code must resend the conversation. <span class="see">[005]</span></dd>
+    <dt>stdio transport</dt><dd>Running an MCP server as a subprocess and talking JSON-RPC over its stdin/stdout. <span class="see">[032]</span></dd>
+    <dt>Store (LangGraph)</dt><dd>Long-term key-value memory organized by namespace (e.g. per user), shared across threads. <span class="see">[028]</span></dd>
+    <dt>Structured output</dt><dd>Constraining the model's reply to a JSON schema (often from a Pydantic model). <span class="see">[009, 014]</span></dd>
+    <dt>Supervisor</dt><dd>A multi-agent pattern where a coordinator agent routes work to specialist agents. <span class="see">[031]</span></dd>
+    <dt>System prompt</dt><dd>The instruction message that sets the assistant's role, rules and style. <span class="see">[005]</span></dd>
+    <dt>Temperature</dt><dd>A sampling setting. Low values give focused, repeatable output; high values give more variety. <span class="see">[004]</span></dd>
+    <dt>Thread</dt><dd>One conversation, identified by <code>thread_id</code> in LangGraph. <span class="see">[028]</span></dd>
+    <dt>Time to first token (TTFT)</dt><dd>Latency until the first piece of a streamed answer arrives. <span class="see">[007]</span></dd>
+    <dt>Token</dt><dd>A chunk of text (about ¾ of an English word) that models read and write. Pricing and limits are in tokens. <span class="see">[004]</span></dd>
+    <dt>Tool calling</dt><dd>The model requests a function call with JSON arguments; your code runs it and returns the result. <span class="see">[016]</span></dd>
+    <dt>Trace / span</dt><dd>A record of one run (trace) made of timed steps (spans), such as model calls and tool calls. <span class="see">[035]</span></dd>
+    <dt>Vector store</dt><dd>A database that stores embeddings and finds the nearest ones to a query vector. <span class="see">[021]</span></dd>
+  </dl>
+</main>
+</body>
+</html>

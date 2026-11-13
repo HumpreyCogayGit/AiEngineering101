@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Better Retrieval</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="23">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>Better Retrieval</h1>
+  <p class="lede">If the right chunk isn't retrieved, no prompt can save the answer. Learn the standard techniques for
+    improving retrieval, and measure which ones actually help.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>Most RAG failures are retrieval failures. Vector search has predictable weaknesses: exact terms (product codes,
+  names, numbers), vague or oddly worded questions, and near-duplicate results crowding out variety. Each technique
+  here targets one weakness, and each has a cost. The deciding tool is a metric: <strong>hit rate</strong>.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>1. Hybrid search: keywords + vectors</h3>
+<p><strong>BM25</strong> is the classic keyword ranking: it rewards query words that appear in a chunk, especially
+  rare words. It's excellent where embeddings are weak: "Liberica", "BL-2026-0412", "Maginhawa". Combining both
+  approaches is called hybrid search.</p>
+
+<h3>2. Reciprocal Rank Fusion (RRF)</h3>
+<p>BM25 scores and cosine distances aren't on the same scale, so you can't simply add them. RRF uses only <em>ranks</em>:</p>
+<pre><code class="language-text">score(doc) = Σ over rankings of  1 / (k + rank)        k = 60 by convention
+
+doc A: rank 1 in vector, rank 3 in BM25  → 1/61 + 1/63 = 0.0323
+doc B: rank 2 in vector, rank 1 in BM25  → 1/62 + 1/61 = 0.0325   ← wins: high in both</code></pre>
+<div class="mermaid">flowchart LR
+  Q[Question] --> V[Vector search top 10] --> F[RRF fusion]
+  Q --> B[BM25 top 10] --> F
+  F --> K[Top k]</div>
+
+<h3>3. MMR: diversity</h3>
+<p>Maximal Marginal Relevance picks each next result to be relevant to the query <em>and</em> different from those
+  already picked. Use it when the top results are near-duplicates.</p>
+
+<h3>4. Multi-query rewriting</h3>
+<p>Ask the model for several rephrasings ("money back" → "refund policy", "return window"), search with each, and
+  fuse the results. It helps with vague questions. Cost: one extra LLM call and several searches per question.</p>
+
+<h3>5. Reranking</h3>
+<p>Retrieve a wide set of candidates cheaply (e.g. 10), then reorder them with a stronger relevance judge, such as an
+  LLM or a cross-encoder reranker model, and keep the top 4. It's precise and slower, so use it when quality matters more than latency.</p>
+
+<h3>Measure: hit rate @ k</h3>
+<pre><code class="language-text">hit rate = share of test questions whose expected source appears in the top k results</code></pre>
+<p><code>data/eval_questions.json</code> holds 20 questions with the expected source file. Every technique gets a number,
+  and you keep only what improves it.</p>
+<p><strong>Pick k to match the question you are asking.</strong> With k = 4 you ask "is the right document somewhere
+  in what the model will read?". On a small knowledge base nearly every strategy passes that, so the table tells you
+  nothing. With k = 1 you ask "is the right document ranked <em>first</em>?", which is where the strategies separate:</p>
+<pre><code class="language-text">Hit rate on 19 questions:
+
+  strategy          @1    @4
+  vector           84%  100%
+  mmr              84%   95%
+  bm25             79%  100%
+  hybrid           89%  100%
+  multi-query     100%  100%
+  hybrid+rerank   100%  100%</code></pre>
+<p>Read it row by row. Hybrid beats either of its parts at @1, which is the argument for fusion. MMR trades a little
+  relevance for diversity and loses a hit at @4. Multi-query and reranking reach 100% at @1, and each pays for it
+  with a model call per question. Whether that is worth it depends on how much the answer improves, which is the
+  subject of Lecture 024. A metric that every candidate maxes out is not measuring anything: tighten it until it
+  discriminates.</p>
+<table>
+  <tr><th>Technique</th><th>Fixes</th><th>Extra cost</th></tr>
+  <tr><td>Hybrid + RRF</td><td>Exact terms, names, codes</td><td>Small (local BM25)</td></tr>
+  <tr><td>MMR</td><td>Duplicate results</td><td>Small</td></tr>
+  <tr><td>Multi-query</td><td>Vague or oddly phrased questions</td><td>1 LLM call + N searches</td></tr>
+  <tr><td>Reranking</td><td>Ordering precision</td><td>1 LLM call (or a reranker model)</td></tr>
+</table>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>Implement BM25 search, RRF, multi-query and the hit-rate metric, then print a comparison table of six strategies:
+  vector, MMR, BM25, hybrid, multi-query and hybrid + rerank.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Explain the typical failure modes of vector search.</li>
+  <li>Implement BM25 keyword search and reciprocal rank fusion.</li>
+  <li>Use multi-query rewriting, MMR and LLM reranking.</li>
+  <li>Compare strategies with hit rate and reason about their cost.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>A hit-rate table for six retrieval strategies is printed, at @1 and @4</li>
+  <li>BM25 finds exact rare words such as "Liberica"</li>
+  <li>Hybrid retrieval scores at least as well as plain vector search, and at least 80%</li>
+  <li>You can explain the cost (latency, tokens) of multi-query and reranking</li>
+  <li>All 7 checks pass</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li><code>BM25Okapi</code> takes a list of tokenized chunks; <code>get_scores(query_tokens)</code> returns one score per chunk.</li>
+  <li>RRF: accumulate scores in a dict keyed by <code>chunk_id(doc)</code>, then sort.</li>
+  <li>Work out the RRF check by hand before running it. It's good practice for reasoning about rankings.</li>
+  <li>Look at the questions each strategy misses. Patterns tell you what to fix next.</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Adding raw scores from different systems</summary><div>
+  <p>A BM25 score of 12 and a cosine distance of 0.3 aren't comparable. Fuse ranks (RRF) or normalize carefully.</p></div></details>
+<details class="pitfall"><summary>Tuning on a tiny test set</summary><div>
+  <p>20 questions is a start. One question changes hit rate by 5 points, so don't over-read small differences.</p></div></details>
+<details class="pitfall"><summary>Stacking every technique</summary><div>
+  <p>Multi-query + reranking can triple latency for a small gain. Add complexity only when the metric justifies it.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>Hit rate is high, but answers are still bad. Why?</p>
+  <p>Retrieval found the right document, but maybe not the right <em>chunk</em>, or the generation step misused it.
+  Lecture 024 evaluates generation separately.</p></div>
+<div class="qa"><p>How does a managed service do this?</p>
+  <p>Azure AI Search offers hybrid search with built-in RRF and a semantic reranker out of the box. What you build
+  here is what it does internally.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://en.wikipedia.org/wiki/Okapi_BM25">Okapi BM25</a></li>
+  <li><a href="https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf">Cormack et al.: Reciprocal Rank Fusion</a></li>
+  <li><a href="https://learn.microsoft.com/azure/search/hybrid-search-overview">Azure AI Search: Hybrid search</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

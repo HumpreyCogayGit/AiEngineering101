@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chat With Your Docs</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="25">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>Chat With Your Docs</h1>
+  <p class="lede">Turn the RAG pipeline into a product: upload files, ask follow-up questions, and see the sources
+    behind every answer.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>This is Module 4's integration project. It combines loading (020), indexing (021), grounded answering (022) and
+  Streamlit (015) into one app, and adds the one new piece a conversation needs: <strong>question condensing</strong>,
+  so that follow-ups like "How much is it?" can be searched.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>Why follow-up questions break naive RAG</h3>
+<pre><code class="language-text">User: Tell me about the cold brew bottle.
+Bot:  It's a 1 litre glass bottle with a fine mesh filter [1].
+User: How much is it?        ← search for "How much is it?" finds... anything with a price</code></pre>
+<p>The retriever only sees the last message. The fix is to rewrite it into a <strong>standalone question</strong> using
+  the history before searching: "How much does the Nimbus Cold Brew Bottle cost?"</p>
+<div class="mermaid">flowchart LR
+  H[Chat history] --> C[Condense with LLM]
+  Q[Follow-up question] --> C
+  C --> S[Standalone question] --> R[Retrieve] --> G[Grounded answer] --> U[Answer + sources]</div>
+<p>Skip the condensing call when there's no history. It's an extra LLM call, so don't pay for it on the first question.</p>
+
+<h3>Per-session indexes</h3>
+<p>Uploaded documents belong to one user's session. We build an <strong>in-memory</strong> Chroma collection
+  (<code>EphemeralClient</code>) with a unique name per session, stored in <code>st.session_state</code>. Users never see
+  each other's files, and nothing is left on disk.</p>
+
+<h3>Handling uploads safely</h3>
+<ul>
+  <li>Restrict file types (<code>type=["md", "txt", "html", "pdf"]</code>).</li>
+  <li>Use only the base name of the uploaded filename (<code>Path(name).name</code>); never trust a path from the client.</li>
+  <li>Process in a temporary directory that's cleaned up automatically.</li>
+  <li>Think about limits: file size, number of files, scanned PDFs without text.</li>
+</ul>
+
+<h3>Showing sources</h3>
+<p>An expander under each answer shows the passages used, with file names and PDF page numbers. Users can verify
+  answers, which builds justified trust, and you can debug retrieval at a glance.</p>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>A Streamlit app: a sidebar uploader (plus a "use sample documents" option), a "Build index" button, a chat with
+  conversational RAG, and a Sources expander showing the standalone query that was searched.</p>
+<pre><code class="language-bash">uv run streamlit run EXER025/starter/app.py</code></pre>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Build conversational RAG with question condensing.</li>
+  <li>Index user uploads in a per-session, in-memory vector store.</li>
+  <li>Handle uploaded files safely.</li>
+  <li>Present sources so users can verify answers.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>Uploading a PDF or Markdown file and clicking "Build index" works</li>
+  <li>Follow-ups work: "Tell me about the cold brew bottle" → "How much is it?"</li>
+  <li>Every answer has a Sources expander with file names (and PDF page numbers)</li>
+  <li>Two browser tabs do not see each other's documents</li>
+  <li>All 7 checks pass</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li>Complete <code>docs_logic.py</code> and pass its checks before touching the UI.</li>
+  <li><code>condense_question</code> must make no LLM call when the history is empty; the check verifies this.</li>
+  <li>In <code>app.py</code>, build the index inside <code>st.spinner</code>, since embedding takes a few seconds.</li>
+  <li>Upload one of your own documents and ask about it.</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Rebuilding the index on every rerun</summary><div>
+  <p>Streamlit reruns on every message. Keep the store in <code>st.session_state</code> and rebuild only when the button is clicked.</p></div></details>
+<details class="pitfall"><summary>A shared global collection</summary><div>
+  <p>One collection for all users leaks one user's documents into another's answers. That's a privacy incident.</p></div></details>
+<details class="pitfall"><summary>Condensing drifts the question</summary><div>
+  <p>The rewrite can change the meaning. Show the standalone query in the Sources expander so you can spot it.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>What changes for 10,000 documents instead of 3 uploads?</p>
+  <p>Ingestion becomes an offline job, the index is persistent and shared (with per-document access control in
+  metadata filters), and you'd consider a managed store like Azure AI Search.</p></div>
+<div class="qa"><p>Should the answer step see the chat history too?</p>
+  <p>Sometimes. It helps with tone and references ("as I said…"), but grounding works best when the answer comes from
+  retrieved context. Here, the history only shapes the search.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://docs.streamlit.io/develop/api-reference/widgets/st.file_uploader">Streamlit: st.file_uploader</a></li>
+  <li><a href="https://docs.langchain.com/oss/python/langchain/rag">LangChain: RAG tutorial (conversational)</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

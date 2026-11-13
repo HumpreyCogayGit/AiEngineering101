@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prompt Engineering Basics</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="8">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>Prompt Engineering Basics</h1>
+  <p class="lede">A prompt is a specification. Vague specs give vague results. A few techniques fix most problems,
+    and you should measure the result rather than trust your impression.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>We build a support-ticket classifier three times. Version 1 is the prompt most people write first. Version 2 adds
+  clear instructions, definitions, delimiters and an output format. Version 3 adds examples. A labelled dataset
+  tells us which version is actually better. This "change, then measure" loop is the core skill of AI engineering.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>Techniques that matter most</h3>
+<table>
+  <tr><th>Technique</th><th>Example</th><th>Why it helps</th></tr>
+  <tr><td><strong>Role and task</strong></td><td>"You are a support-ticket classifier."</td><td>Sets context and expectations.</td></tr>
+  <tr><td><strong>Explicit options with definitions</strong></td><td>"billing: payments, refunds, invoices …"</td><td>Removes guesswork at the boundaries between categories.</td></tr>
+  <tr><td><strong>Output format</strong></td><td>"Reply with the category name only, lowercase."</td><td>Makes the output parseable by code.</td></tr>
+  <tr><td><strong>Delimiters</strong></td><td><code>&lt;ticket&gt; … &lt;/ticket&gt;</code></td><td>Separates instructions from data, and helps against injection (Lecture 036).</td></tr>
+  <tr><td><strong>Few-shot examples</strong></td><td>user/assistant pairs showing input → label</td><td>Shows the task instead of only describing it. Very effective for format and edge cases.</td></tr>
+  <tr><td><strong>Low temperature</strong></td><td><code>**model_params(temperature=0)</code></td><td>Consistent outputs for classification. <code>model_params</code> leaves the parameter out on models that reject it (Lecture 004).</td></tr>
+</table>
+
+<h3>Few-shot as messages</h3>
+<pre><code class="language-python">messages = [
+    {"role": "system", "content": SYSTEM_V2},
+    {"role": "user", "content": "&lt;ticket&gt;My refund hasn't arrived.&lt;/ticket&gt;"},
+    {"role": "assistant", "content": "billing"},          # an example answer
+    {"role": "user", "content": "&lt;ticket&gt;Images don't load in the app.&lt;/ticket&gt;"},
+    {"role": "assistant", "content": "technical"},
+    {"role": "user", "content": f"&lt;ticket&gt;{real_ticket}&lt;/ticket&gt;"},   # the real one
+]</code></pre>
+
+<h3>Measure, don't vibe-check</h3>
+<div class="mermaid">flowchart LR
+  A[Write / change prompt] --> B[Run on labelled dataset]
+  B --> C[Accuracy + look at failures]
+  C --> A</div>
+<p>Trying three examples by hand tells you little. A dataset of even 16 labelled cases shows real differences.
+  Keep two rules:</p>
+<ul>
+  <li><strong>Never put test cases in the prompt.</strong> If your few-shot examples come from the test set, the
+    accuracy score measures memorization, not skill.</li>
+  <li><strong>Read the failures.</strong> The ones it gets wrong tell you which definition to sharpen.</li>
+</ul>
+
+<h3>Normalizing outputs</h3>
+<p>Even good prompts sometimes produce "Billing." instead of "billing". Your code should be tolerant: lowercase,
+  strip punctuation, and map unexpected answers to "unknown" rather than crashing. Lecture 009 removes this problem with structured outputs.</p>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>Three prompt builders (v1, v2, v3) for the labels <code>billing</code>, <code>technical</code>,
+  <code>account</code> and <code>other</code>, a <code>classify()</code> function and an <code>evaluate()</code>
+  loop over <code>EXER008/tickets.json</code>. The output looks like this (illustrative numbers; yours will differ):</p>
+<pre><code class="language-text">v1 naive         accuracy = low      ← often answers with a sentence, not a label
+v2 instructions  accuracy = much higher
+v3 few-shot      accuracy = highest, usually ≥ 80%</code></pre>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Write prompts with a role, definitions, an output format and delimiters.</li>
+  <li>Add few-shot examples as user/assistant message pairs.</li>
+  <li>Evaluate prompt versions on a labelled dataset and compare accuracy.</li>
+  <li>Normalize model output into a fixed label set.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>The script prints accuracy for v1, v2 and v3</li>
+  <li>v1 often answers with a sentence instead of a label (accuracy is low)</li>
+  <li>v3 reaches at least 80% accuracy</li>
+  <li>Your few-shot examples do not appear in the test set</li>
+  <li>All 7 checks pass</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li>Run v1 first and read its raw answer at the end of the output. That's why format instructions matter.</li>
+  <li>Write <code>SYSTEM_V2</code> as a multi-line string. Define each label by what belongs in it.</li>
+  <li>Write 4 examples of your own (one per label) for v3.</li>
+  <li>If accuracy is low, print the misclassified tickets and refine the definitions.</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Overfitting the prompt to the test set</summary><div>
+  <p>Tweaking until a specific failing ticket passes can make others fail. Keep a held-out set if you iterate a lot.</p></div></details>
+<details class="pitfall"><summary>Contradicting instructions</summary><div>
+  <p>"Be detailed" plus "answer in one word". Models handle conflicts unpredictably. Re-read your prompt as a stranger would.</p></div></details>
+<details class="pitfall"><summary>Ambiguous labels</summary><div>
+  <p>"I can't log in to pay my invoice": account or billing? Decide the rule and write it into the prompt.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>Is prompt engineering a temporary skill that better models will make obsolete?</p>
+  <p>The tricks change; the core doesn't. Clear specifications, examples and measurement matter for people too.
+  What gets less important over time is wording superstition.</p></div>
+<div class="qa"><p>When should you stop prompting and try something else?</p>
+  <p>When accuracy plateaus. Next steps are structured outputs, retrieval of better context (RAG), a bigger model,
+  or splitting the task into steps.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://learn.microsoft.com/azure/ai-foundry/openai/concepts/prompt-engineering">Azure: Prompt engineering techniques</a></li>
+  <li><a href="https://platform.openai.com/docs/guides/prompt-engineering">OpenAI: Prompt engineering guide</a></li>
+  <li><a href="https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview">Anthropic: Prompt engineering overview</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

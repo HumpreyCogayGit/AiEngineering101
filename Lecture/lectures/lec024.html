@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evaluating RAG</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="24">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>Evaluating RAG</h1>
+  <p class="lede">"It looked fine when I tried a few questions" is not evaluation. Build a test set, measure
+    retrieval and generation separately, and use an LLM judge for what code can't check.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>Every change you make (chunk size, prompt, model, retriever) can improve some answers and break others. Without
+  evaluation you can't tell which. This lecture builds a repeatable evaluation that produces a report you can compare
+  over time. It's the single habit that most separates AI engineering from AI demos.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>The golden set</h3>
+<pre><code class="language-json">{"question": "How long does a refund take to reach my card?",
+ "expected_source": "refund_policy.md",
+ "reference_answer": "5 to 7 business days after they receive the returned item."}</code></pre>
+<p>Include easy and hard questions, different phrasings, every document, and <strong>unanswerable</strong> questions
+  (<code>expected_source: null</code>), where the correct behaviour is to refuse.</p>
+
+<h3>Measure the two halves separately</h3>
+<div class="mermaid">flowchart LR
+  Q[Question] --> R[Retrieval] --> G[Generation] --> A[Answer]
+  R -.-> M1["hit rate, MRR<br/>(code, exact)"]
+  G -.-> M2["faithfulness, correctness<br/>(LLM judge)"]
+  A -.-> M3["refusal rate<br/>(code)"]</div>
+<table>
+  <tr><th>Metric</th><th>Question it answers</th><th>How</th></tr>
+  <tr><td>Hit rate</td><td>Did we retrieve the right document at all?</td><td>Code</td></tr>
+  <tr><td>MRR</td><td>How high was it ranked? (1/position of the first hit)</td><td>Code</td></tr>
+  <tr><td>Faithfulness</td><td>Is every claim supported by the retrieved context?</td><td>LLM judge</td></tr>
+  <tr><td>Correctness</td><td>Does it match the reference answer in meaning?</td><td>LLM judge</td></tr>
+  <tr><td>Refusal rate</td><td>Does it say "I don't know" when it should?</td><td>Code</td></tr>
+</table>
+<p>Separating them tells you <em>where</em> to work: low hit rate means fix retrieval (Lecture 023); good hit rate but
+  low faithfulness means fix the prompt or model.</p>
+
+<h3>LLM-as-judge</h3>
+<pre><code class="language-python">class Grade(BaseModel):
+    reasoning: str = Field(description="Short explanation, written BEFORE choosing the score")
+    score: int = Field(ge=1, le=5)
+
+judge_llm.with_structured_output(Grade).invoke(FAITHFULNESS_PROMPT.format(context=..., question=..., answer=...))</code></pre>
+<ul>
+  <li><strong>A clear rubric</strong> ("5 = fully supported, 3 = partly, 1 = invents facts") makes scores consistent.</li>
+  <li><strong>Reasoning before score</strong>: since fields are generated in order, the model "thinks" first, which improves judgments.</li>
+  <li><strong>Structured output</strong> makes scores machine-readable; <code>ge</code>/<code>le</code> enforce the range.</li>
+  <li><strong>Calibrate</strong>: check the judge with known good and bad answers (the live check does exactly this).</li>
+</ul>
+<div class="callout warn"><span class="title">Judges have biases</span>
+  LLM judges can favour longer answers, their own style, or the first option shown. Spot-check judgments by hand,
+  use a strong model as judge, and never use the judge as the only signal for high-stakes decisions.</div>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p><code>evaluate.py</code> runs the RAG chain on 20 golden questions, computes all five metrics, and writes a Markdown
+  report with a per-question table (<code>output/eval_report.md</code>).</p>
+<h3>Sample run</h3>
+<p class="file-label">uv run python EXER024/solution/evaluate.py</p>
+<pre><code class="language-text">[1/20] How long do I have to return unopened coffee beans?
+[2/20] My order arrived broken. What should I do?
+...
+[20/20] What is the price of a Tesla Model 3?
+
+{
+  "questions": 20,
+  "hit_rate": 1.0,
+  "mrr": 0.9122807017543859,
+  "faithfulness": 5,
+  "correctness": 4.8,
+  "refusal_rate": 1.0
+}
+Report written to EXER024/solution/output/eval_report.md</code></pre>
+<p>Captured from a real run. Your wording, numbers and timings will differ; the shape should match.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Build and maintain a golden test set, including unanswerable questions.</li>
+  <li>Compute retrieval metrics (hit rate, MRR) in code.</li>
+  <li>Implement an LLM judge with a rubric and structured output.</li>
+  <li>Use a report to decide what to improve next.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>The run produces a Markdown report with metrics and a per-question table</li>
+  <li>Hit rate ≥ 0.85, faithfulness ≥ 4.0, refusal rate = 1.0</li>
+  <li>You looked at the lowest-scoring rows and can say <em>why</em> they failed</li>
+  <li>All 6 checks pass</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li>Implement <code>reciprocal_rank</code> and <code>summarize</code> first. They're plain Python, checked offline.</li>
+  <li>Write <code>Grade</code> with <code>reasoning</code> first, then <code>score</code>; the check enforces the order.</li>
+  <li>Run the evaluation, open the report, sort by the worst scores, and read those answers in full.</li>
+  <li>Change one thing (e.g. k=6 in <code>build_rag_chain</code>), re-run, and compare reports.</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Only testing questions you know work</summary><div>
+  <p>Add the questions real users ask, especially the ones that failed in production.</p></div></details>
+<details class="pitfall"><summary>Changing several things at once</summary><div>
+  <p>If the score moves, you won't know why. One change per run.</p></div></details>
+<details class="pitfall"><summary>Trusting a single number</summary><div>
+  <p>Averages hide disasters. One confidently wrong refund policy matters more than a 0.1 drop in average correctness.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>How big should the golden set be?</p>
+  <p>Start with 20–50 well-chosen cases and grow it with every bug you find. Each bug becomes a test case.</p></div>
+<div class="qa"><p>Can you evaluate without reference answers?</p>
+  <p>Partly. Faithfulness and refusal behaviour need no reference. Correctness does. Production systems often combine
+  reference-free metrics on live traffic with reference-based tests before release.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://learn.microsoft.com/azure/ai-foundry/concepts/evaluation-metrics-built-in">Azure AI Foundry: evaluation metrics</a></li>
+  <li><a href="https://docs.ragas.io/">Ragas: RAG evaluation framework</a></li>
+  <li><a href="https://arxiv.org/abs/2306.05685">Zheng et al. (2023): Judging LLM-as-a-Judge</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

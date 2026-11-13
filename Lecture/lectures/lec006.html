@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Message Content Blocks</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="6">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>Message Content Blocks</h1>
+  <p class="lede">A message's content doesn't have to be a single string. It can be a list of typed blocks
+    (text, images), which lets one message combine several kinds of input. And every block counts against the context window.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>So far <code>content</code> has been a string. Modern chat APIs also accept a <strong>list of content
+  blocks</strong>. You'll send an image to the model, then tackle the other side of the same coin: the
+  <strong>context window</strong>, and how to keep a growing conversation inside it.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>Content as a list of blocks</h3>
+<pre><code class="language-python">{
+  "role": "user",
+  "content": [
+    {"type": "text", "text": "What shapes are in this picture?"},
+    {"type": "image_url", "image_url": {"url": "data:image/png;base64,iVBORw0KGgo...", "detail": "auto"}},
+  ],
+}</code></pre>
+<ul>
+  <li>A string <code>content</code> is just shorthand for a single text block.</li>
+  <li>Images can be a public <code>https://</code> URL or a <strong>data URL</strong>: <code>data:&lt;mime&gt;;base64,&lt;bytes&gt;</code>.</li>
+  <li><code>detail</code>: <code>low</code> (cheap, low resolution), <code>high</code> (tiles the image, more tokens) or <code>auto</code>.</li>
+</ul>
+<div class="callout info"><span class="title">Base64</span>
+  Encodes binary bytes as plain ASCII text so they can travel inside JSON. It makes data about 33% larger.</div>
+
+<h3>Images cost tokens</h3>
+<p>An image is turned into tokens too, from tens to over a thousand depending on size and <code>detail</code>.
+  Resize large images before sending them; a phone photo at full resolution is wasted money.</p>
+
+<h3>The context window</h3>
+<p>Every model has a maximum context: system prompt + history + new input + output must fit. Even when it
+  fits, very long contexts are slower and more expensive, and models can overlook details buried in the middle.</p>
+<div class="mermaid">flowchart LR
+  subgraph W["Context window (e.g. 128k tokens)"]
+    S[system] --- H1[old turns ...] --- H2[recent turns] --- Q[new question] --- O[room for the answer]
+  end</div>
+<p>Strategies when history grows:</p>
+<table>
+  <tr><th>Strategy</th><th>How</th><th>Trade-off</th></tr>
+  <tr><td>Trim (sliding window)</td><td>Keep the system prompt and the newest N tokens</td><td>Simple; forgets old facts</td></tr>
+  <tr><td>Summarize</td><td>Replace old turns with a model-written summary</td><td>Keeps the gist; costs a call, loses detail</td></tr>
+  <tr><td>Retrieve</td><td>Store old turns or facts and fetch the relevant ones</td><td>Scales; more complex (Lectures 019 and 028)</td></tr>
+</table>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p><code>content_blocks.py</code> builds text and image blocks, asks the model about
+  <code>EXER006/images/shapes.png</code> (a red circle, a blue square and a green triangle), and implements
+  <code>trim_history()</code> to keep a 41-message conversation inside a 400-token budget.</p>
+<h3>Sample run</h3>
+<p class="file-label">uv run python EXER006/solution/content_blocks.py</p>
+<pre><code class="language-text">Q: What shapes do you see, and what colour is each?
+A: A red circle, a blue square, and a green triangle.
+
+History: 41 messages -&gt; trimmed to 11 to fit 400 tokens
+First kept non-system message: Question number 15: blah blah</code></pre>
+<p>Captured from a real run. Your wording, numbers and timings will differ; the shape should match.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Build messages with a list of content blocks.</li>
+  <li>Send a local image as a base64 data URL.</li>
+  <li>Explain the context window and the cost of images and history.</li>
+  <li>Implement sliding-window trimming that keeps the system prompt.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>The model correctly describes the red circle, blue square and green triangle</li>
+  <li>A 41-message history is trimmed to fit 400 tokens, keeping the newest turns</li>
+  <li>All 7 checks pass</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li><code>mimetypes.guess_type("shapes.png")</code> returns <code>("image/png", None)</code>.</li>
+  <li><code>base64.b64encode(...)</code> returns <em>bytes</em>. Call <code>.decode("ascii")</code> to get a string for the URL.</li>
+  <li><code>trim_history</code>: walk the non-system messages with <code>reversed()</code>, keep each one while it fits the budget, then reverse the kept list back into original order.</li>
+  <li>The check passes a <code>count_fn</code> that counts every message as 1 token, so you can reason about the expected result exactly.</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Splitting a turn when trimming</summary><div>
+  <p>A naive trim can keep an assistant reply but drop the question it answered, or (with tools) drop a tool call but keep its result, which the API rejects. LangChain's <code>trim_messages</code> has options for this (Lecture 028).</p></div></details>
+<details class="pitfall"><summary>Deployment without vision support</summary><div>
+  <p>Not every model accepts images. gpt-4.1-mini and gpt-4o do.</p></div></details>
+<details class="pitfall"><summary>Huge images</summary><div>
+  <p>Requests have size limits, and big images cost many tokens. Resize to the resolution you need.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>With million-token context windows, why trim at all?</p>
+  <p>Cost and latency grow with every token you send, on every turn. Quality can also drop when relevant
+  details are buried in a huge context. Big windows are a safety net, not a strategy.</p></div>
+<div class="qa"><p>When would you summarize instead of trim?</p>
+  <p>Long-running assistants where early facts matter (a customer's order number, preferences). Summaries keep them; trimming drops them.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://learn.microsoft.com/azure/ai-foundry/openai/how-to/gpt-with-vision">Azure OpenAI: vision-enabled chat models</a></li>
+  <li><a href="https://developer.mozilla.org/docs/Web/URI/Schemes/data">MDN: data URLs</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

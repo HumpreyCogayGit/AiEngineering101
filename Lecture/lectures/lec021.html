@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vector Store with Chroma</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="21">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>Vector Store with Chroma</h1>
+  <p class="lede">A vector store is a database built for one query: "find the records nearest to this vector". Chroma runs it locally
+    with no server and no cost.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>In Lecture 019 you compared a query with every vector in a Python list. That doesn't scale and doesn't survive a
+  restart. A vector store persists <code>(id, vector, text, metadata)</code> records and finds nearest neighbours
+  quickly with an index. We use <strong>Chroma</strong> embedded in our Python process, storing to <code>.chroma/</code>.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>What's stored</h3>
+<table>
+  <tr><th>Field</th><th>Example</th><th>Used for</th></tr>
+  <tr><td>id</td><td><code>07e738ae…</code></td><td>Updates and de-duplication</td></tr>
+  <tr><td>embedding</td><td>1536 floats</td><td>Similarity search</td></tr>
+  <tr><td>document</td><td>the chunk text</td><td>Putting in the prompt</td></tr>
+  <tr><td>metadata</td><td><code>{"source": "shipping.md", "chunk_id": 4}</code></td><td>Filters and citations</td></tr>
+</table>
+
+<h3>Approximate nearest neighbours</h3>
+<p>Comparing with every vector is O(n). Chroma builds an <strong>HNSW</strong> index (a navigable graph of neighbours)
+  that finds <em>approximately</em> the closest vectors in far less time, trading a tiny bit of accuracy for big speed gains.
+  We set the distance to <code>cosine</code>, so <strong>smaller distance = more similar</strong> (distance = 1 − similarity).</p>
+
+<h3>Using it through LangChain</h3>
+<pre><code class="language-python">client = chromadb.PersistentClient(path=".chroma", settings=chromadb.Settings(anonymized_telemetry=False))
+store = Chroma(client=client, collection_name="exer021_kb", embedding_function=get_embeddings(),
+               collection_metadata={"hnsw:space": "cosine"})
+
+store.add_documents(chunks, ids=ids)                               # embeds + stores
+store.similarity_search_with_score("Can I bring my dog?", k=3)     # [(Document, distance), ...]
+store.similarity_search("delivery time", k=2, filter={"source": "shipping.md"})
+retriever = store.as_retriever(search_kwargs={"k": 4})            # a Runnable for chains (Lecture 022)</code></pre>
+
+<h3>Idempotent ingestion</h3>
+<p>Ingestion scripts get run again and again. With random ids, each run duplicates every chunk, and your top-k fills up
+  with copies. With <strong>content-based ids</strong> (a hash of source + text), the same chunk always gets the same
+  id, so you can skip what's already stored and re-runs change nothing.</p>
+<pre><code class="language-python">hashlib.sha256(f"{source}::{text}".encode()).hexdigest()[:32]</code></pre>
+
+<h3>Choosing a vector store</h3>
+<table>
+  <tr><th>Option</th><th>Good for</th></tr>
+  <tr><td>Chroma (embedded)</td><td>Learning, prototypes, single-machine apps</td></tr>
+  <tr><td>pgvector (PostgreSQL)</td><td>When you already run Postgres; vectors next to your business data</td></tr>
+  <tr><td>Azure AI Search</td><td>Managed, hybrid keyword + vector search, enterprise security on Azure</td></tr>
+  <tr><td>Qdrant, Weaviate, Pinecone, Milvus</td><td>Dedicated vector databases at scale</td></tr>
+</table>
+<p>Because you code against LangChain's <code>VectorStore</code> interface, switching later is mostly configuration.</p>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p><code>vector_store.py</code> stores the whole knowledge base in a persistent Chroma collection, searches it with
+  scores and metadata filters, and is safe to run repeatedly: the second run adds 0 chunks.</p>
+<h3>Sample run</h3>
+<p class="file-label">uv run python EXER021/solution/vector_store.py</p>
+<pre><code class="language-text">Added 19 new chunks; collection now has 19 chunks (stored in .../.chroma).
+Run me again: 0 new chunks should be added.
+
+Query: Can I bring my dog?
+  distance=0.792  [company_faq.md] '# Company FAQ\n\n## About us\n\nNimbus Coffee Co. was founded in **2019** '
+  distance=0.851  [employee_handbook.pdf] 'Nimbus Coffee Co. - Employee Handbook (excerpt)\nWorking hours\nCafe sta'
+Query: How much is express delivery?
+  distance=0.600  [shipping.md] '## Shipping fees\n\nStandard shipping is **free for orders over ₱1,500**'
+  distance=0.634  [shipping.md] '# Shipping Information\n\n## Where we ship\n\nWe ship to every region of t'
+
+Filtered to shipping.md only:
+  distance=0.763  [shipping.md] '# Shipping Information\n\n## Where we ship\n\nWe ship to every region of t'
+  distance=0.801  [shipping.md] '## Shipping fees\n\nStandard shipping is **free for orders over ₱1,500**'</code></pre>
+<p>Captured from a real run. Your wording, numbers and timings will differ; the shape should match.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Explain what a vector store stores and how approximate nearest-neighbour search works.</li>
+  <li>Create a persistent Chroma collection and search it with scores and filters.</li>
+  <li>Make ingestion idempotent with content-based ids.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>First run adds all chunks; the second run adds 0</li>
+  <li>"Can I bring my dog?" finds the pets paragraph in <code>company_faq.md</code></li>
+  <li>The <code>source</code> filter limits results to one file</li>
+  <li>All 6 checks pass</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li>Most checks use <code>DeterministicFakeEmbedding</code> in a temporary folder: fast, free and offline.</li>
+  <li><code>store.get(ids=ids)["ids"]</code> returns only the ids that exist, which is how you find what's new.</li>
+  <li>Run the script twice and compare the counts.</li>
+  <li>From Lecture 022 on, <code>aicourse.rag.get_vector_store()</code> wraps all of this.</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Distance vs similarity</summary><div>
+  <p>Chroma returns <em>distances</em>: lower is better. Some other stores return similarity scores, where higher is better. Check before you sort or set thresholds.</p></div></details>
+<details class="pitfall"><summary>Stale collections after changing models</summary><div>
+  <p>Changing the embedding model requires a new collection, or Chroma rejects vectors of a different dimension.</p></div></details>
+<details class="pitfall"><summary>Deleting the wrong folder</summary><div>
+  <p><code>.chroma/</code> is a cache you can rebuild from your documents. Never keep the only copy of data in it.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>How would you handle a document that was edited?</p>
+  <p>Its chunks get new content-based ids. Delete the old chunks by <code>source</code> metadata, then add the new ones. Unchanged chunks keep their ids and aren't re-embedded.</p></div>
+<div class="qa"><p>When is a vector store overkill?</p>
+  <p>A few hundred chunks fit in memory with NumPy, as in Lecture 019. Persistence, filters and scale are what justify a database.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://docs.trychroma.com/">Chroma documentation</a></li>
+  <li><a href="https://python.langchain.com/docs/integrations/vectorstores/chroma/">LangChain: Chroma integration</a></li>
+  <li><a href="https://learn.microsoft.com/azure/search/vector-search-overview">Azure AI Search: vector search</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

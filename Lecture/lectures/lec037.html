@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Capstone: Nimbus Helpdesk</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="37">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>Capstone: Nimbus Helpdesk</h1>
+  <p class="lede">Combine everything into one assistant that customers and staff could actually use, then prove that it
+    works with an evaluation and a written review.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>The capstone is a complete, small product: a helpdesk assistant for Nimbus Coffee Co. with grounded answers from the
+  knowledge base, exact arithmetic, note-taking through an MCP server, conversation memory, guardrails, two interfaces
+  (CLI and web), and an evaluation that gates quality. Most pieces come from earlier lectures; the work is integrating them well.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>Architecture</h3>
+<div class="mermaid">flowchart TB
+  subgraph UI[Interfaces]
+    CLI["cli.py (Typer)"]
+    WEB["app.py (Streamlit)"]
+  end
+  CLI --> AS
+  WEB --> AS
+  subgraph AS["Assistant.ask(question, thread_id)"]
+    GI[guards.check_input] --> AG
+    AG["LangGraph agent<br/>create_agent + InMemorySaver"] --> GO[guards.check_output]
+  end
+  AG --> KB["search_knowledge_base<br/>RAG over Chroma"]
+  AG --> CA[calculator]
+  AG --> MCP["notes_* via MCP<br/>(no delete)"]
+  EV["evaluate.py + eval_set.json"] --> AS</div>
+
+<h3>Design principles</h3>
+<table>
+  <tr><th>Principle</th><th>Where it shows</th><th>From lecture</th></tr>
+  <tr><td>One core, many interfaces</td><td>CLI and web both call <code>Assistant.ask</code></td><td>010, 015</td></tr>
+  <tr><td>Grounding with sources</td><td><code>search_knowledge_base</code> returns numbered passages with file names</td><td>022</td></tr>
+  <tr><td>Tools for facts and math</td><td>Calculator returns errors as text instead of raising</td><td>016, 027</td></tr>
+  <tr><td>Least privilege</td><td>Only three notes tools are exposed; delete is excluded</td><td>034</td></tr>
+  <tr><td>Memory per thread</td><td>Checkpointer plus a thread id per CLI session or browser session</td><td>028</td></tr>
+  <tr><td>Guardrails both ways</td><td>Injection blocked before the model; untrusted links withheld after</td><td>036</td></tr>
+  <tr><td>Observable</td><td>Every <code>Reply</code> carries tools used and tokens</td><td>035</td></tr>
+  <tr><td>Measured</td><td>An eval set with keyword, tool and blocking expectations gates "done"</td><td>024</td></tr>
+</table>
+
+<h3>The <code>Reply</code> contract</h3>
+<pre><code class="language-python">@dataclass
+class Reply:
+    answer: str
+    tools_used: list[str]   # e.g. ["search_knowledge_base", "calculator"]
+    blocked: bool           # a guardrail stopped it
+    reasons: list[str]      # which guardrail and why
+    tokens: int             # for cost tracking</code></pre>
+<p>A structured return value lets every interface, test and evaluation see what happened, not just the text.</p>
+
+<h3>Evaluation as the definition of done</h3>
+<pre><code class="language-json">{"question": "What does 3 bags of Barako Bold plus one Hand Grinder Pro cost in total?",
+ "expect_keywords": ["4620"], "expect_tools": ["search_knowledge_base", "calculator"]}</code></pre>
+<p>Each case says what a correct answer contains and which tools must have been used (so a lucky guess doesn't pass).
+  Blocking cases check the guardrails. The run writes <code>output/capstone_eval.md</code>.</p>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<table>
+  <tr><th>File</th><th>Status</th><th>Your work</th></tr>
+  <tr><td><code>guards.py</code></td><td>given</td><td>Read it</td></tr>
+  <tr><td><code>tools.py</code></td><td>TODO</td><td><code>search_knowledge_base</code>, <code>load_mcp_tools</code></td></tr>
+  <tr><td><code>assistant.py</code></td><td>TODO</td><td><code>setup</code>, <code>ask</code></td></tr>
+  <tr><td><code>cli.py</code></td><td>TODO</td><td>The <code>ask</code> command</td></tr>
+  <tr><td><code>app.py</code></td><td>TODO</td><td>Answering in the chat UI</td></tr>
+  <tr><td><code>evaluate.py</code></td><td>TODO</td><td><code>score_case</code></td></tr>
+</table>
+<pre><code class="language-bash">uv run python EXER037/starter/cli.py ask "What is your refund policy?" -v
+uv run python EXER037/starter/cli.py chat
+uv run streamlit run EXER037/starter/app.py
+uv run python EXER037/starter/cli.py eval
+uv run python EXER037/check.py</code></pre>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Integrate RAG, tools, MCP, memory and guardrails into one agent.</li>
+  <li>Serve one core through two interfaces.</li>
+  <li>Define "done" with an evaluation set, and reach the bar.</li>
+  <li>Review your own system critically: cost, failures, remaining risks.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>All 11 checks pass, including the live evaluation (≥ 80% of eval_set.json)</li>
+  <li>The CLI and the web UI give the same answers</li>
+  <li>Conversations remember earlier turns within a thread</li>
+  <li>Prompt-injection attempts are blocked before reaching the model</li>
+  <li>You wrote a short review (below) of your own assistant</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li><strong>Tools first.</strong> Implement and check <code>tools.py</code>. Reuse <code>aicourse.rag</code> and your EXER034 connection code.</li>
+  <li><strong>The core.</strong> <code>Assistant.ask</code> is the heart: guard, invoke with a thread id, collect new messages, guard again. The offline checks run it with a fake model.</li>
+  <li><strong>Interfaces.</strong> The CLI <code>ask</code> command, then the Streamlit answer block. Both are thin.</li>
+  <li><strong>Evaluate.</strong> Write <code>score_case</code>, run <code>cli.py eval</code>, and open the report.</li>
+  <li><strong>Iterate.</strong> For each failing case: was it retrieval, tool use, or wording? Fix the system prompt, a tool description, or retrieval, then re-run.</li>
+  <li><strong>Review.</strong> Score yourself with the rubric in the README and write <code>REVIEW.md</code>.</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Counting tools from the whole thread</summary><div>
+  <p>The checkpointer returns all messages in the thread. Count only messages after the last <code>HumanMessage</code>, or turn 2 reports turn 1's tools.</p></div></details>
+<details class="pitfall"><summary>Async in Streamlit</summary><div>
+  <p>MCP tools are async. Call <code>asyncio.run(assistant.ask(...))</code> from the Streamlit script; don't create event loops by hand.</p></div></details>
+<details class="pitfall"><summary>Overfitting to the eval set</summary><div>
+  <p>Adding "if question mentions Barako say 4620" to the prompt passes the test and teaches nothing. Add your own cases (the rubric rewards it).</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>What's missing before real customers could use this?</p>
+  <p>Authentication and per-user data, persistent storage (SQLite or Postgres checkpointer), rate limiting, monitoring
+  and alerting, a feedback button feeding the eval set, a human escalation path, deployment (e.g. Azure Container
+  Apps), and a privacy review of what's logged.</p></div>
+<div class="qa"><p>Which earlier lecture would improve the eval score the most?</p>
+  <p>Look at your failures: retrieval misses point to 023 (hybrid search); wrong arithmetic points to tool descriptions
+  (016); answers from outside knowledge point to grounding (022) or agentic checks (030).</p></div>
+<div class="qa"><p>Where do you go from here?</p>
+  <p>Deployment and operations, fine-tuning and distillation for cost, voice and real-time interfaces, and deeper
+  evaluation (online A/B tests, user feedback loops). And building things people use.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://www.anthropic.com/engineering/building-effective-agents">Building effective agents</a></li>
+  <li><a href="https://learn.microsoft.com/azure/container-apps/overview">Azure Container Apps</a></li>
+  <li><a href="https://docs.langchain.com/oss/python/langgraph/deploy">Deploying LangGraph applications</a></li>
+  <li><a href="https://learn.microsoft.com/azure/ai-foundry/responsible-use-of-ai-overview">Responsible AI in Azure AI Foundry</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

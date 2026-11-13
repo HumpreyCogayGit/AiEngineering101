@@ -1,0 +1,9 @@
+CLOUDNEST HOSTING — Monthly statement
+Invoice: CN-88213        Issued: 01 June 2026
+Customer: Nimbus Coffee Co.
+
+  2 x Standard VM (monthly)      @ 24.00  = 48.00
+  1 x Managed database (monthly) @ 35.00  = 35.00
+  5 x Extra backup storage (GB)  @  0.20  =  1.00
+
+  Amount due: USD 84.00

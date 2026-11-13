@@ -1,0 +1,22 @@
+[
+  {"question": "How long do I have to return unopened coffee beans?", "expected_source": "refund_policy.md", "reference_answer": "30 days from delivery, for a full refund."},
+  {"question": "My order arrived broken. What should I do?", "expected_source": "refund_policy.md", "reference_answer": "Contact Nimbus within 7 days with a photo; they ship a free replacement and you don't need to return the damaged item."},
+  {"question": "How long does a refund take to reach my card?", "expected_source": "refund_policy.md", "reference_answer": "5 to 7 business days after they receive the returned item."},
+  {"question": "Is shipping free?", "expected_source": "shipping.md", "reference_answer": "Standard shipping is free for orders over ₱1,500; otherwise ₱120 in Metro Manila and ₱180 elsewhere."},
+  {"question": "Do you deliver to Japan?", "expected_source": "shipping.md", "reference_answer": "Yes. International shipping goes to Singapore, Hong Kong, Japan and Australia, taking 7–14 business days for a flat ₱950."},
+  {"question": "How fast is delivery to Cebu?", "expected_source": "shipping.md", "reference_answer": "Cebu is in the Visayas: 5–7 business days standard or 3 business days express."},
+  {"question": "Which coffee is best for a strong espresso?", "expected_source": "products.md", "reference_answer": "Barako Bold, a dark-roast Liberica from Batangas (Nimbus House Blend also works)."},
+  {"question": "What does the Nimbus Club subscription cost and include?", "expected_source": "products.md", "reference_answer": "₱850 per month for two 250 g bags, free shipping and 10% off equipment."},
+  {"question": "How much coffee should I use for a pour-over?", "expected_source": "brewing_guide.md", "reference_answer": "15 g of coffee for 250 ml of water, a 1:16 ratio."},
+  {"question": "How long should cold brew steep?", "expected_source": "brewing_guide.md", "reference_answer": "16 to 18 hours in the fridge."},
+  {"question": "Should I keep my beans in the fridge?", "expected_source": "brewing_guide.md", "reference_answer": "No. Moisture ruins the flavour; use an airtight container away from light and heat."},
+  {"question": "How many stars do I need for a free drink?", "expected_source": "loyalty_program.md", "reference_answer": "100 stars."},
+  {"question": "Do my reward stars expire?", "expected_source": "loyalty_program.md", "reference_answer": "Yes, 12 months after they are earned."},
+  {"question": "Is the Maginhawa café open on Mondays?", "expected_source": "company_faq.md", "reference_answer": "No, the Quezon City (Maginhawa) café is closed on Mondays."},
+  {"question": "Who founded Nimbus Coffee and when?", "expected_source": "company_faq.md", "reference_answer": "Ana Reyes and Miguel Santos, former baristas, in 2019 in Quezon City."},
+  {"question": "Can I bring my dog to the café?", "expected_source": "company_faq.md", "reference_answer": "Pets are welcome at the outdoor tables of the BGC café."},
+  {"question": "Do I need experience to apply as a barista?", "expected_source": "careers.html", "reference_answer": "No; new baristas are trained in the 3-week Barista Academy."},
+  {"question": "How many vacation days do employees get?", "expected_source": "employee_handbook.pdf", "reference_answer": "15 days of paid vacation leave per year, and up to 5 unused days can be carried over."},
+  {"question": "What is the yearly training budget for employees?", "expected_source": "employee_handbook.pdf", "reference_answer": "PHP 10,000 per year."},
+  {"question": "What is the price of a Tesla Model 3?", "expected_source": null, "reference_answer": "The documents don't contain this information."}
+]

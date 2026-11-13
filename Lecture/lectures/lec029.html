@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Human in the Loop</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="29">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>Human in the Loop</h1>
+  <p class="lede">Some actions are too consequential to automate fully. Pause the agent, show a person what it's about
+    to do, and continue with their decision, even hours later.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>Sending emails, issuing refunds and deleting data: agents that act need oversight. In Lecture 018 you asked for
+  approval with <code>input()</code>, which blocks a process and only works in a terminal. LangGraph's
+  <strong><code>interrupt()</code></strong> pauses a graph, saves it with the checkpointer, and returns control to your app
+  (web UI, Slack, email). <code>Command(resume=...)</code> continues it later.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>Interrupt and resume</h3>
+<div class="mermaid">sequenceDiagram
+  participant App
+  participant Graph
+  participant Human
+  App->>Graph: invoke("Please handle the inbox", thread)
+  Graph->>Graph: agent → wants send_email(...)
+  Graph-->>App: paused: __interrupt__ = {tool_calls: [...]}
+  App->>Human: show the proposed email
+  Human-->>App: "edit: change the body"
+  App->>Graph: invoke(Command(resume={"action": "edit", ...}), thread)
+  Graph->>Graph: review returns edited call → tools → agent
+  Graph-->>App: final answer</div>
+<pre><code class="language-python">def review(state):
+    decision = interrupt({"question": "Approve these actions?", "tool_calls": [...]})
+    # ^ first run: pauses here.  On resume: returns the value passed to Command(resume=...)
+    ...
+
+result = graph.invoke({"messages": [...]}, config)
+result["__interrupt__"][0].value          # what the human should see
+graph.invoke(Command(resume={"action": "approve"}), config)   # same thread_id</code></pre>
+<div class="callout info"><span class="title">How resume works</span>
+  On resume, LangGraph re-runs the interrupted node <em>from the start</em>, and this time <code>interrupt()</code>
+  returns the human's value instead of pausing. So code before <code>interrupt()</code> in that node must be safe to run twice:
+  no side effects before the interrupt.</div>
+
+<h3>Approve, edit, reject</h3>
+<table>
+  <tr><th>Decision</th><th>Graph does</th></tr>
+  <tr><td><strong>approve</strong></td><td><code>Command(goto="tools")</code>: run the calls as proposed</td></tr>
+  <tr><td><strong>edit</strong></td><td>Replace the AI message (same <code>id</code>, so the reducer overwrites it) with corrected arguments, then run tools</td></tr>
+  <tr><td><strong>reject</strong></td><td>Add a <code>ToolMessage</code> per call ("not executed: …reason") and go back to the agent, which can apologise or try another approach</td></tr>
+</table>
+<p>A node can return <code>Command(goto=..., update=...)</code> to route and update state at once. Declare its possible
+  destinations with <code>add_node(..., destinations=("tools", "agent"))</code> so the graph diagram stays correct.</p>
+
+<h3>Only risky tools need a gate</h3>
+<p>Reading the inbox happens freely; <code>send_email</code> and <code>refund_order</code> wait for a person. Gate by
+  consequence: if a mistake would be expensive, embarrassing or irreversible, ask first.</p>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>A support-inbox agent with <code>read_inbox</code> (safe), <code>send_email</code> and <code>refund_order</code> (gated),
+  a <code>review</code> node that interrupts, and a terminal loop that lets you approve, edit or reject each action.</p>
+<h3>Sample run</h3>
+<p class="file-label">uv run python EXER029/solution/hitl_agent.py</p>
+<pre><code class="language-text">⏸  The agent wants to:
+   [call_l3qx...] send_email({'to': 'carla@example.com', 'subject': 'Re: Order #1042 arrived damaged', 'body': 'Hi Carla, ...'})
+   [call_FOKh...] send_email({'to': 'dan@example.com', 'subject': 'Re: Wholesale pricing', 'body': 'Hi Dan, ...'})
+approve / edit / reject? approve
+
+Agent: Handled both inbox messages:
+
+- **Carla:** Offered a free replacement for the damaged grinder and requested shipping-address confirmation.
+- **Dan:** Requested order details needed to provide suitable wholesale terms.
+
+Outbox: [{'to': 'carla@example.com', 'subject': 'Re: Order #1042 arrived damaged', ...}, {'to': 'dan@example.com', ...}]
+Refunds: []</code></pre>
+<p>Captured from a real run. Your wording, numbers and timings will differ; the shape should match.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Pause a graph with <code>interrupt()</code> and resume it with <code>Command(resume=...)</code>.</li>
+  <li>Implement approve, edit and reject flows.</li>
+  <li>Use <code>Command(goto, update)</code> for routing from inside a node.</li>
+  <li>Decide which actions need human approval.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>Reading the inbox happens without asking</li>
+  <li>Every email and refund waits for your decision</li>
+  <li>Approve, edit and reject each behave correctly</li>
+  <li>All 5 checks pass (offline)</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li><code>pending</code> and <code>resume</code> are one-liners; do them first.</li>
+  <li>In <code>review</code>, return early with <code>Command(goto="tools")</code> when no call is risky.</li>
+  <li>For edit, build new tool calls with <code>{**call, "args": new_args}</code> and keep <code>id=last.id</code> on the new <code>AIMessage</code>.</li>
+  <li>Run it and reject the refund with a reason. Read how the agent responds.</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>No checkpointer</summary><div>
+  <p><code>interrupt()</code> needs saved state to resume from. Compile with a checkpointer and reuse the same <code>thread_id</code>.</p></div></details>
+<details class="pitfall"><summary>Side effects before <code>interrupt()</code></summary><div>
+  <p>They run twice (once before pausing, once on resume). Put side effects after the interrupt, or in a separate node.</p></div></details>
+<details class="pitfall"><summary>Unanswered tool calls after reject</summary><div>
+  <p>Every tool call needs a matching tool message, or the next model call fails. Add a rejection message for each.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>Doesn't approval defeat the point of automation?</p>
+  <p>Not if the agent does 95% of the work (reading, deciding, drafting) and the human spends 5 seconds approving.
+  As trust grows from logged approvals, you can auto-approve low-risk cases.</p></div>
+<div class="qa"><p>What should the approval screen show?</p>
+  <p>The exact action, its arguments in readable form, and why the agent wants to do it. "Approve tool call?" with raw JSON invites rubber-stamping.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://docs.langchain.com/oss/python/langgraph/interrupts">LangGraph: Interrupts</a></li>
+  <li><a href="https://docs.langchain.com/oss/python/langchain/human-in-the-loop">LangChain: Human-in-the-loop middleware</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCP Concepts and Using a Server</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="32">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>MCP Concepts and Using a Server</h1>
+  <p class="lede">The Model Context Protocol is a standard plug between AI applications and tools. Write a tool server
+    once, and any MCP-aware app can use it.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>So far your tools lived inside your Python program. Every app that wants a "notes" or "database" tool would have to
+  re-implement it. <strong>MCP</strong> standardizes how applications discover and call tools, read data and fetch prompt
+  templates from external <em>servers</em>. Claude Desktop, VS Code, many agent frameworks, and your LangChain agents can
+  all use the same MCP server.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>Hosts, clients, servers</h3>
+<div class="mermaid">flowchart LR
+  subgraph Host["Host application (your agent, an IDE, a desktop app)"]
+    C1[MCP client]
+    C2[MCP client]
+  end
+  C1 <-->|"JSON-RPC over stdio"| S1["MCP server: coffee<br/>(local subprocess)"]
+  C2 <-->|"JSON-RPC over HTTP"| S2["MCP server: remote service"]</div>
+<table>
+  <tr><th>Role</th><th>Is</th></tr>
+  <tr><td><strong>Host</strong></td><td>The app the user interacts with; it contains the LLM and decides what to call</td></tr>
+  <tr><td><strong>Client</strong></td><td>One connection to one server, inside the host</td></tr>
+  <tr><td><strong>Server</strong></td><td>A program exposing capabilities; it knows nothing about the LLM</td></tr>
+</table>
+
+<h3>Three capability types</h3>
+<table>
+  <tr><th>Capability</th><th>Controlled by</th><th>Example</th></tr>
+  <tr><td><strong>Tools</strong></td><td>The model (it decides to call them)</td><td><code>get_product(name)</code></td></tr>
+  <tr><td><strong>Resources</strong></td><td>The application (it decides what to load)</td><td><code>menu://today</code></td></tr>
+  <tr><td><strong>Prompts</strong></td><td>The user (picks a template, e.g. a slash command)</td><td><code>barista_recommendation(taste)</code></td></tr>
+</table>
+
+<h3>Transports</h3>
+<ul>
+  <li><strong>stdio</strong>: the host starts the server as a subprocess and talks over stdin/stdout. Local, simple, no network. (That's why a stdio server must never <code>print()</code>.)</li>
+  <li><strong>Streamable HTTP</strong>: the server runs as a web service, possibly remote and shared, with authentication.</li>
+</ul>
+
+<h3>A session</h3>
+<pre><code class="language-python">async with stdio_client(StdioServerParameters(command=sys.executable, args=["coffee_server.py"])) as (read, write):
+    async with ClientSession(read, write) as session:
+        await session.initialize()                       # handshake: versions + capabilities
+        tools = await session.list_tools()               # discovery: names, descriptions, JSON schemas
+        result = await session.call_tool("get_product", {"name": "Barako Bold"})
+        menu = await session.read_resource("menu://today")</code></pre>
+
+<h3>MCP tools in LangChain</h3>
+<pre><code class="language-python">client = MultiServerMCPClient({"coffee": {"command": sys.executable, "args": [SERVER], "transport": "stdio"}})
+tools = await client.get_tools()             # regular LangChain tools
+agent = create_agent(llm, tools)
+await agent.ainvoke({"messages": [...]})     # MCP tools are async: use ainvoke</code></pre>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>A ready-made Nimbus Coffee MCP server (<code>EXER032/servers/coffee_server.py</code>) with 3 tools, 1 resource and 1 prompt.
+  You write the client: list capabilities, call a tool (including a failing call), read a resource, then hand the tools
+  to a LangChain agent.</p>
+<h3>Sample run</h3>
+<p class="file-label">uv run python EXER032/solution/mcp_client.py</p>
+<pre><code class="language-text">Server capabilities: {'tools': ['list_products', 'get_product', 'store_hours'], 'resources': ['menu://today'], 'prompts': ['barista_recommendation']}
+
+get_product    -&gt; {
+  "name": "Barako Bold",
+  "price": 390,
+  "roast": "dark",
+  "notes": "strong, smoky, long finish"
+}
+bad product    -&gt; ERROR: Error executing tool get_product: Unknown product: Starbucks. Use list_products to see valid names.
+menu://today   -&gt; Today's specials: Ube Cold Brew (₱180), Calamansi Tonic Espresso (₱165), Ensaymada (₱75).
+
+As LangChain tools: [('list_products', []), ('get_product', ['name']), ('store_hours', ['branch'])]
+
+Q: I like chocolatey coffee. Which Nimbus beans should I buy, how much are they, and when is BGC open?
+A: For chocolatey coffee, try:
+- **Benguet Highlands** — chocolate, caramel, and red apple; medium roast — **₱480 per 250 g**
+- **Decaf Cloud** — smooth cocoa notes; medium roast — **₱550 per 250 g**
+
+**Nimbus BGC is open daily, 7:00 AM–10:00 PM.**</code></pre>
+<p>Captured from a real run. Your wording, numbers and timings will differ; the shape should match.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Explain hosts, clients, servers, transports, and the three capability types.</li>
+  <li>Connect to a stdio server with the MCP Python SDK and use its capabilities.</li>
+  <li>Load MCP tools into a LangChain agent.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>The script lists the server's tools, resources and prompts</li>
+  <li>A bad product name returns a readable error, not a crash</li>
+  <li>The agent answers a multi-part question by calling several MCP tools</li>
+  <li>All 7 checks pass</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li>Read <code>coffee_server.py</code> first. Notice how little code a server needs.</li>
+  <li>Implement the raw client functions; each one opens its own session, which is fine for learning.</li>
+  <li>Optional: with Node.js installed, run the MCP Inspector and click through the server:
+    <code>npx @modelcontextprotocol/inspector uv run python EXER032/servers/coffee_server.py</code></li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Printing to stdout in a stdio server</summary><div>
+  <p>Your print corrupts the JSON-RPC stream and the client fails with parse errors. Log to stderr.</p></div></details>
+<details class="pitfall"><summary>Calling MCP tools synchronously</summary><div>
+  <p>Adapter tools are async. Use <code>ainvoke</code> and <code>asyncio.run</code> at the top level.</p></div></details>
+<details class="pitfall"><summary>Wrong Python for the server</summary><div>
+  <p>Use <code>sys.executable</code> so the server runs in the same environment, with <code>mcp</code> installed.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>Why not just import the Python functions directly?</p>
+  <p>Within one Python app, you could. MCP pays off when tools are shared across apps and languages, maintained by
+  other teams, or run as separate processes with their own permissions.</p></div>
+<div class="qa"><p>Is connecting to an MCP server safe?</p>
+  <p>Only if you trust it. A server's tool descriptions go into your model's prompt, and its tools run with whatever
+  access the server has. Lecture 034 covers trust and least privilege.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://modelcontextprotocol.io/docs/getting-started/intro">Model Context Protocol: Introduction</a></li>
+  <li><a href="https://modelcontextprotocol.io/specification">MCP specification</a></li>
+  <li><a href="https://github.com/modelcontextprotocol/python-sdk">MCP Python SDK</a></li>
+  <li><a href="https://github.com/langchain-ai/langchain-mcp-adapters">langchain-mcp-adapters</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

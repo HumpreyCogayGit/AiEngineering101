@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reliability</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="11">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>Reliability</h1>
+  <p class="lede">In production, API calls fail regularly: rate limits, timeouts, overloaded servers. Reliable apps
+    expect failure and handle each kind appropriately.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>A demo that works 99% of the time is impressive. A product that fails for 1 in 100 users is not. This lecture
+  covers classifying errors, retrying the right ones with exponential backoff and jitter, logging, and running many
+  calls concurrently without tripping rate limits.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>Retryable vs permanent errors</h3>
+<table>
+  <tr><th>Error</th><th>SDK exception</th><th>Retry?</th></tr>
+  <tr><td>429 Too Many Requests</td><td><code>RateLimitError</code></td><td>Yes, after waiting</td></tr>
+  <tr><td>Timeout</td><td><code>APITimeoutError</code></td><td>Yes</td></tr>
+  <tr><td>Network failure</td><td><code>APIConnectionError</code></td><td>Yes</td></tr>
+  <tr><td>5xx server error</td><td><code>InternalServerError</code></td><td>Yes</td></tr>
+  <tr><td>400 bad request / content filter</td><td><code>BadRequestError</code></td><td>No: the same request fails again</td></tr>
+  <tr><td>401 / 404</td><td><code>AuthenticationError</code> / <code>NotFoundError</code></td><td>No: fix the configuration</td></tr>
+</table>
+
+<h3>Exponential backoff with jitter</h3>
+<pre><code class="language-text">attempt 1 fails → wait ~0.5 s
+attempt 2 fails → wait ~1 s
+attempt 3 fails → wait ~2 s       delay = min(cap, base × 2^(attempt-1)) + random jitter
+attempt 4 fails → give up, raise</code></pre>
+<p><strong>Why exponential?</strong> If the service is overloaded, hammering it makes things worse; backing off gives
+  it room to recover. <strong>Why jitter?</strong> Without randomness, a thousand clients that failed together retry
+  together and overload the service again (a "thundering herd").</p>
+<div class="callout info"><span class="title">The SDK already retries</span>
+  The <code>openai</code> client retries 2 times by default (<code>max_retries</code>). In this exercise we turn that
+  off with <code>with_options(max_retries=0)</code> to build it ourselves. In real projects, configure the SDK's
+  retries and timeouts rather than reinventing them, and use a library like <code>tenacity</code> for custom logic.</div>
+
+<h3>Concurrency with a limit</h3>
+<p>LLM calls spend most of their time waiting on the network, so running them concurrently with <code>asyncio</code>
+  gives big speed-ups. Unlimited concurrency triggers 429s, so cap it with a <strong>semaphore</strong>:</p>
+<pre><code class="language-python">semaphore = asyncio.Semaphore(3)            # at most 3 in flight
+
+async def limited(prompt):
+    async with semaphore:
+        return await complete_one(prompt)
+
+results = await asyncio.gather(*(limited(p) for p in prompts))   # keeps input order</code></pre>
+
+<h3>Logging</h3>
+<p>Log each attempt, failure type, wait time, latency and token count, using <code>logging</code> rather than <code>print</code>,
+  so production systems can collect, filter and alert on them. Lecture 035 builds full tracing.</p>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p><code>reliable.py</code>: <code>backoff_delay()</code>, <code>call_with_retry()</code> (retries only the right
+  errors), a <code>ReliableClient</code> that logs each call, and <code>complete_many()</code> for concurrent requests
+  with a limit. The checks run offline and instantly: you pass in a fake <code>sleep</code> function, so nothing actually waits.</p>
+<h3>Sample run</h3>
+<p class="file-label">uv run python EXER011/solution/reliable.py</p>
+<pre><code class="language-text">WARNING reliable: attempt 1 failed (APIConnectionError); retrying in 0.22s
+WARNING reliable: attempt 2 failed (APIConnectionError); retrying in 0.48s
+INFO reliable: completion ok in 2.08s, tokens=25
+success on attempt 3
+Hello!
+¡Hola!
+Bonjour !
+
+6 answers in 4.4s:
+  Japan: Tokyo
+  Kenya: Nairobi
+  Peru: Lima
+  Norway: Oslo
+  Vietnam: Hanoi
+  Chile: Santiago</code></pre>
+<p>Captured from a real run. Your wording, numbers and timings will differ; the shape should match.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Classify API errors as retryable or permanent.</li>
+  <li>Implement exponential backoff with jitter and a retry limit.</li>
+  <li>Run calls concurrently with <code>asyncio.gather</code> and a semaphore.</li>
+  <li>Make time-dependent code testable by injecting <code>sleep</code>.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>The retry demo logs two warnings, then succeeds</li>
+  <li>6 prompts run concurrently (at most 3 in flight), noticeably faster than one after another, with results in input order</li>
+  <li>A <code>ValueError</code> is not retried; a <code>RateLimitError</code> is</li>
+  <li>All 5 checks pass (they run offline and instantly)</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li><code>backoff_delay</code>: compute the capped base delay, then add <code>random.uniform(0, delay * 0.25)</code>.</li>
+  <li><code>call_with_retry</code>: loop over <code>range(1, max_attempts + 1)</code>. In <code>except retry_on</code>, re-raise on the last attempt, otherwise sleep and continue.</li>
+  <li>Only <code>retry_on</code> errors are caught, so anything else propagates immediately.</li>
+  <li><code>complete_many</code>: three lines, as shown above.</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Retrying everything</summary><div>
+  <p>Retrying a 400 just repeats a failure (and costs money), and retrying non-idempotent actions can duplicate them, such as sending two emails.</p></div></details>
+<details class="pitfall"><summary>Double retries</summary><div>
+  <p>Your retries times the SDK's retries times a gateway's retries can turn one failure into dozens of calls. Retry at one layer.</p></div></details>
+<details class="pitfall"><summary><code>time.sleep</code> inside async code</summary><div>
+  <p>It blocks the whole event loop. Use <code>await asyncio.sleep()</code>.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>The model is down for 10 minutes. What should the user see?</p>
+  <p>Not a spinner for 10 minutes. Fail after a bounded time with a clear message, and consider fallbacks: a second
+  region or deployment, a smaller model, or a cached answer.</p></div>
+<div class="qa"><p>Should you honour the <code>Retry-After</code> header?</p>
+  <p>Yes, when present. The server is telling you exactly how long to wait. The SDK does this automatically.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://learn.microsoft.com/azure/ai-foundry/openai/quotas-limits">Azure OpenAI quotas and limits</a></li>
+  <li><a href="https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/">Timeouts, retries and backoff with jitter</a></li>
+  <li><a href="https://docs.python.org/3/library/asyncio-task.html">asyncio: tasks and gather</a></li>
+  <li><a href="https://tenacity.readthedocs.io/">tenacity</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

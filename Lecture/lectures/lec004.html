@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The SDK and Model Parameters</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="4">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>The SDK and Model Parameters</h1>
+  <p class="lede">Swap hand-written HTTP for the official SDK, then learn the dials that shape every answer:
+    tokens, temperature, output limits, and what they cost.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>The <code>openai</code> Python SDK sends the same request you built in Lecture 003, but gives you typed
+  objects, automatic retries, timeouts and streaming support. Because Azure's v1 API is OpenAI-compatible, we
+  point the SDK at Azure with one argument: <code>base_url</code>.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>The client</h3>
+<pre><code class="language-python">from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://my-resource.openai.azure.com/openai/v1/",
+    api_key=key,
+)
+response = client.chat.completions.create(
+    model="gpt-4.1-mini",                       # your deployment name
+    messages=[{"role": "user", "content": "Hi"}],
+)
+response.choices[0].message.content             # attributes, not ["keys"]
+response.usage.total_tokens</code></pre>
+
+<h3>Tokens</h3>
+<p>Models don't read characters or words; they read <strong>tokens</strong>, chunks of text from a fixed
+  vocabulary. In English a token is about ¾ of a word. Everything is measured in tokens: the context window,
+  output limits, rate limits and price. You can count them locally with <code>tiktoken</code>:</p>
+<pre><code class="language-python">import tiktoken
+enc = tiktoken.get_encoding("o200k_base")    # the encoding of GPT-4o / GPT-4.1 models
+enc.encode("hello world")                    # [24912, 2375]  -> 2 tokens</code></pre>
+<div class="callout info"><span class="title">Tokenization surprises</span>
+  Numbers, code, rare words and non-English languages often use more tokens per word. "Kapeng barako" costs
+  more tokens than "strong coffee".</div>
+
+<h3>Temperature: how the next token is chosen</h3>
+<p>At each step the model produces a probability for every possible next token. <strong>Temperature</strong>
+  reshapes that distribution before sampling:</p>
+<table>
+  <tr><th>Temperature</th><th>Behaviour</th><th>Use for</th></tr>
+  <tr><td>0 – 0.3</td><td>Almost always picks the most likely token: focused, repeatable</td><td>Extraction, classification, code, factual Q&amp;A</td></tr>
+  <tr><td>0.7 – 1.0</td><td>Balanced (1.0 is the default)</td><td>Chat, writing</td></tr>
+  <tr><td>1.2 – 2.0</td><td>More surprising choices, eventually incoherent</td><td>Brainstorming, names</td></tr>
+</table>
+<p>Even at temperature 0, outputs are <em>not guaranteed</em> to be identical across calls. Don't build systems
+  that rely on exact repetition.</p>
+
+<h3>Two model families, two sets of parameters</h3>
+<p>Not every model accepts every parameter. Chat deployments fall into two families, and the difference shows up
+  the first time you set <code>temperature</code>:</p>
+<table>
+  <tr><th></th><th>Classic chat models</th><th>Reasoning models</th></tr>
+  <tr><td>Examples</td><td>gpt-4.1, gpt-4.1-mini, gpt-4o</td><td>gpt-5 family, o-series</td></tr>
+  <tr><td><code>temperature</code></td><td>0 to 2</td><td>Only the default (1). Anything else is a 400 error</td></tr>
+  <tr><td><code>top_p</code></td><td>Accepted</td><td>Rejected</td></tr>
+  <tr><td>Output cap</td><td><code>max_completion_tokens</code> (or the older <code>max_tokens</code>)</td><td><code>max_completion_tokens</code> only</td></tr>
+  <tr><td>How you steer them</td><td>Sampling parameters and the prompt</td><td>The prompt, and a reasoning-effort setting</td></tr>
+</table>
+<pre><code class="language-text">openai.BadRequestError: Error code: 400 - Unsupported value: 'temperature' does not support 0
+with this model. Only the default (1) value is supported.</code></pre>
+<p>Two habits make your code work on both families:</p>
+<ul>
+  <li><strong>Send an optional parameter only when the caller set it.</strong> <code>ask()</code> builds a
+    <code>kwargs</code> dict and adds <code>temperature</code> and <code>max_completion_tokens</code> only when
+    they are not <code>None</code>. Left out, the model's own default applies.</li>
+  <li><strong>Treat a rejected parameter as an expected outcome.</strong> <code>temperature_experiment()</code>
+    catches <code>BadRequestError</code> and records an empty list for a temperature the model refuses, instead of
+    crashing halfway through.</li>
+</ul>
+<div class="callout info"><span class="title">From Lecture 008 on: <code>model_params()</code></span>
+  Later exercises want <code>temperature=0</code> for repeatable results. They write
+  <code>**model_params(temperature=0)</code> (from <code>aicourse.llm</code>), which sends the parameter when your
+  deployment accepts it and leaves it out when it does not. It finds out with one tiny test call, then remembers the
+  answer in <code>.aicourse_cache.json</code>. You can also state it yourself with
+  <code>AICOURSE_SUPPORTS_TEMPERATURE=true|false</code> in <code>.env</code>.</div>
+
+<h3>Limiting output: <code>max_completion_tokens</code></h3>
+<p>Caps how many tokens the model may generate. If it hits the cap, the answer is cut off mid-sentence and
+  <code>finish_reason</code> is <code>"length"</code>. Always check <code>finish_reason</code> before trusting an answer as complete.</p>
+
+<div class="callout warn"><span class="title">Reasoning tokens count against the cap</span>
+  A reasoning model spends output tokens on thinking before it writes anything, and those hidden tokens are part of
+  <code>max_completion_tokens</code> (and of your bill). With a small cap the whole budget can go to reasoning: you
+  get <code>finish_reason="length"</code> and an <strong>empty</strong> answer. On these models, leave generous
+  room, and read <code>usage.completion_tokens_details.reasoning_tokens</code> to see where the tokens went.</div>
+
+<h3>Cost</h3>
+<p>You pay per token, with different prices for input (prompt) and output (completion), quoted per million tokens:</p>
+<pre><code class="language-text">cost = prompt_tokens × input_price / 1,000,000  +  completion_tokens × output_price / 1,000,000</code></pre>
+<p>Output tokens usually cost 3–5× more than input tokens. Long system prompts and long chat histories are paid
+  again on <em>every</em> request.</p>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p><code>sdk_basics.py</code> wraps the SDK in an <code>ask()</code> function that returns text, token usage and
+  finish reason; counts tokens locally; estimates cost; shows a truncated answer; and runs a temperature
+  experiment so you can <em>see</em> the effect.</p>
+<h3>Sample run</h3>
+<p class="file-label">uv run python EXER004/solution/sdk_basics.py     (on a reasoning model, gpt-5 family)</p>
+<pre><code class="language-text">Tokens are small pieces of text—sometimes a whole word, part of a word, or punctuation—that an AI
+reads and writes. Think of them like LEGO pieces that the AI puts together to make sentences.
+
+prompt=18 completion=79 finish=stop
+Estimated cost: $0.000134
+
+Local token count of the prompt: 12
+
+With max_tokens=5 -&gt; ''  finish_reason=length
+
+--- Temperature experiment ---
+temperature=0.0: not supported by this model
+temperature=1.0: ['Ember &amp; Oak', 'Ember &amp; Oak', 'Ember &amp; Oak']</code></pre>
+<p>Captured from a real run. Your wording, numbers and timings will differ; the shape should match.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Create an SDK client for Azure with <code>base_url</code> and <code>api_key</code>.</li>
+  <li>Explain tokens and count them with <code>tiktoken</code>.</li>
+  <li>Use <code>temperature</code> and <code>max_completion_tokens</code>, and interpret <code>finish_reason</code>.</li>
+  <li>Estimate the cost of a request from its usage.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>The script prints an answer, its token usage and an estimated cost</li>
+  <li><code>max_tokens=5</code> produces a cut-off answer with <code>finish_reason="length"</code> (on a reasoning model the text can even be empty: the budget went to hidden reasoning tokens)</li>
+  <li>On a classic model the answers are (nearly) identical at temperature 0 and vary at 1.0; on a reasoning model temperature 0 is reported as not supported and the script keeps running</li>
+  <li>All 7 checks pass</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li><code>make_client()</code>: take <code>base_url</code> and the key from <code>get_settings()</code>. Use <code>.get_secret_value()</code>, because the key is a <code>SecretStr</code> that hides itself when printed.</li>
+  <li><code>ask()</code>: pass <code>temperature</code> and <code>max_completion_tokens</code> only when they aren't <code>None</code>. Build a <code>kwargs</code> dict and unpack it with <code>**kwargs</code>.</li>
+  <li><code>estimate_cost()</code>: check your result by hand. 1M input tokens at $0.40 is $0.40.</li>
+  <li><code>temperature_experiment()</code>: wrap each temperature in <code>try / except BadRequestError</code>. Store an empty list when the message mentions <code>temperature</code>; re-raise anything else.</li>
+  <li>Run the experiment several times. Notice how temperature affects variety, not quality.</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary><code>max_tokens</code> vs <code>max_completion_tokens</code></summary><div>
+  <p>Newer models use <code>max_completion_tokens</code>. The older <code>max_tokens</code> is rejected by reasoning models. Prefer the new name.</p></div></details>
+<details class="pitfall"><summary>Reasoning models reject temperature</summary><div>
+  <p>o-series and gpt-5 models return a 400 error for any <code>temperature</code> other than the default. Send the parameter only when it was asked for, and handle the 400 (see the table above). The course runs on both families.</p></div></details>
+<details class="pitfall"><summary>Ignoring <code>finish_reason</code></summary><div>
+  <p>A JSON answer cut off by the length limit is invalid JSON. A summary cut off mid-sentence looks finished to a casual reader. Check it.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>Your model only accepts the default temperature. How do you get repeatable output?</p>
+  <p>With the prompt and the output format rather than the sampler: precise instructions, a closed list of allowed
+  answers (Lecture 008), and structured output validated in code (Lecture 009). Those matter more than temperature
+  on every model, which is why the later exercises still pass on a reasoning model.</p></div>
+<div class="qa"><p>Should you always use temperature 0 in production?</p>
+  <p>For extraction and classification, usually yes. For conversation, a little randomness sounds more natural.
+  Pick per task, and evaluate (Lecture 024) rather than guess.</p></div>
+<div class="qa"><p>How would you cut the cost of a chatbot by half?</p>
+  <p>Shorter system prompts, trimming history (Lecture 006), a smaller model for easy turns, capping output
+  length, and caching. Measure tokens per request first (Lecture 035).</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://github.com/openai/openai-python">openai-python SDK</a></li>
+  <li><a href="https://learn.microsoft.com/azure/ai-foundry/openai/how-to/chatgpt">Azure OpenAI: working with chat models</a></li>
+  <li><a href="https://github.com/openai/tiktoken">tiktoken</a></li>
+  <li><a href="https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/">Azure OpenAI pricing</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

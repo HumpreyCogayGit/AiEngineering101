@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Building a CLI App</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="10">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>Building a CLI App</h1>
+  <p class="lede">The terminal is where developers live. A good command-line tool composes with everything else:
+    pipes, scripts, cron jobs and CI.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>You'll package Module 1 into a real tool, <code>ask.py</code>, with sub-commands, options, help text,
+  streaming output, stdin piping and proper exit codes. We use <a href="https://typer.tiangolo.com">Typer</a>,
+  which builds the CLI from Python type hints.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>Anatomy of a CLI</h3>
+<pre><code class="language-text">ask.py  summarize   notes.txt   --words 50
+        └ command   └ argument  └ option (with a value)</code></pre>
+<pre><code class="language-python">app = typer.Typer(help="Ask an LLM from your terminal.")
+
+@app.command()
+def ask(
+    question: Annotated[str, typer.Argument(help="The question to ask")],
+    temperature: Annotated[float, typer.Option("--temperature", "-t", min=0.0, max=2.0)] = 0.7,
+) -> None:
+    """Ask a single question."""            # becomes the help text
+    ...
+
+if __name__ == "__main__":
+    app()</code></pre>
+<p>Typer reads the type hints to parse and validate input (<code>-t abc</code> is rejected) and generates
+  <code>--help</code> from docstrings and <code>help=</code> texts.</p>
+
+<h3>The Unix conventions that make tools composable</h3>
+<table>
+  <tr><th>Convention</th><th>In our tool</th></tr>
+  <tr><td><strong>stdin</strong>: read input from a pipe; <code>-</code> means "stdin"</td><td><code>cat notes.txt | ask.py summarize -</code></td></tr>
+  <tr><td><strong>stdout</strong> for results</td><td>The answer only, so it can be piped on</td></tr>
+  <tr><td><strong>stderr</strong> for errors and diagnostics</td><td><code>typer.echo(msg, err=True)</code></td></tr>
+  <tr><td><strong>Exit codes</strong>: 0 = success, non-zero = failure</td><td>1 = file problem, 2 = configuration problem</td></tr>
+</table>
+<pre><code class="language-bash">uv run python EXER010/solution/ask.py summarize missing.txt || echo "it failed, and scripts can tell"
+git diff | uv run python EXER010/solution/ask.py summarize - --words 40   # summarize your changes</code></pre>
+
+<h3>Testable by design</h3>
+<p>The tool gets its client through a small <code>get_client()</code> function. Tests replace that one function
+  with a fake, and Typer's <code>CliRunner</code> invokes commands in-process and captures output and exit codes.
+  This is <em>dependency injection</em> in its simplest form.</p>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<table>
+  <tr><th>Command</th><th>Does</th></tr>
+  <tr><td><code>ask "question" [--system S] [-t 0.2]</code></td><td>One streamed answer</td></tr>
+  <tr><td><code>chat [--system S]</code></td><td>Interactive streaming chat with memory</td></tr>
+  <tr><td><code>summarize FILE|- [--words N]</code></td><td>Summarize a file or stdin</td></tr>
+</table>
+<h3>Sample run</h3>
+<pre><code class="language-text">$ uv run python EXER010/solution/ask.py ask "What is a token, in one sentence?" -t 0.2
+A token is a unit of text—such as a word, part of a word, or punctuation—that an AI model processes.
+
+$ uv run python EXER010/solution/ask.py summarize data/knowledge_base/refund_policy.md --words 30
+Nimbus accepts unopened online returns within 30 days; opened coffee within 14 days for 50% store
+credit. Damaged/wrong items receive free replacements. Subscriptions cancel before billing.
+
+$ cat data/knowledge_base/shipping.md | uv run python EXER010/solution/ask.py summarize - -w 20
+Ships nationwide and to four countries; delivery takes same-day to 14 days, with varied fees, free
+thresholds, and tracking.
+
+$ uv run python EXER010/solution/ask.py summarize nope.txt ; echo "exit code: $?"
+Error: file not found: nope.txt
+exit code: 1</code></pre>
+<p>Captured from a real run. Your wording, numbers and timings will differ; the shape should match.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Build a multi-command CLI with arguments, options and help text.</li>
+  <li>Support stdin piping, and separate stdout from stderr.</li>
+  <li>Return meaningful exit codes.</li>
+  <li>Test a CLI offline by injecting a fake client.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li><code>--help</code> shows all three commands with descriptions</li>
+  <li>Answers stream to the terminal</li>
+  <li>Piping text into <code>summarize -</code> works</li>
+  <li>A missing file prints an error to stderr and exits with code <code>1</code></li>
+  <li>All 6 checks pass</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li><code>stream_answer</code> is your EXER007 code, with <code>typer.echo(piece, nl=False)</code> instead of <code>print</code>.</li>
+  <li>Implement <code>read_input</code>, then register <code>summarize</code> with <code>@app.command()</code>. Until you do, it's missing from <code>--help</code>.</li>
+  <li><code>raise typer.Exit(1)</code> ends the program with exit code 1.</li>
+  <li>Try it for real: <code>uv run python EXER010/starter/ask.py summarize README.md --words 30</code>.</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Printing errors to stdout</summary><div>
+  <p>Then <code>ask.py summarize x &gt; summary.txt</code> writes the error message into the file. Errors go to stderr.</p></div></details>
+<details class="pitfall"><summary>Using <code>sys.exit()</code> deep inside library code</summary><div>
+  <p>Only the CLI layer should decide to exit. Library functions should raise exceptions; the command turns them into exit codes.</p></div></details>
+<details class="pitfall"><summary>Huge files</summary><div>
+  <p>Summarizing a 500-page file overflows the context window. A real tool would chunk it (Lecture 020) and summarize in stages.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>Why build a CLI when a web UI is friendlier?</p>
+  <p>Automation. A CLI can run in CI to review pull requests, in cron to summarize logs, or in a shell pipeline. Many
+  production AI features start as internal CLI tools.</p></div>
+<div class="qa"><p>What would you add next?</p>
+  <p>A <code>--json</code> output flag for scripts, a config file for defaults, and caching of identical requests.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://typer.tiangolo.com/tutorial/">Typer tutorial</a></li>
+  <li><a href="https://clig.dev/">Command Line Interface Guidelines</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

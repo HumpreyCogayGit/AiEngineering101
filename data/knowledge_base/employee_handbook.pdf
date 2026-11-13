@@ -1,0 +1,74 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 5 0 R /Resources << /Font << /F1 7 0 R >> >> >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 6 0 R /Resources << /Font << /F1 7 0 R >> >> >>
+endobj
+5 0 obj
+<< /Length 604 >>
+stream
+BT
+/F1 12 Tf
+14 TL
+60 780 Td
+(Nimbus Coffee Co. - Employee Handbook \(excerpt\)) Tj T*
+() Tj T*
+(Working hours) Tj T*
+(Cafe staff work shifts of 8 hours including a 1-hour paid lunch break.) Tj T*
+(Shift schedules are published every Thursday for the following week.) Tj T*
+() Tj T*
+(Leave) Tj T*
+(Full-time employees receive 15 days of paid vacation leave per year) Tj T*
+(and 10 days of paid sick leave. Unused vacation leave \(up to 5 days\)) Tj T*
+(can be carried over to the next year.) Tj T*
+() Tj T*
+(Dress code) Tj T*
+(Wear the Nimbus apron, closed shoes and a clean black or white top.) Tj T*
+ET
+endstream
+endobj
+6 0 obj
+<< /Length 457 >>
+stream
+BT
+/F1 12 Tf
+14 TL
+60 780 Td
+(Training) Tj T*
+(New baristas complete the 3-week Barista Academy before working alone.) Tj T*
+(Every employee gets a training budget of PHP 10,000 per year for courses.) Tj T*
+() Tj T*
+(Expenses) Tj T*
+(Submit expense claims in the HR app within 30 days with a photo of the receipt.) Tj T*
+(Claims are reimbursed with the next payroll.) Tj T*
+() Tj T*
+(Contact) Tj T*
+(For HR questions email hr@nimbuscoffee.example.) Tj T*
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000121 00000 n 
+0000000247 00000 n 
+0000000373 00000 n 
+0000001028 00000 n 
+0000001536 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R >>
+startxref
+1606
+%%EOF

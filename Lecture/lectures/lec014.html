@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Structured Output in LangChain</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="14">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>Structured Output in LangChain</h1>
+  <p class="lede">Turn messy documents into validated Python objects with one method call, then check that the
+    values make business sense, which no schema can guarantee.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>Lecture 009 used the SDK's <code>parse()</code>. LangChain offers the same capability for any chat model through
+  <code>with_structured_output()</code>, and the result is a runnable you can put in chains. We extract invoices in
+  three very different formats and add a second layer of validation: do the numbers add up?</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3><code>with_structured_output</code></h3>
+<pre><code class="language-python">class LineItem(BaseModel):
+    description: str = Field(description="What was bought")
+    quantity: float = Field(description="Number of units (hours count as units)")
+    unit_price: float = Field(description="Price of one unit, without currency symbol")
+
+class Invoice(BaseModel):
+    invoice_number: str = Field(description="The invoice number or id, exactly as written")
+    date: str = Field(description="Issue date in ISO format YYYY-MM-DD")
+    line_items: list[LineItem] = Field(description="Every billed item, including fees")
+    total: float = Field(description="The total amount due as stated on the invoice")
+    ...
+
+parser = llm.with_structured_output(Invoice)
+invoice = parser.invoke([("system", "Extract the invoice data."), ("human", text)])   # -> Invoice</code></pre>
+<p>Nested models (<code>list[LineItem]</code>) work naturally. Field descriptions guide the model on ambiguous details,
+  for example that "4 hours at $120/hour" is a quantity of 4.</p>
+
+<h3>Two layers of validation</h3>
+<div class="mermaid">flowchart LR
+  T[Invoice text] --> S[Schema validation<br/>types and required fields] --> B[Business validation<br/>items add up to total?] --> OK[Accept]
+  S -- invalid --> R1[Retry / repair]
+  B -- mismatch --> R2[Flag for review]</div>
+<p>The schema guarantees <em>shape</em>. Business rules catch <em>wrong values</em>: a misread price, a missed fee, an
+  invented line item. Rules like "sum of items equals total" are cheap, deterministic checks on non-deterministic
+  output. Use them whenever your domain has them.</p>
+
+<h3>Failing gracefully: <code>include_raw=True</code></h3>
+<pre><code class="language-python">result = llm.with_structured_output(Invoice, include_raw=True).invoke(messages)
+# {"raw": AIMessage, "parsed": Invoice | None, "parsing_error": Exception | None}</code></pre>
+<p>Instead of raising, you get the raw message and the error, which you can log, retry or route to a person.</p>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>An invoice parser for <code>EXER014/invoices/</code>: a formal table, a casual email ("4 hours at $120/hour"), and a
+  hosting statement. Every invoice should come out with an ISO date and line items that add up to the stated total.</p>
+<h3>Sample run</h3>
+<p class="file-label">uv run python EXER014/solution/invoice_parser.py</p>
+<pre><code class="language-text">invoice_001.txt: BL-2026-0412 | BRIGHTLEAF OFFICE SUPPLIES INC. | 2026-04-12 | USD 81.75  [OK]
+    10.0 x A4 copy paper (ream)                @    4.50
+     3.0 x Black ballpoint pens (box of 12)    @    6.00
+     1.0 x Stapler, heavy duty                 @   18.75
+
+invoice_002.txt: JDC-77 | Juan dela Cruz Photography | 2026-05-03 | USD 605.00  [OK]
+     4.0 x Event coverage                      @  120.00
+     1.0 x Photo album                         @   95.00
+     1.0 x Travel fee                          @   30.00
+
+invoice_003.txt: CN-88213 | CLOUDNEST HOSTING | 2026-06-01 | USD 84.00  [OK]
+     2.0 x Standard VM (monthly)               @   24.00
+     1.0 x Managed database (monthly)          @   35.00
+     5.0 x Extra backup storage (GB)           @    0.20</code></pre>
+<p>Captured from a real run. Your wording, numbers and timings will differ; the shape should match.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Design nested Pydantic schemas with helpful field descriptions.</li>
+  <li>Extract data with <code>with_structured_output</code>.</li>
+  <li>Add business-rule validation on top of schema validation.</li>
+  <li>Handle parsing failures without crashing.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>All three invoices parse into <code>Invoice</code> objects with correct totals</li>
+  <li>Dates in three different formats all come out as <code>YYYY-MM-DD</code></li>
+  <li>Every invoice prints <code>[OK]</code> — the line items add up</li>
+  <li>All 5 checks pass</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li>Write the <code>Invoice</code> fields <strong>with descriptions</strong>; the check requires them.</li>
+  <li><code>validate_totals</code>: compare with a tolerance (<code>abs(a - b) &lt;= 0.01</code>). Never compare floats with <code>==</code>.</li>
+  <li>If invoice 002 fails, check how the hourly fee was extracted, and improve the <code>quantity</code> description.</li>
+</ol>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Floats for money</summary><div>
+  <p>Floats can't represent 0.1 exactly. For real accounting use <code>Decimal</code> or integer cents. Floats with a tolerance are fine for this exercise.</p></div></details>
+<details class="pitfall"><summary>The model "fixes" the total</summary><div>
+  <p>Models sometimes compute the total instead of copying it, which hides real discrepancies. The description says "as stated on the invoice" for this reason.</p></div></details>
+<details class="pitfall"><summary>Over-large schemas</summary><div>
+  <p>Fifty fields in one schema make extraction less accurate. Extract what you need, or split into several focused calls.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>An invoice fails the total check. Is the model wrong, or the invoice?</p>
+  <p>Either is possible, and that's the point. Route mismatches to a person rather than auto-correcting. Many real
+  invoices contain errors, and finding them is valuable.</p></div>
+<div class="qa"><p>How would you know your parser is 98% accurate?</p>
+  <p>A labelled set of invoices with expected values, scored field by field. The same evaluation discipline as Lecture 008, applied to extraction.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://docs.langchain.com/oss/python/langchain/structured-output">LangChain: Structured output</a></li>
+  <li><a href="https://docs.python.org/3/library/decimal.html">Python decimal module</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>
