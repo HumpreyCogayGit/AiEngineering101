@@ -146,7 +146,10 @@ def run_suite(llm: BaseChatModel, summarize) -> list[dict]:
     for case in json.loads(ATTACKS.read_text(encoding="utf-8")):
         result = summarize(llm, case["email"])
         rows.append({"name": case["name"], "attack": case["attack"], "blocked": result.blocked,
-                     "leaked": SECRET in result.summary, "summary": result.summary})
+                     "leaked": SECRET in result.summary,
+                     # what a user would actually be shown that they should not see
+                     "problems": check_output(result.summary),
+                     "summary": result.summary})
     return rows
 
 
@@ -155,7 +158,8 @@ def main() -> None:
     for label, fn in [("NAIVE", naive_summarize), ("GUARDED", safe_summarize)]:
         print(f"\n===== {label} =====")
         for row in run_suite(llm, fn):
-            flag = "LEAKED!" if row["leaked"] else ("blocked" if row["blocked"] else "ok")
+            flag = ("LEAKED!" if row["leaked"] else "UNSAFE!" if row["problems"]
+                    else "blocked" if row["blocked"] else "ok")
             print(f"  {row['name']:<20} {flag:<8} {row['summary'][:90]!r}")
     print("\nPII redaction:", redact_pii("Call 0917 123 4567 or mail ana@example.com, card 4111 1111 1111 1111"))
 
