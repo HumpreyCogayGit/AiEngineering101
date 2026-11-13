@@ -112,8 +112,9 @@ with this model. Only the default (1) value is supported.</code></pre>
   get <code>finish_reason="length"</code> and an <strong>empty</strong> answer. On these models, leave generous
   room, and read <code>usage.completion_tokens_details.reasoning_tokens</code> to see where the tokens went.
   The <code>reasoning_effort</code> parameter (<code>none</code>, <code>low</code>, <code>medium</code>, <code>high</code>)
-  controls how much thinking happens. The course's helpers send the value of <code>AICOURSE_REASONING_EFFORT</code>;
-  on Ollama it defaults to <code>none</code>, because thinking makes a local model several times slower.</div>
+  controls how much thinking happens. The course's helpers send it only when you set
+  <code>AICOURSE_REASONING_EFFORT</code> in <code>.env</code>. Less thinking is faster and cheaper, but it costs
+  quality: with <code>none</code>, a small local model picks tools noticeably worse (Module 3 and Module 5).</div>
 
 <h3>Cost</h3>
 <p>You pay per token, with different prices for input (prompt) and output (completion), quoted per million tokens:</p>

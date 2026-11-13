@@ -77,7 +77,7 @@ class Settings(BaseSettings):
     # None = the provider's default (see `request_timeout`).
     request_timeout_override: float | None = Field(default=None, alias="AICOURSE_REQUEST_TIMEOUT")
     chroma_dir: str = Field(default=".chroma", alias="AICOURSE_CHROMA_DIR")
-    # None = the provider's default (see `reasoning_effort`).
+    # None = leave it to the model (see `reasoning_effort`).
     reasoning_effort_override: str | None = Field(default=None, alias="AICOURSE_REASONING_EFFORT")
     # None = detect automatically (see aicourse.llm.supports_temperature).
     supports_temperature: bool | None = Field(default=None, alias="AICOURSE_SUPPORTS_TEMPERATURE")
@@ -202,15 +202,15 @@ class Settings(BaseSettings):
     def reasoning_effort(self) -> str | None:
         """How much hidden "thinking" to ask for: none, low, medium, high. None = don't say.
 
-        AICOURSE_REASONING_EFFORT sets it (the word `default` means: don't send
-        the parameter). Otherwise Azure models keep their own default, and
-        Ollama gets "none": a local thinking model is several times slower with
-        thinking on, and its schema-constrained output is unreliable.
+        Set with AICOURSE_REASONING_EFFORT. Unset (or the word `default`), the
+        parameter is not sent and the model uses its own default. Less thinking
+        is faster and cheaper, but a small model chooses tools noticeably worse
+        without it, so the course does not turn it off for you.
         """
-        if self.reasoning_effort_override is not None:
-            value = self.reasoning_effort_override.strip().lower()
-            return None if value in ("", "default") else value
-        return "none" if self.provider == "ollama" else None
+        if self.reasoning_effort_override is None:
+            return None
+        value = self.reasoning_effort_override.strip().lower()
+        return None if value in ("", "default") else value
 
     @property
     def max_tokens_param(self) -> str:

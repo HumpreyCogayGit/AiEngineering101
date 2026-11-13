@@ -105,9 +105,9 @@ Things that differ between providers, and how the course handles them:
 - **Answer length limit**: Azure applies `max_completion_tokens`, Ollama applies `max_tokens`.
   Use `model_params(max_tokens=...)` or `settings.max_tokens_param`.
 - **API key**: a local Ollama does not check it.
-- **Thinking**: `model_params()` and `get_chat_model()` send `reasoning_effort` when one is configured.
-  On Ollama it defaults to `none` (thinking makes a local model slow and its structured output unreliable);
-  override with `AICOURSE_REASONING_EFFORT`.
+- **Thinking**: `model_params()` and `get_chat_model()` send `reasoning_effort` only when you set
+  `AICOURSE_REASONING_EFFORT`. Leave it unset: `none` makes a local model much faster, but `gemma4:e4b`
+  then fails the agent checks in EXER017, EXER030 and EXER031.
 - **Structured output**: Azure shows your field descriptions to the model; Ollama only enforces the shape.
   State rules about values (date formats) in the prompt too.
 - **Embedding prefixes**: `get_embeddings()` adds the query/document prefixes an embedding model was trained

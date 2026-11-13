@@ -128,8 +128,8 @@ if completion.choices[0].message.refusal: ...    # the model may refuse unsafe r
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
-<details class="pitfall"><summary>Structured output from a local thinking model</summary><div>
-  <p>With thinking switched on, some local models (gemma4 on Ollama) intermittently answer a schema request with plain text, which fails to parse. The course sends <code>reasoning_effort="none"</code> to Ollama through <code>model_params()</code> and <code>get_chat_model()</code> for this reason. Change it with <code>AICOURSE_REASONING_EFFORT</code> in <code>.env</code>.</p></div></details>
+<details class="pitfall"><summary>A vague prompt with a schema on a local model</summary><div>
+  <p>Given only "Extract the event from the user's text." and a schema, gemma4 on Ollama sometimes answered with a bare string such as <code>Q2 planning workshop</code>, which fails to parse. Saying what the values must look like ("Write dates as YYYY-MM-DD…") made the output reliable. A schema is not a substitute for a clear instruction.</p></div></details>
 <details class="pitfall"><summary>Trusting values because the shape is right</summary><div>
   <p>A schema guarantees <code>date</code> is a string, not that it's the right date. Add business validation (Lecture 014) and evaluation.</p></div></details>
 <details class="pitfall"><summary>Strict-schema limitations</summary><div>
