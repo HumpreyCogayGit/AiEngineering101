@@ -94,7 +94,7 @@ Bot: I don't know your name yet.</code></pre>
 
 <section id="walkthrough"><h2>Walkthrough</h2>
 <ol>
-  <li>From this exercise on we use <code>aicourse.llm.get_openai_client()</code>, which is your <code>make_client()</code> from Lecture 004.</li>
+  <li>From this exercise on we use <code>aicourse.llm.get_llm_client()</code>, which is your <code>make_client()</code> from Lecture 004.</li>
   <li><code>Conversation.__init__</code>: start with a list containing a single system message.</li>
   <li><code>chat_turn</code>: add the user message <em>before</em> calling the model, and the assistant reply after.</li>
   <li>The check uses a <em>fake client</em> that records what you send. Read <code>aicourse/fakes.py</code>. This is how you test LLM code without paying for calls.</li>

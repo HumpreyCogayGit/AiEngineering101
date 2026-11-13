@@ -29,22 +29,22 @@
 <h3>Anatomy of the request</h3>
 <div class="mermaid">sequenceDiagram
   participant P as Your program
-  participant A as Azure Foundry
-  P->>A: POST /openai/v1/chat/completions<br/>headers: api-key, Content-Type<br/>body: {model, messages}
+  participant A as Inference provider
+  P->>A: POST {base_url}/chat/completions<br/>headers: Authorization, Content-Type<br/>body: {model, messages}
   Note over A: model generates tokens
   A-->>P: 200 OK<br/>{choices[0].message, usage, ...}</div>
 <table>
   <tr><th>Part</th><th>Value</th><th>Why</th></tr>
   <tr><td>Method</td><td><code>POST</code></td><td>We send data (the conversation).</td></tr>
-  <tr><td>URL</td><td><code>{endpoint}/openai/v1/chat/completions</code></td><td>Which resource and which operation.</td></tr>
-  <tr><td>Header <code>api-key</code></td><td>your key</td><td>Authentication. (<code>Authorization: Bearer …</code> also works.)</td></tr>
+  <tr><td>URL</td><td><code>{base_url}/chat/completions</code></td><td>Which server and which operation. The base URL is <code>…/openai/v1/</code> on Azure and <code>http://localhost:11434/v1/</code> on Ollama.</td></tr>
+  <tr><td>Header <code>Authorization</code></td><td><code>Bearer &lt;your key&gt;</code></td><td>Authentication. A local Ollama ignores it. (Azure also accepts the key in its own <code>api-key</code> header.)</td></tr>
   <tr><td>Header <code>Content-Type</code></td><td><code>application/json</code></td><td>Tells the server how to parse the body.</td></tr>
-  <tr><td>Body</td><td><code>{"model": deployment, "messages": [...]}</code></td><td>On Azure, <code>model</code> is your <em>deployment</em> name.</td></tr>
+  <tr><td>Body</td><td><code>{"model": model, "messages": [...]}</code></td><td>The name your provider knows the model by: on Azure your <em>deployment</em> name, on Ollama the name with its tag.</td></tr>
 </table>
 <pre><code class="language-python">response = httpx.post(
-    "https://my-resource.openai.azure.com/openai/v1/chat/completions",
-    headers={"api-key": key, "Content-Type": "application/json"},
-    json={"model": "gpt-4.1-mini", "messages": [{"role": "user", "content": "Hi"}]},
+    f"{base_url}chat/completions",   # e.g. http://localhost:11434/v1/chat/completions
+    headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+    json={"model": model, "messages": [{"role": "user", "content": "Hi"}]},
     timeout=60,
 )
 response.raise_for_status()      # 4xx/5xx -> httpx.HTTPStatusError
@@ -74,8 +74,8 @@ print(data["choices"][0]["message"]["content"])</code></pre>
   <tr><th>Code</th><th>Meaning</th><th>What to do</th></tr>
   <tr><td>200</td><td>OK</td><td>Parse the body.</td></tr>
   <tr><td>400</td><td>Bad request (malformed body, or blocked by the content filter)</td><td>Fix the request. Don't retry.</td></tr>
-  <tr><td>401</td><td>Unauthorized (wrong key)</td><td>Fix the configuration.</td></tr>
-  <tr><td>404</td><td>Deployment not found</td><td>Check the deployment name.</td></tr>
+  <tr><td>401</td><td>Unauthorized (wrong key). A local Ollama never sends it: it does not check keys.</td><td>Fix the configuration.</td></tr>
+  <tr><td>404</td><td>Model (on Azure: deployment) not found</td><td>Check the model name.</td></tr>
   <tr><td>429</td><td>Rate limited</td><td>Wait and retry (Lecture 011).</td></tr>
   <tr><td>5xx</td><td>Server problem</td><td>Retry with backoff.</td></tr>
 </table>
@@ -83,7 +83,7 @@ print(data["choices"][0]["message"]["content"])</code></pre>
 
 <section id="project"><h2>The Project</h2>
 <p><code>raw_call.py</code> builds the URL, headers and body, sends the request, prints the full JSON and then
-  the parts you care about, and finally demonstrates a readable <code>HTTP 401</code> with a wrong key.</p>
+  the parts you care about, and finally demonstrates a readable HTTP error with a model name that does not exist.</p>
 <h3>Sample run</h3>
 <p class="file-label">uv run python EXER003/solution/raw_call.py</p>
 <pre><code class="language-text">{
@@ -99,9 +99,9 @@ Reply        : A large language model is an AI system trained on vast amounts of
 Finish reason: stop
 Usage        : {'completion_tokens': 25, 'prompt_tokens': 17, 'total_tokens': 42, ...}
 
---- And with a wrong key ---
-HTTP 401: {"error":{"code":"401","message":"Access denied due to invalid subscription key or wrong API endpoint. ..."}}</code></pre>
-<p>Captured from a real run. Your wording, numbers and timings will differ; the shape should match.</p>
+--- And with a model that does not exist ---
+HTTP 404: {"error":{"message":"model 'no-such-model' not found","type":"not_found_error","param":null,"code":null}}</code></pre>
+<p>Captured from real runs (the error line is from Ollama; Azure words it differently). Your wording, numbers and timings will differ; the shape should match.</p>
 </section>
 
 <section id="goal"><h2>Goal</h2>
@@ -116,26 +116,26 @@ HTTP 401: {"error":{"code":"401","message":"Access denied due to invalid subscri
 <section id="success"><h2>Success Criteria</h2>
 <ul class="checklist">
   <li>The script prints the full JSON response, then the reply, finish reason and usage</li>
-  <li>A wrong key produces a readable <code>HTTP 401</code> message instead of a crash</li>
+  <li>A model name that does not exist produces a readable <code>HTTP 4xx</code> message instead of a crash</li>
   <li>All 6 checks pass (2 of them call the live API)</li>
 </ul>
 </section>
 
 <section id="walkthrough"><h2>Walkthrough</h2>
 <ol>
-  <li><code>build_url</code>: use <code>endpoint.rstrip("/")</code> so a trailing slash doesn't produce <code>//openai</code>.</li>
+  <li><code>build_url</code>: use <code>base_url.rstrip("/")</code> so a trailing slash doesn't produce <code>//chat</code>.</li>
   <li><code>build_body</code>: you wrote this in Lecture 002. Reuse the idea.</li>
   <li><code>send_chat</code>: <code>httpx.post(..., json=body)</code> serializes the dict for you. Don't call <code>json.dumps</code> yourself.</li>
-  <li>Run it and read the full JSON. Find <code>content_filter_results</code>: Azure screens every request and response.</li>
+  <li>Run it and read the full JSON. Look for fields beyond the standard ones: Azure adds <code>content_filter_results</code> (it screens every request and response), and a thinking model on Ollama adds <code>reasoning</code>.</li>
 </ol>
 <div class="callout tip"><span class="title">Try the stretch goals</span>
-  Use a deployment name that doesn't exist (404). Add <code>"temperature": 0</code> and run three times. Add
-  <code>"max_completion_tokens": 5</code> and look at <code>finish_reason</code>.</div>
+  Send a wrong key: a cloud provider answers 401, a local Ollama doesn't check. Add <code>"temperature": 0</code> and run three times. Add
+  <code>"max_completion_tokens": 5</code> (on Ollama: <code>"max_tokens": 5</code>) and look at <code>finish_reason</code>.</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
 <details class="pitfall"><summary>Forgetting <code>raise_for_status()</code></summary><div>
-  <p>Without it, a 401 response is parsed as if it were a reply, and you get a confusing <code>KeyError: 'choices'</code> instead of a clear error.</p></div></details>
+  <p>Without it, an error response is parsed as if it were a reply, and you get a confusing <code>KeyError: 'choices'</code> instead of a clear error.</p></div></details>
 <details class="pitfall"><summary>No timeout</summary><div>
   <p>A request without a timeout can hang forever if the network stalls. Always set one.</p></div></details>
 <details class="pitfall"><summary>Old URL formats in tutorials</summary><div>

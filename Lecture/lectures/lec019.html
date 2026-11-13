@@ -75,7 +75,7 @@ def cosine_similarity(a, b):
 <section id="goal"><h2>Goal</h2>
 <ol class="objectives">
   <li>Explain what an embedding is and why similar meanings give similar vectors.</li>
-  <li>Create embeddings in batches with the Azure embedding deployment.</li>
+  <li>Create embeddings in batches with your embedding model.</li>
   <li>Implement cosine similarity and top-k search.</li>
 </ol>
 </section>
@@ -91,7 +91,7 @@ def cosine_similarity(a, b):
 
 <section id="walkthrough"><h2>Walkthrough</h2>
 <ol>
-  <li>Deploy <code>text-embedding-3-small</code> in Foundry and set <code>AZURE_OPENAI_EMBEDDING_DEPLOYMENT</code>.</li>
+  <li>Get an embedding model: on Azure, deploy <code>text-embedding-3-small</code> in Foundry and set <code>AZURE_OPENAI_EMBEDDING_DEPLOYMENT</code>; on Ollama, run <code>ollama pull nomic-embed-text</code>.</li>
   <li><code>embed_texts</code>: one request for the whole list is far faster than one per text.</li>
   <li>Test <code>cosine_similarity</code> on tiny vectors first: <code>[1, 0]</code> vs <code>[0, 1]</code> should be 0.</li>
   <li>Add your own queries and sentences. Try a query in Filipino or Spanish: multilingual embedding models match across languages.</li>
@@ -100,7 +100,9 @@ def cosine_similarity(a, b):
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
 <details class="pitfall"><summary>Mixing embedding models</summary><div>
-  <p>Vectors from different models (or different dimensions) are not comparable. Re-embed everything if you change models. The course's shared index includes the deployment name in its collection name for this reason.</p></div></details>
+  <p>Vectors from different models (or different dimensions) are not comparable. Re-embed everything if you change models. The course's shared index includes the embedding model's name in its collection name for this reason, so switching provider builds a new index instead of mixing vectors.</p></div></details>
+<details class="pitfall"><summary>Leaving out the prefixes an embedding model was trained with</summary><div>
+  <p>Some open embedding models expect a task prefix on every text: <code>nomic-embed-text</code> wants <code>search_query: </code> before a question and <code>search_document: </code> before a passage, and ranks noticeably worse without them. <code>aicourse.llm.get_embeddings()</code> adds the prefixes configured in <code>.env</code> (<code>OLLAMA_EMBEDDING_QUERY_PREFIX</code>, <code>OLLAMA_EMBEDDING_DOCUMENT_PREFIX</code>). A raw <code>client.embeddings.create()</code> call sends exactly what you give it. Azure's <code>text-embedding-3</code> models use no prefix.</p></div></details>
 <details class="pitfall"><summary>Expecting keyword precision</summary><div>
   <p>Embeddings capture meaning, so they can miss exact codes like "BL-2026-0412" or rare names. Lecture 023 adds keyword search to cover this.</p></div></details>
 <details class="pitfall"><summary>Embedding very long texts</summary><div>

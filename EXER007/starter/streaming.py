@@ -12,7 +12,7 @@ from __future__ import annotations
 import time
 from typing import Callable, Iterator
 
-from aicourse.llm import get_openai_client
+from aicourse.llm import get_llm_client
 from aicourse.settings import get_settings
 
 
@@ -62,7 +62,7 @@ def measure(client, messages: list[dict]) -> dict:
 
 
 def main() -> None:
-    client = get_openai_client()
+    client = get_llm_client()
     messages = [{"role": "system", "content": "You are a storyteller."}]
     print("Streaming chatbot. Type /exit to quit.")
     while True:

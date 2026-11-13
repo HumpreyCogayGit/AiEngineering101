@@ -4,7 +4,7 @@ Build a terminal chatbot that remembers the conversation. The model itself is
 STATELESS: it remembers nothing between calls. "Memory" is just us sending
 the whole message list every time.
 
-From now on we use the ready-made helper `get_openai_client()` — it does
+From now on we use the ready-made helper `get_llm_client()` — it does
 exactly what you wrote in EXER004's make_client().
 
     uv run python EXER005/starter/chatbot.py
@@ -13,7 +13,7 @@ exactly what you wrote in EXER004's make_client().
 
 from __future__ import annotations
 
-from aicourse.llm import get_openai_client
+from aicourse.llm import get_llm_client
 from aicourse.settings import get_settings
 
 DEFAULT_SYSTEM = "You are a friendly, concise assistant. Keep answers under 80 words."
@@ -56,7 +56,7 @@ def chat_turn(client, conversation: Conversation, user_text: str) -> str:
 
 
 def main() -> None:
-    client = get_openai_client()
+    client = get_llm_client()
     convo = Conversation()
     print("Chatbot ready. Commands: /history  /reset  /exit")
     while True:

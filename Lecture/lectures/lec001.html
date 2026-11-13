@@ -24,7 +24,7 @@
   but from the environment: the wrong Python, a missing package, a key pasted in the wrong place.
   We fix that once, at the root of the repository, so all 37 exercises share one configuration.</p>
 <p>You will meet four ideas: <strong>virtual environments</strong>, <strong>dependency locking</strong>,
-  <strong>configuration through environment variables</strong>, and <strong>Azure deployments</strong>.</p>
+  <strong>configuration through environment variables</strong>, and <strong>inference providers</strong>.</p>
 </section>
 
 <section id="concept"><h2>Concept</h2>
@@ -39,7 +39,7 @@ uv.lock          exactly what we got  (langchain==1.5.0, ...)  ← reproducibili
 .venv/           the installed environment (never commit it)</code></pre>
 
 <h3>Configuration lives outside the code</h3>
-<p>Endpoints, deployment names and keys change between machines and environments (dev, test, prod).
+<p>Endpoints, model names and keys change between machines and environments (dev, test, prod).
   The <a href="https://12factor.net/config">twelve-factor</a> rule is: <em>store config in the environment</em>.
   Locally we use a <code>.env</code> file that is loaded into environment variables and never committed.</p>
 <div class="mermaid">flowchart LR
@@ -50,6 +50,26 @@ uv.lock          exactly what we got  (langchain==1.5.0, ...)  ← reproducibili
   values. It fails early with a readable message (for example "AZURE_OPENAI_API_KEY: is missing") instead of
   a confusing 401 deep inside a request.</p>
 
+<h3>Inference providers</h3>
+<p>An <strong>inference provider</strong> is whatever runs the model and answers your API calls. The course supports
+  two, selected with <code>AICOURSE_PROVIDER</code> in <code>.env</code>:</p>
+<table>
+  <tr><th>Provider</th><th>Where the model runs</th><th>Base URL</th><th>What you send as <code>model</code></th></tr>
+  <tr><td><code>azure</code>: Azure Foundry</td><td>In the cloud, pay per token</td><td><code>https://&lt;resource&gt;.openai.azure.com/openai/v1/</code></td><td>Your deployment name</td></tr>
+  <tr><td><code>ollama</code>: Ollama</td><td>On your machine, free</td><td><code>http://localhost:11434/v1/</code></td><td>The name <code>ollama list</code> shows, e.g. <code>gemma4:e4b</code></td></tr>
+</table>
+<p>Both speak the same <strong>OpenAI-compatible v1 API</strong>, so the standard <code>openai</code> SDK and LangChain's
+  <code>ChatOpenAI</code> work with either: only the <code>base_url</code>, key and model name differ.
+  <code>aicourse/settings.py</code> reads the selected provider's block and exposes provider-neutral settings
+  (<code>base_url</code>, <code>api_key</code>, <code>chat_model</code>, <code>embedding_model</code>).
+  No exercise names a provider, so the code you write runs on both.</p>
+<div class="mermaid">flowchart LR
+  P["AICOURSE_PROVIDER"] --> S["aicourse/settings.py"]
+  A["AZURE_OPENAI_* block"] --> S
+  O["OLLAMA_* block"] --> S
+  S --> N["base_url · api_key<br/>chat_model · embedding_model"]
+  N --> C["your code"]</div>
+
 <h3>Azure Foundry: resource, deployment, endpoint</h3>
 <table>
   <tr><th>Term</th><th>Meaning</th></tr>
@@ -57,9 +77,13 @@ uv.lock          exactly what we got  (langchain==1.5.0, ...)  ← reproducibili
   <tr><td>Model</td><td>A model family/version, e.g. <code>gpt-4.1-mini</code>.</td></tr>
   <tr><td>Deployment</td><td>A named instance of a model in your resource, with its own quota. <strong>Your code addresses the deployment name.</strong></td></tr>
 </table>
-<p>We use Azure's <strong>OpenAI-compatible v1 API</strong>: <code>https://&lt;resource&gt;.openai.azure.com/openai/v1/</code>.
-  Because it speaks the same protocol as OpenAI, the standard <code>openai</code> SDK and LangChain's
-  <code>ChatOpenAI</code> work with only a different <code>base_url</code>.</p>
+<h3>Ollama: server, model, tag</h3>
+<table>
+  <tr><th>Term</th><th>Meaning</th></tr>
+  <tr><td>Server</td><td>The Ollama program on your machine. It listens on <code>http://localhost:11434</code> and needs no key.</td></tr>
+  <tr><td>Model</td><td>Weights you downloaded with <code>ollama pull</code>. The first request loads them into memory.</td></tr>
+  <tr><td>Tag</td><td>The part after the colon (<code>gemma4:e4b</code>): a size or variant of the model. <strong>Your code addresses the full name with its tag.</strong></td></tr>
+</table>
 
 <h3>Secrets hygiene</h3>
 <ul>
@@ -74,17 +98,26 @@ uv.lock          exactly what we got  (langchain==1.5.0, ...)  ← reproducibili
 <p>A small script, <code>check_setup.py</code>, that confirms the Python version, loads and validates your
   settings, and prints them with the key masked. It's the first thing to run whenever something seems broken.</p>
 <pre><code class="language-text">Python 3.12.14  ->  OK
-Endpoint          : https://my-resource.openai.azure.com
-API base URL      : https://my-resource.openai.azure.com/openai/v1/
-Chat deployment   : gpt-4.1-mini
-Embedding deploy. : text-embedding-3-small
-API key           : 8f3a****91bc</code></pre>
+Provider        : Azure Foundry
+Endpoint        : https://my-resource.openai.azure.com
+API base URL    : https://my-resource.openai.azure.com/openai/v1/
+Chat model      : gpt-4.1-mini
+Embedding model : text-embedding-3-small
+API key         : 8f3a****91bc</code></pre>
+<p>With <code>AICOURSE_PROVIDER=ollama</code> the same script prints:</p>
+<pre><code class="language-text">Python 3.12.14  ->  OK
+Provider        : Ollama
+Endpoint        : http://localhost:11434
+API base URL    : http://localhost:11434/v1/
+Chat model      : gemma4:e4b
+Embedding model : nomic-embed-text:latest
+API key         : ****</code></pre>
 </section>
 
 <section id="goal"><h2>Goal</h2>
 <ol class="objectives">
   <li>Install the course environment with <code>uv sync</code> and run code with <code>uv run</code>.</li>
-  <li>Create a chat model deployment in Azure Foundry and find its endpoint and key.</li>
+  <li>Set up an inference provider: a chat model deployment in Azure Foundry, or a chat model pulled into Ollama.</li>
   <li>Configure <code>.env</code> and understand how settings flow into every exercise.</li>
   <li>Handle secrets safely: mask, ignore, rotate.</li>
 </ol>
@@ -94,7 +127,7 @@ API key           : 8f3a****91bc</code></pre>
 <ul class="checklist">
   <li><code>uv sync</code> completes and <code>uv run python --version</code> shows 3.12.x</li>
   <li><code>.env</code> exists at the repository root and is ignored by git</li>
-  <li><code>check_setup.py</code> prints your endpoint and deployment, with the key masked</li>
+  <li><code>check_setup.py</code> prints your provider, endpoint and model names, with the key masked</li>
   <li>All checks in <code>check.py</code> pass</li>
 </ul>
 </section>
@@ -118,8 +151,10 @@ API key           : 8f3a****91bc</code></pre>
 <details class="pitfall"><summary>Running from inside the exercise folder</summary><div>
   <p>Commands assume the repository root (<code>uv run python EXER001/check.py</code>). <code>uv</code> finds the
   project from there, and <code>settings.py</code> finds <code>.env</code> next to <code>pyproject.toml</code>.</p></div></details>
-<details class="pitfall"><summary>Using the model name instead of the deployment name</summary><div>
+<details class="pitfall"><summary>Azure: using the model name instead of the deployment name</summary><div>
   <p>If you named your deployment <code>my-chat</code>, then <code>AZURE_OPENAI_CHAT_DEPLOYMENT=my-chat</code>, even though the model is gpt-4.1-mini.</p></div></details>
+<details class="pitfall"><summary>Ollama: leaving the tag off the model name</summary><div>
+  <p><code>gemma4</code> means <code>gemma4:latest</code>, which may be a different model from <code>gemma4:e4b</code>, or one you never pulled. Copy the name from <code>ollama list</code>.</p></div></details>
 <details class="pitfall"><summary>Quotes or spaces around values in .env</summary><div>
   <p><code>KEY = "abc"</code> can work with some loaders and not others. Write <code>KEY=abc</code>.</p></div></details>
 <details class="pitfall"><summary>Committing .env "just once"</summary><div>
@@ -133,6 +168,9 @@ API key           : 8f3a****91bc</code></pre>
 <div class="qa"><p>Why does Azure separate "model" and "deployment"?</p>
   <p>You may run several deployments of the same model with different quotas, versions or content-filter
   settings (e.g. one for production, one for experiments) and switch between them without changing code.</p></div>
+<div class="qa"><p>Why can one codebase run on a cloud provider and on a local one?</p>
+  <p>Both implement the same HTTP API, and the code depends on that API, not on the company behind it. Everything
+  provider-specific is confined to one settings file, so switching is a configuration change, not a code change.</p></div>
 <div class="qa"><p>What would change in production?</p>
   <p>Keys would live in Azure Key Vault or be replaced by managed identity, and configuration would come from the
   hosting platform's environment variables rather than a file.</p></div>

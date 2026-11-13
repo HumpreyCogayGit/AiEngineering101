@@ -105,8 +105,8 @@ First kept non-system message: Question number 15: blah blah</code></pre>
 <section id="pitfalls"><h2>Common Pitfalls</h2>
 <details class="pitfall"><summary>Splitting a turn when trimming</summary><div>
   <p>A naive trim can keep an assistant reply but drop the question it answered, or (with tools) drop a tool call but keep its result, which the API rejects. LangChain's <code>trim_messages</code> has options for this (Lecture 028).</p></div></details>
-<details class="pitfall"><summary>Deployment without vision support</summary><div>
-  <p>Not every model accepts images. gpt-4.1-mini and gpt-4o do.</p></div></details>
+<details class="pitfall"><summary>Model without vision support</summary><div>
+  <p>Not every model accepts images. gpt-4.1-mini and gpt-4o do. On Ollama, <code>ollama show &lt;model&gt;</code> must list the <code>vision</code> capability (gemma4:e4b has it).</p></div></details>
 <details class="pitfall"><summary>Huge images</summary><div>
   <p>Requests have size limits, and big images cost many tokens. Resize to the resolution you need.</p></div></details>
 </section>

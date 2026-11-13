@@ -7,7 +7,7 @@ A hands-on course that takes a learner from their first LLM API call to building
 | Decision | Choice |
 |---|---|
 | Target learner | Little Python experience, new to deep-diving LLMs |
-| LLM endpoint | Azure Foundry (chat model + embedding model deployments) |
+| Inference provider | Azure Foundry (chat + embedding deployments) or Ollama (local chat + embedding models), selected with `AICOURSE_PROVIDER` |
 | Frameworks | LangChain, LangGraph |
 | Web UI | Streamlit |
 | Vector store | Chroma (local, persisted to disk) |
@@ -48,7 +48,7 @@ AiEngineerCourse/
 
 ### Root configuration
 
-- `.env.example` lists every setting with a comment: Foundry endpoint, API key, API version, chat deployment name, embedding deployment name.
+- `.env.example` lists every setting with a comment: the provider switch, then one block per provider (Azure Foundry: endpoint, API key, chat and embedding deployment names; Ollama: base URL, chat and embedding model names).
 - `aicourse/settings.py` is the single place that reads `.env`. It fails with a clear message naming the missing setting.
 - Early exercises (Module 0 and 1) read the settings but build the HTTP request or SDK client by hand. `aicourse/llm.py` helpers are only used after the learner has built the same thing manually.
 - The machine has Python 3.14; the project pins an older version (3.12 planned) through `.python-version` for library compatibility. The exact pin and library versions are confirmed when scaffolding.
@@ -73,7 +73,7 @@ Plain static site that opens directly from the file system or through `python -m
 ```
 Lecture/
 ├── index.html            # Course home: roadmap, modules, progress
-├── setup.html            # Azure Foundry and local setup guide
+├── setup.html            # Provider (Azure Foundry or Ollama) and local setup guide
 ├── glossary.html
 ├── lectures/
 │   ├── lec001.html       # One page per exercise, same number as EXER001
@@ -114,7 +114,7 @@ Lecture/
 
 | # | Title | The learner builds | Key concepts |
 |---|---|---|---|
-| 001 | Setup and First Check | Working environment; a script that confirms the settings load | uv, virtual environments, `.env`, secrets hygiene, Azure Foundry resource and deployments |
+| 001 | Setup and First Check | Working environment; a script that confirms the settings load | uv, virtual environments, `.env`, secrets hygiene, inference providers (Azure Foundry deployments, Ollama models) |
 | 002 | Python Primer for AI Engineers | Small scripts that parse and build nested JSON | dicts, lists, functions, type hints, JSON, Pydantic models, exceptions |
 | 003 | HTTP and the Raw API Call | A chat completion sent with `httpx`, no SDK | REST, headers, auth, request and response bodies, status codes |
 
@@ -184,14 +184,14 @@ Lecture/
 | # | Title | The learner builds | Key concepts |
 |---|---|---|---|
 | 035 | Observability and Cost | Tracing and a usage report for an earlier agent | traces, spans, token and cost tracking, debugging agent runs |
-| 036 | Safety and Guardrails | Attacks against, then defenses for, an earlier app | prompt injection, input and output validation, Azure content filters, least privilege |
+| 036 | Safety and Guardrails | Attacks against, then defenses for, an earlier app | prompt injection, input and output validation, provider content filters, least privilege |
 | 037 | Capstone | A complete assistant: Streamlit UI, LangGraph agent, RAG, MCP tools, CLI entry point, evaluation | design, integration, a written review against a rubric |
 
 ## 5. Build Phases
 
 | Phase | Deliverable | Notes |
 |---|---|---|
-| 1. Scaffold | Root config, `aicourse/` package, `.env.example`, README, git repository | Ends with a verified call to the Foundry endpoint |
+| 1. Scaffold | Root config, `aicourse/` package, `.env.example`, README, git repository | Ends with a verified call to the configured provider |
 | 2. Lecture site shell | Home page, lecture template, navigation, theme, progress, setup guide | Template reviewed before any content is written |
 | 3. Pilot | EXER001–003 and their lectures, complete | Review point: confirm tone, depth and format before scaling |
 | 4. Module 1 | EXER004–011 | |
@@ -212,8 +212,8 @@ Lecture/
 ## 6. Assumptions and Decisions
 
 1. **"CLI calling" is covered two ways:** building a command-line app that calls the LLM (EXER010) and letting the LLM run shell commands as a tool (EXER018).
-2. **Models:** configurable in `.env`. Recommended defaults: chat `gpt-4.1-mini` (tools, structured output, images, temperature) and embeddings `text-embedding-3-small`.
-3. **Raw SDK:** the `openai` Python SDK pointed at the Foundry endpoint is used for the pre-LangChain exercises.
+2. **Models:** configurable in `.env`. Recommended defaults: chat `gpt-4.1-mini` (tools, structured output, images, temperature) and embeddings `text-embedding-3-small` on Azure; chat `gemma4:e4b` and embeddings `nomic-embed-text` on Ollama.
+3. **Raw SDK:** the `openai` Python SDK pointed at the provider's OpenAI-compatible endpoint is used for the pre-LangChain exercises.
 4. **Observability (EXER035):** learners build their own callback-based tracker; LangSmith is an optional, documented add-on (env vars only, no code changes).
 5. **Solutions ship in the same repository** as the starters, in `solution/`.
 6. **Language:** course content is in English.
@@ -221,11 +221,12 @@ Lecture/
 
 ## 7. Implementation Notes
 
-- **Endpoint:** all code uses Azure's OpenAI-compatible **v1 API** (`<endpoint>/openai/v1/`), so the standard `OpenAI` client and LangChain `ChatOpenAI` / `OpenAIEmbeddings` work with only a `base_url`. No `api_version` handling is needed.
+- **Providers:** `AICOURSE_PROVIDER` selects `azure` or `ollama`. Provider-specific values are read only in `aicourse/settings.py`, which exposes provider-neutral settings (`base_url`, `api_key`, `chat_model`, `embedding_model`, `max_tokens_param`). Helpers and exercises use only those names (`get_llm_client()`, `get_chat_model()`, `get_embeddings()`), so no code targets a provider or a model.
+- **Endpoint:** all code uses the provider's OpenAI-compatible **v1 API** (Azure: `<endpoint>/openai/v1/`; Ollama: `http://localhost:11434/v1/`), so the standard `OpenAI` client and LangChain `ChatOpenAI` / `OpenAIEmbeddings` work with only a `base_url`. No `api_version` handling is needed.
 - **Python 3.12**, pinned in `.python-version`. Library versions are locked in `uv.lock` (built with langchain 1.5, langgraph 1.2, openai 3.x, mcp 1.30, chromadb 1.5, streamlit 1.67).
 - **Shared package `aicourse/`:** `settings.py` (config), `llm.py` (clients), `rag.py` (knowledge base, chunking, Chroma store and RAG chain used from EXER022 on), `check.py` (check runner), `fakes.py` (fake OpenAI client and fake LangChain chat model, so most checks run offline).
 - **Data:** `data/knowledge_base/` holds the fictional *Nimbus Coffee Co.* documents (Markdown, HTML, PDF) used by every RAG and agent exercise; `data/eval_questions.json` is the RAG golden set.
-- **Checks:** starters raise `NotImplementedError` in TODOs, so `check.py` reports them as TODO and fails; `--solution` runs the same checks against the reference. Checks marked `[live API]` need a real deployment.
+- **Checks:** starters raise `NotImplementedError` in TODOs, so `check.py` reports them as TODO and fails; `--solution` runs the same checks against the reference. Checks marked `[live API]` need a real model.
 - **Model compatibility:** the course runs on classic chat models (gpt-4.1 family) and on reasoning models (gpt-5 family, o-series). Reasoning models accept only the default `temperature` and LangChain reaches them through the Responses API, where `AIMessage.content` is a list of blocks. So: optional parameters go through `aicourse.llm.model_params()` (detects support once, caches it in `.aicourse_cache.json`; override with `AICOURSE_SUPPORTS_TEMPERATURE`), and every LangChain answer is read with `.text`, never `.content`. Lectures 004 and 012 teach both points.
 - **Offline checks need no `.env`:** the check runner substitutes placeholder settings for checks that are not marked `[live API]`; live checks are skipped with one clear message when the configuration is missing. `--offline` skips live checks on purpose.
 - **`check_all.py`** automates the definition of done: every solution passes, every untouched starter fails.

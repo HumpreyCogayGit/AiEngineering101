@@ -20,7 +20,7 @@ from typing import Annotated
 
 import typer
 
-from aicourse.llm import get_openai_client, model_params
+from aicourse.llm import get_llm_client, model_params
 from aicourse.settings import ConfigError, get_settings
 
 app = typer.Typer(help="Ask an LLM from your terminal.", no_args_is_help=True)
@@ -32,7 +32,7 @@ EXIT_CONFIG_ERROR = 2
 def get_client():
     """Separate function so tests can replace it with a fake. (Given.)"""
     try:
-        return get_openai_client()
+        return get_llm_client()
     except ConfigError as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(EXIT_CONFIG_ERROR)
@@ -41,7 +41,7 @@ def get_client():
 def stream_answer(messages: list[dict], temperature: float = 0.7) -> str:
     """Stream the reply to stdout and return the full text.
 
-    Reuse what you learned in EXER007. Use get_client() (not get_openai_client())
+    Reuse what you learned in EXER007. Use get_client() (not get_llm_client())
     and typer.echo(piece, nl=False) to print each piece without a newline.
     Print one final newline at the end.
     Pass the temperature as **model_params(temperature=temperature) so the tool

@@ -9,7 +9,7 @@ lists (JSON), functions with type hints, exceptions, and Pydantic models.
 
 ## Tasks
 
-1. Open [sample_response.json](sample_response.json). This is a real-shaped answer from an Azure chat model.
+1. Open [sample_response.json](sample_response.json). This is a real-shaped answer from a chat model.
 2. Complete every `TODO` in `starter/primer.py`:
    - `load_response`, `get_reply_text`, `get_total_tokens` — read nested JSON
    - `safe_get_reply` — handle malformed data with `try/except`

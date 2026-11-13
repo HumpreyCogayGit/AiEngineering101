@@ -19,7 +19,7 @@ class CompletionResult:
 
 
 def make_client() -> OpenAI:
-    """Create an OpenAI SDK client that talks to your Azure resource."""
+    """Create an SDK client that talks to your provider's OpenAI-compatible API."""
     s = get_settings()
     return OpenAI(
         base_url=s.base_url,
@@ -41,9 +41,11 @@ def ask(
     if temperature is not None:
         kwargs["temperature"] = temperature
     if max_tokens is not None:
-        kwargs["max_completion_tokens"] = max_tokens
+        # The limit has two names: "max_completion_tokens" (current) and
+        # "max_tokens" (original). Settings knows which one your provider applies.
+        kwargs[get_settings().max_tokens_param] = max_tokens
     response = client.chat.completions.create(
-        model=get_settings().chat_deployment,
+        model=get_settings().chat_model,
         messages=[{"role": "user", "content": prompt}],
         **kwargs,
     )
@@ -57,7 +59,11 @@ def ask(
 
 
 def count_tokens(text: str) -> int:
-    """Count tokens locally with the o200k_base encoding used by GPT-4o / GPT-4.1 models."""
+    """Count tokens locally with the o200k_base encoding used by GPT-4o / GPT-4.1 models.
+
+    Every model family has its own tokenizer, so for other models (the ones
+    Ollama runs, for example) this is an estimate. `usage` in the response is exact.
+    """
     encoding = tiktoken.get_encoding("o200k_base")
     return len(encoding.encode(text))
 
@@ -101,7 +107,7 @@ def main() -> None:
     print(result.text)
     print(f"\nprompt={result.prompt_tokens} completion={result.completion_tokens} "
           f"finish={result.finish_reason}")
-    # Example prices (USD per 1M tokens) — check the Azure pricing page for yours.
+    # Example prices (USD per 1M tokens) — check your provider's pricing page. A local model costs nothing per token.
     print(f"Estimated cost: ${estimate_cost(result.prompt_tokens, result.completion_tokens, 0.40, 1.60):.6f}")
 
     print("\nLocal token count of the prompt:", count_tokens("Explain tokens to a 10-year-old in two sentences."))

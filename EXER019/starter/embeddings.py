@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from aicourse.llm import get_openai_client
+from aicourse.llm import get_llm_client
 from aicourse.settings import get_settings
 
 CORPUS = [
@@ -30,7 +30,7 @@ CORPUS = [
 def embed_texts(client, texts: list[str]) -> list[list[float]]:
     """Embed many texts in ONE API call.
 
-    response = client.embeddings.create(model=<embedding deployment>, input=texts)
+    response = client.embeddings.create(model=<embedding model>, input=texts)
     response.data is a list of items with .index and .embedding.
     Return the embeddings in the same order as `texts` (sort by .index to be safe).
     """
@@ -58,7 +58,7 @@ def search(
 
 
 def main() -> None:
-    client = get_openai_client()
+    client = get_llm_client()
     vectors = embed_texts(client, CORPUS)
     print(f"Embedded {len(vectors)} sentences; each vector has {len(vectors[0])} dimensions.")
     print("First 5 numbers of the first vector:", [round(x, 4) for x in vectors[0][:5]])

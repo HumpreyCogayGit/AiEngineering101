@@ -45,8 +45,9 @@ def _():
 def _():
     settings = mod.load_config()
     assert settings.endpoint.startswith("http"), "endpoint should be a URL"
-    assert settings.base_url.endswith("/openai/v1/")
-    assert settings.chat_deployment, "AZURE_OPENAI_CHAT_DEPLOYMENT is empty"
+    assert settings.base_url.endswith("/v1/"), settings.base_url
+    assert settings.chat_model, "the chat model name is empty"
+    assert settings.embedding_model, "the embedding model name is empty"
 
 
 checker.run()

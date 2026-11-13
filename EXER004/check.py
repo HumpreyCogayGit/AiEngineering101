@@ -8,11 +8,13 @@ checker = Checker(__file__)
 mod = checker.load("sdk_basics.py")
 
 
-@checker.check("make_client() returns an OpenAI client on the /openai/v1/ base URL")
+@checker.check("make_client() returns an SDK client on your provider's v1 base URL")
 def _():
+    from aicourse.settings import get_settings
+
     client = mod.make_client()
     assert isinstance(client, OpenAI)
-    assert str(client.base_url).endswith("/openai/v1/"), client.base_url
+    assert str(client.base_url) == get_settings().base_url, client.base_url
 
 
 @checker.check("count_tokens('hello world') == 2")

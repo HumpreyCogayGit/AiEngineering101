@@ -9,8 +9,13 @@ Understand embeddings, the foundation of RAG: text in, vector out, and
 
 ## Before you start
 
-Deploy an **embedding model** in Azure Foundry (recommended `text-embedding-3-small`)
-and set `AZURE_OPENAI_EMBEDDING_DEPLOYMENT` in `.env`.
+You need an **embedding model** on your provider:
+
+- **Azure Foundry**: deploy one (recommended `text-embedding-3-small`) and set
+  `AZURE_OPENAI_EMBEDDING_DEPLOYMENT` in `.env`.
+- **Ollama**: `ollama pull nomic-embed-text` (the default `OLLAMA_EMBEDDING_MODEL`).
+
+Vectors from different embedding models have different sizes and cannot be compared.
 
 ## Tasks
 

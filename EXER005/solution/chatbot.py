@@ -7,7 +7,7 @@ the whole message list every time.
 
 from __future__ import annotations
 
-from aicourse.llm import get_openai_client
+from aicourse.llm import get_llm_client
 from aicourse.settings import get_settings
 
 DEFAULT_SYSTEM = "You are a friendly, concise assistant. Keep answers under 80 words."
@@ -37,7 +37,7 @@ def chat_turn(client, conversation: Conversation, user_text: str) -> str:
     """One round trip: add the user message, call the model, store and return the reply."""
     conversation.add_user(user_text)
     response = client.chat.completions.create(
-        model=get_settings().chat_deployment,
+        model=get_settings().chat_model,
         messages=conversation.to_api(),
     )
     reply = response.choices[0].message.content or ""
@@ -46,7 +46,7 @@ def chat_turn(client, conversation: Conversation, user_text: str) -> str:
 
 
 def main() -> None:
-    client = get_openai_client()
+    client = get_llm_client()
     convo = Conversation()
     print("Chatbot ready. Commands: /history  /reset  /exit")
     while True:

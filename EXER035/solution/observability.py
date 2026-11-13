@@ -25,7 +25,7 @@ from langchain_core.tools import tool
 from aicourse.llm import get_chat_model
 from aicourse.rag import format_docs, get_vector_store
 
-# USD per 1M tokens. Example values — check the Azure pricing page for your model and region.
+# USD per 1M tokens. Example values — check your provider's pricing page. A local model costs nothing per token.
 PRICES = {"input": 0.40, "output": 1.60}
 
 

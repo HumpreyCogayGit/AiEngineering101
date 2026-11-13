@@ -4,7 +4,7 @@ import json
 
 from aicourse.check import Checker
 from aicourse.fakes import FakeClient
-from aicourse.llm import get_openai_client
+from aicourse.llm import get_llm_client
 
 checker = Checker(__file__)
 mod = checker.load("formatting.py")
@@ -53,7 +53,7 @@ def _():
 
 @checker.check("extract_structured() returns an Event with the right facts  [live API]")
 def _():
-    event = mod.extract_structured(get_openai_client(), mod.SAMPLE_EMAIL)
+    event = mod.extract_structured(get_llm_client(), mod.SAMPLE_EMAIL)
     assert isinstance(event, mod.Event), type(event)
     assert event.date == "2026-03-14", event.date
     names = {n.lower() for n in event.attendees}
@@ -62,7 +62,7 @@ def _():
 
 @checker.check("extract_json_mode() returns the expected keys  [live API]")
 def _():
-    out = mod.extract_json_mode(get_openai_client(), mod.SAMPLE_EMAIL)
+    out = mod.extract_json_mode(get_llm_client(), mod.SAMPLE_EMAIL)
     assert {"title", "date", "attendees"} <= set(out), out
 
 

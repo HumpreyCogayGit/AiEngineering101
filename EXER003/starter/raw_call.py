@@ -16,11 +16,11 @@ import httpx
 from aicourse.settings import get_settings
 
 
-def build_url(endpoint: str) -> str:
-    """The chat completions URL of Azure's OpenAI-compatible v1 API.
+def build_url(base_url: str) -> str:
+    """The chat completions URL of an OpenAI-compatible v1 API.
 
-    "https://x.openai.azure.com" -> "https://x.openai.azure.com/openai/v1/chat/completions"
-    Be careful not to produce a double slash if the endpoint ends with "/".
+    "http://localhost:11434/v1/" -> "http://localhost:11434/v1/chat/completions"
+    Be careful not to produce a double slash if the base URL ends with "/".
     """
     # TODO
     raise NotImplementedError("build_url")
@@ -29,29 +29,32 @@ def build_url(endpoint: str) -> str:
 def build_headers(api_key: str) -> dict[str, str]:
     """Return the HTTP headers.
 
-    Azure accepts the key in a header called `api-key`.
+    The key travels as a Bearer token: `Authorization: Bearer <api_key>`.
     We also send `Content-Type: application/json`.
     """
     # TODO
     raise NotImplementedError("build_headers")
 
 
-def build_body(deployment: str, prompt: str) -> dict:
-    """Return the JSON body: {"model": deployment, "messages": [one user message]}.
+def build_body(model: str, prompt: str) -> dict:
+    """Return the JSON body: {"model": model, "messages": [one user message]}.
 
-    On Azure, `model` is your DEPLOYMENT name. (You wrote this in EXER002!)
+    `model` is the name your provider knows the model by. (You wrote this in EXER002!)
     """
     # TODO
     raise NotImplementedError("build_body")
 
 
-def send_chat(prompt: str, api_key: str | None = None) -> dict:
+def send_chat(prompt: str, model: str | None = None) -> dict:
     """POST the request and return the parsed JSON response.
+
+    `model` overrides the configured chat model (used to test a wrong name).
 
     Steps:
       1. s = get_settings()
-      2. key = api_key if api_key is not None else s.api_key.get_secret_value()
-      3. httpx.post(url, headers=..., json=..., timeout=s.request_timeout)
+      2. url = build_url(s.base_url); key = s.api_key.get_secret_value()
+      3. httpx.post(url, headers=..., json=build_body(model or s.chat_model, prompt),
+                    timeout=s.request_timeout)
       4. response.raise_for_status()   # turns 4xx/5xx into an exception
       5. return response.json()
     """
@@ -61,7 +64,7 @@ def send_chat(prompt: str, api_key: str | None = None) -> dict:
 
 def main() -> None:
     prompt = "In one sentence, what is a large language model?"
-    print(f">>> POST {build_url(get_settings().endpoint)}")
+    print(f">>> POST {build_url(get_settings().base_url)}")
     data = send_chat(prompt)
     print("\n--- Full JSON response ---")
     print(json.dumps(data, indent=2)[:1500])
@@ -70,9 +73,9 @@ def main() -> None:
     print("Finish reason:", data["choices"][0]["finish_reason"])
     print("Usage        :", data["usage"])
 
-    print("\n--- And with a wrong key ---")
+    print("\n--- And with a model that does not exist ---")
     try:
-        send_chat(prompt, api_key="wrong-key")
+        send_chat(prompt, model="no-such-model")
     except httpx.HTTPStatusError as exc:
         print(f"HTTP {exc.response.status_code}: {exc.response.text[:200]}")
 

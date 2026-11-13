@@ -12,8 +12,10 @@ correctly — without ever printing your secret key.
 Follow the setup guide: [Lecture/setup.html](../Lecture/setup.html). You need:
 
 1. `uv` installed, then `uv sync` run once from the repository root.
-2. An Azure Foundry resource with a **chat model deployment** (recommended: `gpt-4.1-mini`; reasoning models such as the gpt-5 family work too).
-3. A `.env` file at the repository root, copied from `.env.example` and filled in.
+2. An inference provider with a **chat model**, either:
+   - an Azure Foundry resource with a chat model deployment (recommended: `gpt-4.1-mini`; reasoning models such as the gpt-5 family work too), or
+   - Ollama running locally with a chat model pulled (recommended: `ollama pull gemma4:e4b`).
+3. A `.env` file at the repository root, copied from `.env.example`, with `AICOURSE_PROVIDER` set to `azure` or `ollama` and that provider's block filled in.
 
 ## Tasks
 
@@ -42,5 +44,5 @@ uv run python EXER001/check.py --solution   # checks the reference solution
 
 - [ ] `uv sync` completes and `uv run python --version` shows 3.12.x
 - [ ] `.env` exists at the repository root and is ignored by git
-- [ ] `check_setup.py` prints your endpoint and deployment, with the key masked
+- [ ] `check_setup.py` prints your provider, endpoint and model names, with the key masked
 - [ ] All checks in `check.py` pass

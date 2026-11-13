@@ -1,4 +1,4 @@
-"""Fake OpenAI clients used by the check scripts.
+"""Fake LLM clients used by the check scripts.
 
 They let a check verify WHAT your code sends to the model (offline, free and
 deterministic) without making a real API call. You never need these in your

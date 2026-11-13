@@ -15,7 +15,7 @@
   <header class="lecture-header">
     <div class="kicker">Before Lecture 001</div>
     <h1>Setup Guide</h1>
-    <p class="lede">Three things: the Python toolchain, an Azure Foundry model deployment, and a <code>.env</code> file.
+    <p class="lede">Three things: the Python toolchain, an inference provider that runs the models (Azure Foundry in the cloud, or Ollama on your own machine), and a <code>.env</code> file.
       Budget about 30–45 minutes the first time.</p>
   </header>
 
@@ -42,7 +42,22 @@ uv run python --version    # should print Python 3.12.x</code></pre>
     <li><strong>Node.js</strong>, only to use the MCP Inspector in Module 6 (<code>npx @modelcontextprotocol/inspector</code>).</li>
   </ul>
 
-  <h2 id="azure">2. Create a model deployment in Azure Foundry</h2>
+  <h2 id="provider">2. Choose an inference provider</h2>
+  <p>The course needs two models: a <strong>chat model</strong> and, from Lecture 019, an <strong>embedding model</strong>.
+    An <em>inference provider</em> is whatever runs them and answers your API calls. Pick one; you can switch later
+    by changing one line in <code>.env</code>.</p>
+  <table>
+    <tr><th></th><th>Azure Foundry</th><th>Ollama</th></tr>
+    <tr><td>Where the models run</td><td>In the cloud</td><td>On your own machine</td></tr>
+    <tr><td>Cost</td><td>Pay per token (a few US dollars for the course)</td><td>Free</td></tr>
+    <tr><td>You need</td><td>An Azure subscription</td><td>About 10 GB of disk and 16 GB of memory</td></tr>
+    <tr><td>Model quality and speed</td><td>Higher</td><td>Lower: a small model makes more mistakes</td></tr>
+    <tr><td>Works offline</td><td>No</td><td>Yes</td></tr>
+  </table>
+  <p>Both speak the same <em>OpenAI-compatible API</em>, so every lecture, exercise and check is the same on both.
+    The code never names a provider: it asks <code>aicourse/settings.py</code> for the base URL, key and model names.</p>
+
+  <h3 id="azure">Option A: a model deployment in Azure Foundry</h3>
   <div class="mermaid">flowchart LR
   A[Azure subscription] --> B[Foundry resource]
   B --> C[Chat model deployment<br/>e.g. gpt-4.1-mini]
@@ -70,34 +85,67 @@ uv run python --version    # should print Python 3.12.x</code></pre>
     The whole course typically costs a few US dollars with a mini model. Set a budget alert in the Azure portal
     (Cost Management → Budgets) anyway. That's a good habit for any AI project.</div>
 
+  <h3 id="ollama">Option B: local models with Ollama</h3>
+  <ol>
+    <li>Install Ollama from <a href="https://ollama.com">ollama.com</a> and start it. It listens on
+      <code>http://localhost:11434</code>.</li>
+    <li>Download a chat model and an embedding model (once):
+      <pre><code class="language-bash">ollama pull gemma4:e4b          # chat model, about 10 GB
+ollama pull nomic-embed-text    # embedding model, needed from Lecture 019
+ollama list                     # the names your code will send as "model"</code></pre></li>
+  </ol>
+  <div class="callout info"><span class="title">Using a different local model</span>
+    Any chat model works if <code>ollama show &lt;model&gt;</code> lists the <code>tools</code> and <code>vision</code>
+    capabilities. Set its name in <code>OLLAMA_CHAT_MODEL</code>. Bigger models answer better and slower.</div>
+  <div class="callout warn"><span class="title">A small model is a different experience</span>
+    A model that fits on a laptop follows instructions less reliably than a large hosted one. A few
+    <code>[live API]</code> checks that grade the model's judgement can fail even when your code is right.
+    Checks run with <code>--offline</code> never depend on the model.</div>
+
   <h2 id="env">3. Configure <code>.env</code></h2>
   <pre><code class="language-bash">cp .env.example .env      # Windows: copy .env.example .env</code></pre>
-  <p>Open <code>.env</code> and fill in your values:</p>
-  <pre><code class="language-ini">AZURE_OPENAI_ENDPOINT=https://my-resource.openai.azure.com
+  <p>Open <code>.env</code>, set <code>AICOURSE_PROVIDER</code>, and fill in that provider's block. For Azure Foundry:</p>
+  <pre><code class="language-ini">AICOURSE_PROVIDER=azure
+AZURE_OPENAI_ENDPOINT=https://my-resource.openai.azure.com
 AZURE_OPENAI_API_KEY=your-key-here
 AZURE_OPENAI_CHAT_DEPLOYMENT=gpt-4.1-mini
 AZURE_OPENAI_EMBEDDING_DEPLOYMENT=text-embedding-3-small</code></pre>
-  <p>All course code reads these through <code>aicourse/settings.py</code>, which normalizes the endpoint and
-    builds the API base URL <code>&lt;endpoint&gt;/openai/v1/</code>. That is Azure's <em>OpenAI-compatible v1 API</em>,
-    so the standard <code>openai</code> SDK and LangChain's <code>ChatOpenAI</code> work against Azure unchanged.</p>
+  <p>For Ollama, one line is enough. The rest have working defaults:</p>
+  <pre><code class="language-ini">AICOURSE_PROVIDER=ollama
+# OLLAMA_BASE_URL=http://localhost:11434
+# OLLAMA_CHAT_MODEL=gemma4:e4b
+# OLLAMA_EMBEDDING_MODEL=nomic-embed-text:latest</code></pre>
+  <p>All course code reads these through <code>aicourse/settings.py</code>, which turns the selected block into
+    provider-neutral settings: <code>base_url</code>, <code>api_key</code>, <code>chat_model</code> and
+    <code>embedding_model</code>. The base URL is the provider's <em>OpenAI-compatible v1 API</em>
+    (<code>&lt;endpoint&gt;/openai/v1/</code> on Azure, <code>http://localhost:11434/v1/</code> on Ollama),
+    so the standard <code>openai</code> SDK and LangChain's <code>ChatOpenAI</code> work against either unchanged.</p>
   <div class="callout danger"><span class="title">Never commit your key</span>
     <code>.env</code> is listed in <code>.gitignore</code>. If a key ever leaks (pushed to GitHub, pasted in a chat),
-    regenerate it immediately in the Azure portal.</div>
+    regenerate it immediately in your provider's portal. A local Ollama has no key to leak, but keep the habit.</div>
 
   <h2 id="verify">4. Verify</h2>
   <pre><code class="language-bash">uv run python EXER001/solution/check_setup.py   # prints your config with the key masked
-uv run python EXER003/solution/raw_call.py      # makes a real call to your deployment</code></pre>
+uv run python EXER003/solution/raw_call.py      # makes a real call to your chat model</code></pre>
   <p>If both work, you're ready for <a href="lectures/lec001.html">Lecture 001</a>.</p>
 
   <h2 id="trouble">Troubleshooting</h2>
-  <details class="pitfall"><summary>401 Access denied / invalid subscription key</summary><div>
+  <details class="pitfall"><summary>Azure: 401 Access denied / invalid subscription key</summary><div>
     <p>The key doesn't belong to the endpoint's resource, or has a stray space or quote. Copy both values again from the same deployment page.</p></div></details>
-  <details class="pitfall"><summary>404 DeploymentNotFound / model not found</summary><div>
+  <details class="pitfall"><summary>Azure: 404 DeploymentNotFound</summary><div>
     <p><code>AZURE_OPENAI_CHAT_DEPLOYMENT</code> must be the <em>deployment</em> name, which may differ from the model name. A new deployment can take a minute or two to become available.</p></div></details>
-  <details class="pitfall"><summary>429 Too Many Requests</summary><div>
+  <details class="pitfall"><summary>Azure: 429 Too Many Requests</summary><div>
     <p>Your deployment's tokens-per-minute quota is low. Raise it in the deployment settings, or wait. Lecture 011 teaches retries with backoff.</p></div></details>
-  <details class="pitfall"><summary>Connection errors / name resolution failure</summary><div>
+  <details class="pitfall"><summary>Azure: connection errors / name resolution failure</summary><div>
     <p>Check the endpoint spelling, your network or VPN, and whether the resource uses private networking.</p></div></details>
+  <details class="pitfall"><summary>Ollama: connection refused</summary><div>
+    <p>Ollama is not running. Start the app, or run <code>ollama serve</code>. If it listens somewhere else, set <code>OLLAMA_BASE_URL</code>.</p></div></details>
+  <details class="pitfall"><summary>Ollama: 404 model not found</summary><div>
+    <p>The model is not downloaded, or the name differs from what <code>ollama list</code> shows (the tag after the colon counts). Run <code>ollama pull &lt;model&gt;</code>.</p></div></details>
+  <details class="pitfall"><summary>Ollama: the first answer is slow, or a request times out</summary><div>
+    <p>The first call loads the model into memory, which can take a minute. Later calls are fast while it stays loaded. Raise <code>AICOURSE_REQUEST_TIMEOUT</code> on a slow machine.</p></div></details>
+  <details class="pitfall"><summary>Ollama: long conversations or documents get cut off</summary><div>
+    <p>Ollama's context window is set on the server, not per request. Check it with <code>ollama ps</code> and raise it with the <code>OLLAMA_CONTEXT_LENGTH</code> environment variable before starting Ollama.</p></div></details>
   <details class="pitfall"><summary>"Course configuration problem: … is missing"</summary><div>
     <p>The <code>.env</code> file is missing, in the wrong folder (it must be at the repository root), or a variable name is misspelled.</p></div></details>
 </main>

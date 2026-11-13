@@ -4,7 +4,7 @@ import inspect
 
 from aicourse.check import Checker
 from aicourse.fakes import FakeClient
-from aicourse.llm import get_openai_client
+from aicourse.llm import get_llm_client
 
 checker = Checker(__file__)
 mod = checker.load("streaming.py")
@@ -43,7 +43,7 @@ def _():
 
 @checker.check("real streaming delivers several chunks  [live API]")
 def _():
-    pieces = list(mod.stream_reply(get_openai_client(),
+    pieces = list(mod.stream_reply(get_llm_client(),
                                    [{"role": "user", "content": "Count from 1 to 20, separated by spaces."}]))
     assert len(pieces) > 3, f"only {len(pieces)} chunks"
     assert "20" in "".join(pieces)

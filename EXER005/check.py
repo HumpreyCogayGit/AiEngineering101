@@ -2,7 +2,7 @@
 
 from aicourse.check import Checker
 from aicourse.fakes import FakeClient
-from aicourse.llm import get_openai_client
+from aicourse.llm import get_llm_client
 
 checker = Checker(__file__)
 mod = checker.load("chatbot.py")
@@ -52,7 +52,7 @@ def _():
 @checker.check("the bot remembers your name across turns  [live API]")
 def _():
     c = mod.Conversation("You are a helpful assistant.")
-    client = get_openai_client()
+    client = get_llm_client()
     mod.chat_turn(client, c, "Hi, my name is Zephyrine. Just say hi back.")
     reply = mod.chat_turn(client, c, "What is my name? Reply with the name only.")
     assert "zephyrine" in reply.lower(), reply

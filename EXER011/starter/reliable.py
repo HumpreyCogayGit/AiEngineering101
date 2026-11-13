@@ -19,7 +19,7 @@ from typing import Awaitable, Callable, TypeVar
 
 import openai
 
-from aicourse.llm import get_async_openai_client, get_openai_client
+from aicourse.llm import get_async_llm_client, get_llm_client
 from aicourse.settings import get_settings
 
 log = logging.getLogger("reliable")
@@ -68,14 +68,14 @@ class ReliableClient:
     """Wraps the SDK client: disables the SDK's own retries (we do it ourselves) and logs every call."""
 
     def __init__(self, client=None, max_attempts: int = 4) -> None:
-        self.client = client or get_openai_client().with_options(max_retries=0)
+        self.client = client or get_llm_client().with_options(max_retries=0)
         self.max_attempts = max_attempts
 
     def complete(self, messages: list[dict], **kwargs) -> str:
         start = time.perf_counter()
         response = call_with_retry(
             lambda: self.client.chat.completions.create(
-                model=get_settings().chat_deployment, messages=messages, **kwargs
+                model=get_settings().chat_model, messages=messages, **kwargs
             ),
             max_attempts=self.max_attempts,
         )
@@ -94,11 +94,11 @@ async def complete_many(
 ) -> list[str]:
     """Run many prompts concurrently, at most `concurrency` at a time, results in INPUT order."""
     if complete_one is None:
-        client = get_async_openai_client()
+        client = get_async_llm_client()
 
         async def complete_one(prompt: str) -> str:
             response = await client.chat.completions.create(
-                model=get_settings().chat_deployment,
+                model=get_settings().chat_model,
                 messages=[{"role": "user", "content": prompt}],
             )
             return response.choices[0].message.content or ""

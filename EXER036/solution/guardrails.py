@@ -6,7 +6,7 @@ instructions from an attacker's. No single fix exists, so we layer defences:
 
   input   → length limit, injection heuristics, PII redaction
   prompt  → untrusted text wrapped in random delimiters, clear rules
-  model   → Azure content filters (handled gracefully)
+  model   → the provider's content filter, if it has one (handled gracefully)
   output  → secret-leak and URL checks before anything reaches the user
   design  → least privilege: the summarizer has no tools and knows no secrets it doesn't need
 
@@ -96,10 +96,11 @@ def naive_summarize(llm: BaseChatModel, email: str) -> Result:
     try:
         reply = llm.invoke([SystemMessage(SYSTEM_PROMPT), HumanMessage(f"Summarize this email:\n{email}")])
     except Exception as exc:
-        # Even with no guardrails of your own, the platform has one: Azure's content
-        # filter rejects blatant jailbreak text before the model ever sees it.
+        # Even with no guardrails of your own, a hosted platform may have one: Azure's
+        # content filter rejects blatant jailbreak text before the model ever sees it.
+        # A local model (Ollama) has no such filter: there, your own guardrails are all there is.
         if is_content_filter_error(exc):
-            return Result("(rejected by the Azure content filter)", True, ["content_filter"])
+            return Result("(rejected by the provider's content filter)", True, ["content_filter"])
         raise
     return Result(reply.text)
 

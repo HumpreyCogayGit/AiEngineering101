@@ -57,7 +57,9 @@ reply.usage_metadata   # tokens, standardized</code></pre></div>
 <div class="callout info"><span class="title">Why <code>ChatOpenAI</code> and not <code>AzureChatOpenAI</code>?</span>
   <code>AzureChatOpenAI</code> targets Azure's older, versioned API (<code>api_version=…</code>). With the
   OpenAI-compatible v1 endpoint, the standard <code>ChatOpenAI</code> with a <code>base_url</code> is simpler and
-  recommended. Both work.</div>
+  recommended. Both work. The same reasoning covers Ollama: LangChain has a native <code>ChatOllama</code>, but
+  Ollama's OpenAI-compatible endpoint lets one <code>ChatOpenAI</code> serve every provider in this course, so
+  switching provider changes only <code>.env</code>.</div>
 
 <h3><code>.text</code> or <code>.content</code>?</h3>
 <p>An <code>AIMessage</code> has both, and they are not the same thing:</p>
@@ -110,7 +112,7 @@ Memory: Your favourite colour is teal.</code></pre>
 
 <section id="goal"><h2>Goal</h2>
 <ol class="objectives">
-  <li>Create a LangChain chat model for your Azure deployment.</li>
+  <li>Create a LangChain chat model for your configured chat model.</li>
   <li>Use typed message classes and read <code>AIMessage</code> metadata.</li>
   <li>Use <code>invoke</code>, <code>stream</code> and <code>batch</code>.</li>
   <li>Map each LangChain call to the raw code it replaces.</li>

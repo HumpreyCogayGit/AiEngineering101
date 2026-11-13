@@ -71,7 +71,7 @@ def _():
     assert not result.blocked
 
 
-@checker.check("safe_summarize() turns an Azure content-filter error into a blocked result")
+@checker.check("safe_summarize() turns a provider content-filter error into a blocked result")
 def _():
     class FilteredModel:
         def invoke(self, _):

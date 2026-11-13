@@ -47,11 +47,12 @@ def main() -> None:
     except ConfigError as exc:
         print(exc)
         sys.exit(1)
-    print(f"Endpoint          : {settings.endpoint}")
-    print(f"API base URL      : {settings.base_url}")
-    print(f"Chat deployment   : {settings.chat_deployment}")
-    print(f"Embedding deploy. : {settings.embedding_deployment}")
-    print(f"API key           : {masked_key(settings.api_key.get_secret_value())}")
+    print(f"Provider        : {settings.provider_label}")
+    print(f"Endpoint        : {settings.endpoint}")
+    print(f"API base URL    : {settings.base_url}")
+    print(f"Chat model      : {settings.chat_model}")
+    print(f"Embedding model : {settings.embedding_model}")
+    print(f"API key         : {masked_key(settings.api_key.get_secret_value())}")
     print("\nConfiguration looks good. Next: EXER002.")
 
 

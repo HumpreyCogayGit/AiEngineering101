@@ -10,19 +10,19 @@ from __future__ import annotations
 import time
 from typing import Callable, Iterator
 
-from aicourse.llm import get_openai_client
+from aicourse.llm import get_llm_client
 from aicourse.settings import get_settings
 
 
 def stream_reply(client, messages: list[dict]) -> Iterator[str]:
     """Yield text pieces (deltas) as they arrive."""
     stream = client.chat.completions.create(
-        model=get_settings().chat_deployment,
+        model=get_settings().chat_model,
         messages=messages,
         stream=True,
     )
     for chunk in stream:
-        # Some chunks (e.g. Azure's first content-filter chunk, or the usage chunk)
+        # Some chunks (e.g. the usage chunk, or Azure's first content-filter chunk)
         # have no choices, and some deltas have no content.
         if not chunk.choices:
             continue
@@ -44,7 +44,7 @@ def collect(pieces: Iterator[str], on_token: Callable[[str], None] | None = None
 def stream_with_usage(client, messages: list[dict]) -> tuple[str, dict]:
     """Stream, and also return token usage (sent in a final chunk with empty choices)."""
     stream = client.chat.completions.create(
-        model=get_settings().chat_deployment,
+        model=get_settings().chat_model,
         messages=messages,
         stream=True,
         stream_options={"include_usage": True},
@@ -77,7 +77,7 @@ def measure(client, messages: list[dict]) -> dict:
 
 
 def main() -> None:
-    client = get_openai_client()
+    client = get_llm_client()
     messages = [{"role": "system", "content": "You are a storyteller."}]
     print("Streaming chatbot. Type /exit to quit.")
     while True:

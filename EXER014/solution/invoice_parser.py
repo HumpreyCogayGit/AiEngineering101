@@ -46,7 +46,10 @@ def build_parser(llm: BaseChatModel) -> Runnable:
 def parse_invoice(parser: Runnable, text: str) -> Invoice:
     return parser.invoke(
         [
-            ("system", "Extract the invoice data. Use only information present in the text."),
+            # The schema fixes the shape; rules about values (the date format) are stated
+            # here too, because not every provider shows the field descriptions to the model.
+            ("system", "Extract the invoice data. Use only information present in the text. "
+                       "Write dates as YYYY-MM-DD and the currency as an ISO code such as USD."),
             ("human", text),
         ]
     )

@@ -8,24 +8,24 @@ checker = Checker(__file__)
 mod = checker.load("raw_call.py")
 
 
-@checker.check("build_url() appends /openai/v1/chat/completions")
+@checker.check("build_url() appends chat/completions to the base URL")
 def _():
-    assert mod.build_url("https://x.openai.azure.com") == "https://x.openai.azure.com/openai/v1/chat/completions"
+    assert mod.build_url("https://example.com/openai/v1") == "https://example.com/openai/v1/chat/completions"
 
 
 @checker.check("build_url() handles a trailing slash")
 def _():
-    assert mod.build_url("https://x.openai.azure.com/") == "https://x.openai.azure.com/openai/v1/chat/completions"
+    assert mod.build_url("http://localhost:11434/v1/") == "http://localhost:11434/v1/chat/completions"
 
 
-@checker.check("build_headers() sends the key in `api-key` and JSON content type")
+@checker.check("build_headers() sends the key as a Bearer token and JSON content type")
 def _():
     h = mod.build_headers("secret")
-    assert h.get("api-key") == "secret"
+    assert h.get("Authorization") == "Bearer secret", h
     assert h.get("Content-Type") == "application/json"
 
 
-@checker.check("build_body() uses the deployment as model with one user message")
+@checker.check("build_body() uses the model name with one user message")
 def _():
     assert mod.build_body("dep", "Hi") == {"model": "dep", "messages": [{"role": "user", "content": "Hi"}]}
 
@@ -38,12 +38,12 @@ def _():
     assert data["usage"]["total_tokens"] > 0
 
 
-@checker.check("send_chat() raises HTTPStatusError 401 for a wrong key  [live API]")
+@checker.check("send_chat() raises HTTPStatusError (4xx) for a model that does not exist  [live API]")
 def _():
     try:
-        mod.send_chat("hi", api_key="wrong-key")
+        mod.send_chat("hi", model="no-such-model")
     except httpx.HTTPStatusError as exc:
-        assert exc.response.status_code == 401, exc.response.status_code
+        assert 400 <= exc.response.status_code < 500, exc.response.status_code
         return
     raise AssertionError("no error raised — did you call response.raise_for_status()?")
 

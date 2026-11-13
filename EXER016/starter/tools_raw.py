@@ -14,7 +14,7 @@ import ast
 import json
 import operator
 
-from aicourse.llm import get_openai_client
+from aicourse.llm import get_llm_client
 from aicourse.settings import get_settings
 
 # --------------------------------------------------------------- the tools
@@ -110,7 +110,7 @@ def run_conversation(client, user_text: str, max_rounds: int = 5, verbose: bool 
 
 
 def main() -> None:
-    client = get_openai_client()
+    client = get_llm_client()
     for question in [
         "What's the weather in Tokyo?",
         "What is 1234 * 5678 + 42?",

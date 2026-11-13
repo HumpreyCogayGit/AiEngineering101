@@ -4,8 +4,9 @@
 
 ## Goal
 
-Replace hand-written HTTP with the official `openai` Python SDK and learn the
-parameters that shape a response: `temperature`, `max_completion_tokens`, tokens
+Replace hand-written HTTP with the `openai` Python SDK, the client library for the
+OpenAI-compatible API every provider in this course speaks, and learn the
+parameters that shape a response: `temperature`, the answer length limit, tokens
 and cost.
 
 ## Tasks
@@ -35,6 +36,10 @@ uv run python EXER004/check.py
 - [ ] On a classic model the answers are (nearly) identical at temperature 0 and vary at 1.0;
       on a reasoning model temperature 0 is reported as not supported and the script keeps running
 - [ ] All 7 checks pass
+
+> **Note:** the length limit has two names. `max_completion_tokens` is the current one and the
+> only one reasoning models accept; `max_tokens` is the original one and the only one Ollama
+> applies. `get_settings().max_tokens_param` gives the right name for your provider.
 
 > **Note:** reasoning models (o-series, gpt-5 family) only accept the default `temperature`
 > and answer anything else with a 400 error. `temperature_experiment()` must survive that:

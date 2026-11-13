@@ -11,7 +11,7 @@ import mimetypes
 from pathlib import Path
 from typing import Callable
 
-from aicourse.llm import get_openai_client
+from aicourse.llm import get_llm_client
 from aicourse.settings import get_settings
 
 IMAGES = Path(__file__).resolve().parent.parent / "images"
@@ -42,7 +42,7 @@ def build_multimodal_message(text: str, image_paths: list[str | Path]) -> dict:
 
 def describe_image(client, path: str | Path, question: str) -> str:
     response = client.chat.completions.create(
-        model=get_settings().chat_deployment,
+        model=get_settings().chat_model,
         messages=[build_multimodal_message(question, [path])],
     )
     return response.choices[0].message.content or ""
@@ -83,7 +83,7 @@ def trim_history(
 
 
 def main() -> None:
-    client = get_openai_client()
+    client = get_llm_client()
     image = IMAGES / "shapes.png"
     print("Q: What shapes do you see, and what colour is each?")
     print("A:", describe_image(client, image, "What shapes do you see, and what colour is each?"))

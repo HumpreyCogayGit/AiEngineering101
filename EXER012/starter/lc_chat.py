@@ -21,7 +21,7 @@ from aicourse.settings import get_settings
 def make_llm(temperature: float = 0.7) -> ChatOpenAI:
     """Build the chat model by hand.
 
-    ChatOpenAI(model=<chat deployment>, base_url=..., api_key=<the secret value>,
+    ChatOpenAI(model=<chat model>, base_url=..., api_key=<the secret value>,
                timeout=..., **model_params(temperature=temperature))
     model_params() leaves temperature out for models that reject it (gpt-5 family).
     (After this exercise you can use aicourse.llm.get_chat_model() instead.)

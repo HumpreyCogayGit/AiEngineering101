@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 from typing import Callable
 
-from aicourse.llm import get_openai_client, model_params
+from aicourse.llm import get_llm_client, model_params
 from aicourse.settings import get_settings
 
 LABELS = ["billing", "technical", "account", "other"]
@@ -76,7 +76,7 @@ def normalize_label(text: str) -> str:
 
 def classify(client, messages: list[dict]) -> str:
     response = client.chat.completions.create(
-        model=get_settings().chat_deployment,
+        model=get_settings().chat_model,
         messages=messages,
         **model_params(temperature=0),
     )
@@ -94,13 +94,13 @@ def evaluate(client, builder: Callable[[str], list[dict]], dataset: list[dict]) 
 
 
 def main() -> None:
-    client = get_openai_client()
+    client = get_llm_client()
     data = load_dataset()
     for name, builder in [("v1 naive", build_messages_v1), ("v2 instructions", build_messages_v2),
                           ("v3 few-shot", build_messages_v3)]:
         print(f"{name:<16} accuracy = {evaluate(client, builder, data):.0%}")
     print("\nWhat v1 actually answers:")
-    resp = client.chat.completions.create(model=get_settings().chat_deployment,
+    resp = client.chat.completions.create(model=get_settings().chat_model,
                                           messages=build_messages_v1(data[0]["text"]))
     print(" ", resp.choices[0].message.content[:200])
 

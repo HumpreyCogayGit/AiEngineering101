@@ -26,5 +26,5 @@ uv run python EXER007/check.py
 
 - [ ] Answers appear progressively in the terminal, not all at once
 - [ ] On exit the script prints time-to-first-token and total time; the first is much smaller
-- [ ] Chunks without `choices` (Azure content-filter / usage chunks) don't crash your code
+- [ ] Chunks without `choices` (the usage chunk, or Azure's content-filter chunk) don't crash your code
 - [ ] All 5 checks pass

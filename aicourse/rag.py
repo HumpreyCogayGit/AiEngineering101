@@ -78,9 +78,15 @@ def chunk_id(doc: Document) -> str:
 
 # ------------------------------------------------------------------ vector store
 def default_collection_name() -> str:
-    # Include the embedding deployment: vectors from different models are not comparable.
-    dep = re.sub(r"[^a-zA-Z0-9_-]", "-", get_settings().embedding_deployment)
-    return f"nimbus_kb_{dep}"[:60]
+    # Include the embedding model: vectors from different models are not comparable.
+    s = get_settings()
+    model = re.sub(r"[^a-zA-Z0-9_-]", "-", s.embedding_model)
+    name = f"nimbus_kb_{model}"[:50].rstrip("-_")
+    prefixes = s.embedding_query_prefix + "|" + s.embedding_document_prefix
+    if prefixes != "|":
+        # A different prefix gives different vectors too.
+        name += "_" + hashlib.sha256(prefixes.encode()).hexdigest()[:6]
+    return name
 
 
 _STORES: dict[tuple[str, str], object] = {}

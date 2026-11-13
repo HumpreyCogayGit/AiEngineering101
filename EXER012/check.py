@@ -10,13 +10,15 @@ checker = Checker(__file__)
 mod = checker.load("lc_chat.py")
 
 
-@checker.check("make_llm() returns a ChatOpenAI for your deployment")
+@checker.check("make_llm() returns a ChatOpenAI for your chat model")
 def _():
     llm = mod.make_llm(temperature=0.1)
     assert isinstance(llm, ChatOpenAI)
     # LangChain itself drops temperature for reasoning models (gpt-5 family): None is fine there.
     assert llm.temperature in (0.1, None), llm.temperature
-    assert str(llm.openai_api_base).endswith("/openai/v1/"), llm.openai_api_base
+    from aicourse.settings import get_settings
+
+    assert str(llm.openai_api_base) == get_settings().base_url, llm.openai_api_base
 
 
 @checker.check("ask() sends SystemMessage + HumanMessage and returns text")
@@ -62,7 +64,7 @@ def _():
     assert types == [SystemMessage, HumanMessage, AIMessage, HumanMessage, AIMessage], types
 
 
-@checker.check("make_llm() talks to your deployment  [live API]")
+@checker.check("make_llm() talks to your chat model  [live API]")
 def _():
     reply = mod.make_llm(0).invoke("Reply with the word: ready")
     assert isinstance(reply, AIMessage) and reply.text

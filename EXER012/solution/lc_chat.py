@@ -19,7 +19,7 @@ def make_llm(temperature: float = 0.7) -> ChatOpenAI:
     """Build the chat model by hand (later: aicourse.llm.get_chat_model())."""
     s = get_settings()
     return ChatOpenAI(
-        model=s.chat_deployment,
+        model=s.chat_model,
         base_url=s.base_url,
         api_key=s.api_key.get_secret_value(),
         timeout=s.request_timeout,

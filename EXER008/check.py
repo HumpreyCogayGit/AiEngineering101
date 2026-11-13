@@ -2,7 +2,7 @@
 
 from aicourse.check import Checker
 from aicourse.fakes import FakeClient
-from aicourse.llm import get_openai_client
+from aicourse.llm import get_llm_client
 
 checker = Checker(__file__)
 mod = checker.load("prompts.py")
@@ -60,7 +60,7 @@ def _():
 
 @checker.check("v3 (few-shot) accuracy >= 80% on tickets.json  [live API]")
 def _():
-    acc = mod.evaluate(get_openai_client(), mod.build_messages_v3, mod.load_dataset())
+    acc = mod.evaluate(get_llm_client(), mod.build_messages_v3, mod.load_dataset())
     assert acc >= 0.8, f"accuracy {acc:.0%}"
 
 

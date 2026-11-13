@@ -14,7 +14,7 @@ import mimetypes
 from pathlib import Path
 from typing import Callable
 
-from aicourse.llm import get_openai_client
+from aicourse.llm import get_llm_client
 from aicourse.settings import get_settings
 
 IMAGES = Path(__file__).resolve().parent.parent / "images"
@@ -88,7 +88,7 @@ def trim_history(
 
 
 def main() -> None:
-    client = get_openai_client()
+    client = get_llm_client()
     image = IMAGES / "shapes.png"
     print("Q: What shapes do you see, and what colour is each?")
     print("A:", describe_image(client, image, "What shapes do you see, and what colour is each?"))

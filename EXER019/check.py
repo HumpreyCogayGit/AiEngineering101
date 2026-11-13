@@ -3,7 +3,7 @@
 import math
 
 from aicourse.check import Checker
-from aicourse.llm import get_openai_client
+from aicourse.llm import get_llm_client
 
 checker = Checker(__file__)
 mod = checker.load("embeddings.py")
@@ -32,13 +32,13 @@ def _():
 
 @checker.check("embed_texts() returns one vector per text  [live API]")
 def _():
-    vecs = mod.embed_texts(get_openai_client(), ["hello", "world", "coffee"])
+    vecs = mod.embed_texts(get_llm_client(), ["hello", "world", "coffee"])
     assert len(vecs) == 3 and len(vecs[0]) > 50, (len(vecs), len(vecs[0]))
 
 
 @checker.check("semantic search finds the refund sentence with no shared words  [live API]")
 def _():
-    client = get_openai_client()
+    client = get_llm_client()
     vectors = mod.embed_texts(client, mod.CORPUS)
     q = mod.embed_texts(client, ["How do I get my money back?"])[0]
     best_text, _ = mod.search(q, mod.CORPUS, vectors, k=1)[0]

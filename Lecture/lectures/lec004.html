@@ -21,8 +21,8 @@
 
 <section id="overview"><h2>Overview</h2>
 <p>The <code>openai</code> Python SDK sends the same request you built in Lecture 003, but gives you typed
-  objects, automatic retries, timeouts and streaming support. Because Azure's v1 API is OpenAI-compatible, we
-  point the SDK at Azure with one argument: <code>base_url</code>.</p>
+  objects, automatic retries, timeouts and streaming support. Despite its name it is the client library for the <em>OpenAI-compatible API</em>, whoever serves it: we
+  point the SDK at Azure Foundry or at a local Ollama with one argument, <code>base_url</code>.</p>
 </section>
 
 <section id="concept"><h2>Concept</h2>
@@ -30,11 +30,11 @@
 <pre><code class="language-python">from openai import OpenAI
 
 client = OpenAI(
-    base_url="https://my-resource.openai.azure.com/openai/v1/",
-    api_key=key,
+    base_url=settings.base_url,   # Azure: https://my-resource.openai.azure.com/openai/v1/
+    api_key=key,                  # Ollama: http://localhost:11434/v1/
 )
 response = client.chat.completions.create(
-    model="gpt-4.1-mini",                       # your deployment name
+    model=settings.chat_model,                  # Azure: deployment name. Ollama: e.g. "gemma4:e4b"
     messages=[{"role": "user", "content": "Hi"}],
 )
 response.choices[0].message.content             # attributes, not ["keys"]
@@ -45,7 +45,7 @@ response.usage.total_tokens</code></pre>
   vocabulary. In English a token is about ¾ of a word. Everything is measured in tokens: the context window,
   output limits, rate limits and price. You can count them locally with <code>tiktoken</code>:</p>
 <pre><code class="language-python">import tiktoken
-enc = tiktoken.get_encoding("o200k_base")    # the encoding of GPT-4o / GPT-4.1 models
+enc = tiktoken.get_encoding("o200k_base")    # GPT-4o / GPT-4.1; an estimate for other model families
 enc.encode("hello world")                    # [24912, 2375]  -> 2 tokens</code></pre>
 <div class="callout info"><span class="title">Tokenization surprises</span>
   Numbers, code, rare words and non-English languages often use more tokens per word. "Kapeng barako" costs
@@ -64,11 +64,11 @@ enc.encode("hello world")                    # [24912, 2375]  -> 2 tokens</code>
   that rely on exact repetition.</p>
 
 <h3>Two model families, two sets of parameters</h3>
-<p>Not every model accepts every parameter. Chat deployments fall into two families, and the difference shows up
+<p>Not every model accepts every parameter. Chat models fall into two families, and the difference shows up
   the first time you set <code>temperature</code>:</p>
 <table>
   <tr><th></th><th>Classic chat models</th><th>Reasoning models</th></tr>
-  <tr><td>Examples</td><td>gpt-4.1, gpt-4.1-mini, gpt-4o</td><td>gpt-5 family, o-series</td></tr>
+  <tr><td>Examples</td><td>gpt-4.1, gpt-4.1-mini, gpt-4o, and the open models Ollama runs</td><td>gpt-5 family, o-series</td></tr>
   <tr><td><code>temperature</code></td><td>0 to 2</td><td>Only the default (1). Anything else is a 400 error</td></tr>
   <tr><td><code>top_p</code></td><td>Accepted</td><td>Rejected</td></tr>
   <tr><td>Output cap</td><td><code>max_completion_tokens</code> (or the older <code>max_tokens</code>)</td><td><code>max_completion_tokens</code> only</td></tr>
@@ -79,7 +79,7 @@ with this model. Only the default (1) value is supported.</code></pre>
 <p>Two habits make your code work on both families:</p>
 <ul>
   <li><strong>Send an optional parameter only when the caller set it.</strong> <code>ask()</code> builds a
-    <code>kwargs</code> dict and adds <code>temperature</code> and <code>max_completion_tokens</code> only when
+    <code>kwargs</code> dict and adds <code>temperature</code> and the output cap only when
     they are not <code>None</code>. Left out, the model's own default applies.</li>
   <li><strong>Treat a rejected parameter as an expected outcome.</strong> <code>temperature_experiment()</code>
     catches <code>BadRequestError</code> and records an empty list for a temperature the model refuses, instead of
@@ -88,19 +88,32 @@ with this model. Only the default (1) value is supported.</code></pre>
 <div class="callout info"><span class="title">From Lecture 008 on: <code>model_params()</code></span>
   Later exercises want <code>temperature=0</code> for repeatable results. They write
   <code>**model_params(temperature=0)</code> (from <code>aicourse.llm</code>), which sends the parameter when your
-  deployment accepts it and leaves it out when it does not. It finds out with one tiny test call, then remembers the
+  model accepts it and leaves it out when it does not. It finds out with one tiny test call, then remembers the
   answer in <code>.aicourse_cache.json</code>. You can also state it yourself with
-  <code>AICOURSE_SUPPORTS_TEMPERATURE=true|false</code> in <code>.env</code>.</div>
+  <code>AICOURSE_SUPPORTS_TEMPERATURE=true|false</code> in <code>.env</code>. The same helper takes
+  <code>max_tokens=</code> and sends it under the name your provider applies.</div>
 
-<h3>Limiting output: <code>max_completion_tokens</code></h3>
-<p>Caps how many tokens the model may generate. If it hits the cap, the answer is cut off mid-sentence and
+<h3>Limiting output: <code>max_completion_tokens</code> / <code>max_tokens</code></h3>
+<p>The API has two names for the output cap, and providers differ in which one they apply:</p>
+<table>
+  <tr><th>Parameter</th><th>Azure Foundry</th><th>Ollama</th></tr>
+  <tr><td><code>max_completion_tokens</code> (current name)</td><td>Applied by every model</td><td>Accepted but ignored: the answer is not cut</td></tr>
+  <tr><td><code>max_tokens</code> (original name)</td><td>Classic models only; reasoning models reject it</td><td>Applied</td></tr>
+</table>
+<p>So that one line of code works everywhere, <code>get_settings().max_tokens_param</code> holds the right name for
+  your provider: <code>kwargs[settings.max_tokens_param] = max_tokens</code>. A parameter that is silently ignored is
+  worse than one that is rejected, which is one more reason to check <code>finish_reason</code>.</p>
+<p>The cap limits how many tokens the model may generate. If it hits the cap, the answer is cut off mid-sentence and
   <code>finish_reason</code> is <code>"length"</code>. Always check <code>finish_reason</code> before trusting an answer as complete.</p>
 
 <div class="callout warn"><span class="title">Reasoning tokens count against the cap</span>
   A reasoning model spends output tokens on thinking before it writes anything, and those hidden tokens are part of
-  <code>max_completion_tokens</code> (and of your bill). With a small cap the whole budget can go to reasoning: you
+  the cap (and of your bill). Local thinking models such as gemma4 behave the same way. With a small cap the whole budget can go to reasoning: you
   get <code>finish_reason="length"</code> and an <strong>empty</strong> answer. On these models, leave generous
-  room, and read <code>usage.completion_tokens_details.reasoning_tokens</code> to see where the tokens went.</div>
+  room, and read <code>usage.completion_tokens_details.reasoning_tokens</code> to see where the tokens went.
+  The <code>reasoning_effort</code> parameter (<code>none</code>, <code>low</code>, <code>medium</code>, <code>high</code>)
+  controls how much thinking happens. The course's helpers send the value of <code>AICOURSE_REASONING_EFFORT</code>;
+  on Ollama it defaults to <code>none</code>, because thinking makes a local model several times slower.</div>
 
 <h3>Cost</h3>
 <p>You pay per token, with different prices for input (prompt) and output (completion), quoted per million tokens:</p>
@@ -133,9 +146,9 @@ temperature=1.0: ['Ember &amp; Oak', 'Ember &amp; Oak', 'Ember &amp; Oak']</code
 
 <section id="goal"><h2>Goal</h2>
 <ol class="objectives">
-  <li>Create an SDK client for Azure with <code>base_url</code> and <code>api_key</code>.</li>
+  <li>Create an SDK client for your provider with <code>base_url</code> and <code>api_key</code>.</li>
   <li>Explain tokens and count them with <code>tiktoken</code>.</li>
-  <li>Use <code>temperature</code> and <code>max_completion_tokens</code>, and interpret <code>finish_reason</code>.</li>
+  <li>Use <code>temperature</code> and the output cap, and interpret <code>finish_reason</code>.</li>
   <li>Estimate the cost of a request from its usage.</li>
 </ol>
 </section>
@@ -152,7 +165,7 @@ temperature=1.0: ['Ember &amp; Oak', 'Ember &amp; Oak', 'Ember &amp; Oak']</code
 <section id="walkthrough"><h2>Walkthrough</h2>
 <ol>
   <li><code>make_client()</code>: take <code>base_url</code> and the key from <code>get_settings()</code>. Use <code>.get_secret_value()</code>, because the key is a <code>SecretStr</code> that hides itself when printed.</li>
-  <li><code>ask()</code>: pass <code>temperature</code> and <code>max_completion_tokens</code> only when they aren't <code>None</code>. Build a <code>kwargs</code> dict and unpack it with <code>**kwargs</code>.</li>
+  <li><code>ask()</code>: pass <code>temperature</code> and the output cap (under the name in <code>get_settings().max_tokens_param</code>) only when they aren't <code>None</code>. Build a <code>kwargs</code> dict and unpack it with <code>**kwargs</code>.</li>
   <li><code>estimate_cost()</code>: check your result by hand. 1M input tokens at $0.40 is $0.40.</li>
   <li><code>temperature_experiment()</code>: wrap each temperature in <code>try / except BadRequestError</code>. Store an empty list when the message mentions <code>temperature</code>; re-raise anything else.</li>
   <li>Run the experiment several times. Notice how temperature affects variety, not quality.</li>
@@ -161,7 +174,7 @@ temperature=1.0: ['Ember &amp; Oak', 'Ember &amp; Oak', 'Ember &amp; Oak']</code
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
 <details class="pitfall"><summary><code>max_tokens</code> vs <code>max_completion_tokens</code></summary><div>
-  <p>Newer models use <code>max_completion_tokens</code>. The older <code>max_tokens</code> is rejected by reasoning models. Prefer the new name.</p></div></details>
+  <p>Newer hosted models use <code>max_completion_tokens</code>, and reasoning models reject the older <code>max_tokens</code>. Ollama is the reverse: it applies <code>max_tokens</code> and ignores the new name. Use <code>get_settings().max_tokens_param</code> instead of hard-coding either.</p></div></details>
 <details class="pitfall"><summary>Reasoning models reject temperature</summary><div>
   <p>o-series and gpt-5 models return a 400 error for any <code>temperature</code> other than the default. Send the parameter only when it was asked for, and handle the 400 (see the table above). The course runs on both families.</p></div></details>
 <details class="pitfall"><summary>Ignoring <code>finish_reason</code></summary><div>

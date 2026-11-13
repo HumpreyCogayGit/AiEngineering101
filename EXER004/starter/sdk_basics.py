@@ -26,10 +26,11 @@ class CompletionResult:
 
 
 def make_client() -> OpenAI:
-    """Create an OpenAI SDK client that talks to your Azure resource.
+    """Create an SDK client that talks to your provider's OpenAI-compatible API.
 
     Hint: OpenAI(base_url=s.base_url, api_key=s.api_key.get_secret_value(), timeout=s.request_timeout)
-    where s = get_settings(). The v1 base URL makes Azure look exactly like OpenAI.
+    where s = get_settings(). The v1 base URL is all the SDK needs: the same
+    class talks to Azure Foundry, to a local Ollama, or to OpenAI itself.
     """
     # TODO
     raise NotImplementedError("make_client")
@@ -43,9 +44,10 @@ def ask(
 ) -> CompletionResult:
     """Send one user message and return a CompletionResult.
 
-    - model = get_settings().chat_deployment
+    - model = get_settings().chat_model
     - ONLY when temperature is not None, pass `temperature=temperature`
-    - ONLY when max_tokens is not None, pass it as `max_completion_tokens=max_tokens`
+    - ONLY when max_tokens is not None, pass it under the name your provider applies:
+      kwargs[get_settings().max_tokens_param] = max_tokens   ("max_completion_tokens" or "max_tokens")
     - read: response.choices[0].message.content, response.choices[0].finish_reason,
             response.usage.prompt_tokens, response.usage.completion_tokens
     """
@@ -54,7 +56,9 @@ def ask(
 
 
 def count_tokens(text: str) -> int:
-    """Count tokens locally with tiktoken's "o200k_base" encoding.
+    """Count tokens locally with tiktoken's "o200k_base" encoding (GPT-4o / GPT-4.1).
+
+    Every model family has its own tokenizer, so for other models this is an estimate.
 
     Hint: tiktoken.get_encoding("o200k_base").encode(text) returns a list of token ids.
     """
@@ -96,7 +100,7 @@ def main() -> None:
     print(result.text)
     print(f"\nprompt={result.prompt_tokens} completion={result.completion_tokens} "
           f"finish={result.finish_reason}")
-    # Example prices (USD per 1M tokens) — check the Azure pricing page for yours.
+    # Example prices (USD per 1M tokens) — check your provider's pricing page. A local model costs nothing per token.
     print(f"Estimated cost: ${estimate_cost(result.prompt_tokens, result.completion_tokens, 0.40, 1.60):.6f}")
 
     print("\nLocal token count of the prompt:", count_tokens("Explain tokens to a 10-year-old in two sentences."))

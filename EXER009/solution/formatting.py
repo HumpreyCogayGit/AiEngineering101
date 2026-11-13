@@ -12,7 +12,7 @@ import json
 
 from pydantic import BaseModel, Field, ValidationError
 
-from aicourse.llm import get_openai_client, model_params
+from aicourse.llm import get_llm_client, model_params
 from aicourse.settings import get_settings
 
 SAMPLE_EMAIL = """Hi team,
@@ -40,7 +40,7 @@ JSON_MODE_SYSTEM = (
 
 def extract_json_mode(client, text: str) -> dict:
     response = client.chat.completions.create(
-        model=get_settings().chat_deployment,
+        model=get_settings().chat_model,
         messages=[
             {"role": "system", "content": JSON_MODE_SYSTEM},
             {"role": "user", "content": text},
@@ -52,12 +52,20 @@ def extract_json_mode(client, text: str) -> dict:
 
 
 # ------------------------------------------------- 2. structured outputs
+# The schema guarantees the SHAPE of the answer. Whether the model also reads the
+# field descriptions depends on the provider, so rules about the VALUES go in the prompt.
+STRUCTURED_SYSTEM = (
+    "Extract the event from the user's text. "
+    "Write dates as YYYY-MM-DD and times as 24-hour HH:MM."
+)
+
+
 def extract_structured(client, text: str) -> Event:
     """The SDK turns the Pydantic model into a strict JSON schema and parses the reply."""
     completion = client.chat.completions.parse(
-        model=get_settings().chat_deployment,
+        model=get_settings().chat_model,
         messages=[
-            {"role": "system", "content": "Extract the event from the user's text."},
+            {"role": "system", "content": STRUCTURED_SYSTEM},
             {"role": "user", "content": text},
         ],
         response_format=Event,
@@ -77,7 +85,7 @@ def parse_with_repair(client, messages: list[dict], model_cls: type[BaseModel],
     last_error = ""
     for _ in range(max_attempts):
         response = client.chat.completions.create(
-            model=get_settings().chat_deployment,
+            model=get_settings().chat_model,
             messages=messages,
             response_format={"type": "json_object"},
             **model_params(temperature=0),
@@ -97,7 +105,7 @@ def parse_with_repair(client, messages: list[dict], model_cls: type[BaseModel],
 
 
 def main() -> None:
-    client = get_openai_client()
+    client = get_llm_client()
     print("1) JSON mode:\n", json.dumps(extract_json_mode(client, SAMPLE_EMAIL), indent=2))
     event = extract_structured(client, SAMPLE_EMAIL)
     print("\n2) Structured output (a real Python object):")

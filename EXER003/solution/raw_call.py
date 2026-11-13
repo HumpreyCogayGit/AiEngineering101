@@ -13,36 +13,35 @@ import httpx
 from aicourse.settings import get_settings
 
 
-def build_url(endpoint: str) -> str:
-    """The chat completions URL of Azure's OpenAI-compatible v1 API."""
-    return f"{endpoint.rstrip('/')}/openai/v1/chat/completions"
+def build_url(base_url: str) -> str:
+    """The chat completions URL of an OpenAI-compatible v1 API."""
+    return f"{base_url.rstrip('/')}/chat/completions"
 
 
 def build_headers(api_key: str) -> dict[str, str]:
-    """Azure accepts the key in the `api-key` header."""
-    return {"api-key": api_key, "Content-Type": "application/json"}
+    """The key travels as a Bearer token in the `Authorization` header."""
+    return {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
 
-def build_body(deployment: str, prompt: str) -> dict:
-    """On Azure, `model` is your DEPLOYMENT name."""
+def build_body(model: str, prompt: str) -> dict:
+    """`model` is the name your provider knows the model by."""
     return {
-        "model": deployment,
+        "model": model,
         "messages": [{"role": "user", "content": prompt}],
     }
 
 
-def send_chat(prompt: str, api_key: str | None = None) -> dict:
+def send_chat(prompt: str, model: str | None = None) -> dict:
     """POST the request and return the parsed JSON response.
 
     Raises httpx.HTTPStatusError for 4xx/5xx responses.
-    `api_key` overrides the configured key (used to test a wrong key).
+    `model` overrides the configured chat model (used to test a wrong name).
     """
     s = get_settings()
-    key = api_key if api_key is not None else s.api_key.get_secret_value()
     response = httpx.post(
-        build_url(s.endpoint),
-        headers=build_headers(key),
-        json=build_body(s.chat_deployment, prompt),
+        build_url(s.base_url),
+        headers=build_headers(s.api_key.get_secret_value()),
+        json=build_body(model or s.chat_model, prompt),
         timeout=s.request_timeout,
     )
     response.raise_for_status()
@@ -51,7 +50,7 @@ def send_chat(prompt: str, api_key: str | None = None) -> dict:
 
 def main() -> None:
     prompt = "In one sentence, what is a large language model?"
-    print(f">>> POST {build_url(get_settings().endpoint)}")
+    print(f">>> POST {build_url(get_settings().base_url)}")
     data = send_chat(prompt)
     print("\n--- Full JSON response ---")
     print(json.dumps(data, indent=2)[:1500])
@@ -60,9 +59,9 @@ def main() -> None:
     print("Finish reason:", data["choices"][0]["finish_reason"])
     print("Usage        :", data["usage"])
 
-    print("\n--- And with a wrong key ---")
+    print("\n--- And with a model that does not exist ---")
     try:
-        send_chat(prompt, api_key="wrong-key")
+        send_chat(prompt, model="no-such-model")
     except httpx.HTTPStatusError as exc:
         print(f"HTTP {exc.response.status_code}: {exc.response.text[:200]}")
 

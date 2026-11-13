@@ -43,14 +43,14 @@ uv run python EXER005/check.py --solution     # check the reference solution</co
   <div class="callout info"><span class="title">Two principles</span>
     <p><strong>Raw first, framework second.</strong> You call the API with plain HTTP before using the SDK,
       and write a tool loop by hand before LangChain does it for you. You'll know what the framework hides.</p>
-    <p><strong>Measure, don't guess.</strong> Checks marked <code>[live API]</code> call your real Azure deployment;
+    <p><strong>Measure, don't guess.</strong> Checks marked <code>[live API]</code> call your real model;
       others run offline with fake models. From Module 4 on you build your own evaluations.</p>
   </div>
 
   <h2 id="stack">The stack</h2>
   <table>
     <tr><th>Layer</th><th>Tool</th><th>Used from</th></tr>
-    <tr><td>Model endpoint</td><td>Azure Foundry (Azure OpenAI v1 API)</td><td>Module 0</td></tr>
+    <tr><td>Inference provider</td><td>Azure Foundry (cloud) or Ollama (local), through the OpenAI-compatible v1 API</td><td>Module 0</td></tr>
     <tr><td>Raw access</td><td><code>httpx</code>, then the <code>openai</code> SDK</td><td>Modules 0–1</td></tr>
     <tr><td>Framework</td><td>LangChain</td><td>Module 2</td></tr>
     <tr><td>Agents</td><td>LangGraph</td><td>Module 5</td></tr>
@@ -63,8 +63,8 @@ uv run python EXER005/check.py --solution     # check the reference solution</co
   <div id="module-list"></div>
 
   <h2 id="prereqs">Before you start</h2>
-  <p>You need a computer with macOS, Linux or Windows, basic comfort with a terminal, and an Azure
-    subscription. Little Python experience is fine: Lecture 002 covers what you need. Follow the
+  <p>You need a computer with macOS, Linux or Windows, basic comfort with a terminal, and an inference provider:
+    an Azure subscription, or Ollama installed locally. Little Python experience is fine: Lecture 002 covers what you need. Follow the
     <a href="setup.html">setup guide</a> first.</p>
 </main>
 </body>

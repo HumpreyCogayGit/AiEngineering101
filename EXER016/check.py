@@ -4,7 +4,7 @@ import json
 
 from aicourse.check import Checker
 from aicourse.fakes import FakeClient
-from aicourse.llm import get_openai_client
+from aicourse.llm import get_llm_client
 
 checker = Checker(__file__)
 mod = checker.load("tools_raw.py")
@@ -56,7 +56,7 @@ def _():
 
 @checker.check("the model uses the calculator for exact math  [live API]")
 def _():
-    answer = mod.run_conversation(get_openai_client(), "What is 1234 * 5678? Use the calculator.")
+    answer = mod.run_conversation(get_llm_client(), "What is 1234 * 5678? Use the calculator.")
     assert "7006652" in answer.replace(",", "").replace(" ", ""), answer
 
 

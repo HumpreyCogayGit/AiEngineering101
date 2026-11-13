@@ -42,7 +42,9 @@ class Invoice(BaseModel):
 parser = llm.with_structured_output(Invoice)
 invoice = parser.invoke([("system", "Extract the invoice data."), ("human", text)])   # -> Invoice</code></pre>
 <p>Nested models (<code>list[LineItem]</code>) work naturally. Field descriptions guide the model on ambiguous details,
-  for example that "4 hours at $120/hour" is a quantity of 4.</p>
+  for example that "4 hours at $120/hour" is a quantity of 4. Not every provider shows the descriptions to the model
+  (Lecture 009): Ollama only enforces the shape. So repeat the rules that matter, such as the date format, in the
+  system instruction.</p>
 
 <h3>Two layers of validation</h3>
 <div class="mermaid">flowchart LR

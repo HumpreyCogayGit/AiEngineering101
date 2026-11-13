@@ -5,7 +5,7 @@ from pathlib import Path
 
 from aicourse.check import Checker
 from aicourse.fakes import FakeClient
-from aicourse.llm import get_openai_client
+from aicourse.llm import get_llm_client
 
 checker = Checker(__file__)
 mod = checker.load("content_blocks.py")
@@ -58,7 +58,7 @@ def _():
 
 @checker.check("the model sees the shapes in the image  [live API]")
 def _():
-    answer = mod.describe_image(get_openai_client(), IMAGE, "Name the colours of the shapes. Be brief.").lower()
+    answer = mod.describe_image(get_llm_client(), IMAGE, "Name the colours of the shapes. Be brief.").lower()
     hits = sum(c in answer for c in ("red", "blue", "green"))
     assert hits >= 2, answer
 

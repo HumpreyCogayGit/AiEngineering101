@@ -1,7 +1,7 @@
 """EXER037 (capstone) checks. Run:  uv run python EXER037/check.py
 
 Offline checks use fake models and fake tools. The final check runs the real
-evaluation set against your deployment.
+evaluation set against your chat model.
 """
 
 import asyncio

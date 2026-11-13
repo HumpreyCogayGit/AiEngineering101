@@ -30,4 +30,5 @@ uv run python EXER006/check.py
 - [ ] A 41-message history is trimmed to fit 400 tokens, keeping the newest turns
 - [ ] All 7 checks pass
 
-> Your chat deployment must support image input (gpt-4.1-mini, gpt-4o-mini, gpt-4o … do).
+> Your chat model must support image input (gpt-4.1-mini, gpt-4o-mini, gpt-4o … do; on Ollama,
+> `ollama show <model>` must list the `vision` capability, as it does for gemma4:e4b).

@@ -55,10 +55,10 @@ def safe_get_reply(response: dict) -> str | None:
 
 
 # -------------------------------------------------------------- building JSON
-def build_request(deployment: str, user_text: str, system_text: str | None = None) -> dict:
+def build_request(model: str, user_text: str, system_text: str | None = None) -> dict:
     """Build a chat request body.
 
-    {"model": deployment, "messages": [ {system?}, {"role": "user", "content": user_text} ]}
+    {"model": model, "messages": [ {system?}, {"role": "user", "content": user_text} ]}
     The system message is only included when system_text is given, and it comes FIRST.
     """
     # TODO
@@ -88,7 +88,7 @@ def main() -> None:
     response = load_response(SAMPLE)
     print("Reply       :", get_reply_text(response))
     print("Tokens used :", get_total_tokens(response))
-    print("Request body:", json.dumps(build_request("gpt-4.1-mini", "Hi!", "Be brief."), indent=2))
+    print("Request body:", json.dumps(build_request("my-chat-model", "Hi!", "Be brief."), indent=2))
     try:
         parse_messages([{"role": "robot", "content": "beep"}])
     except ValidationError as exc:

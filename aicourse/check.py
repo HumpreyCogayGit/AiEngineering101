@@ -47,6 +47,7 @@ class _Check:
 LIVE_TAG = "[live API]"
 ENV_TAG = "[needs .env]"  # about your real configuration: skipped by --offline
 _PLACEHOLDER_ENV = {
+    "AICOURSE_PROVIDER": "azure",
     "AZURE_OPENAI_ENDPOINT": "https://offline-check.invalid",
     "AZURE_OPENAI_API_KEY": "offline-check-key",
     "AZURE_OPENAI_CHAT_DEPLOYMENT": "offline-check-model",

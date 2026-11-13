@@ -39,12 +39,12 @@
 #        dict key   list  dict key   dict key</code></pre>
 
 <h3>Functions with type hints</h3>
-<pre><code class="language-python">def build_request(deployment: str, user_text: str, system_text: str | None = None) -> dict:
+<pre><code class="language-python">def build_request(model: str, user_text: str, system_text: str | None = None) -> dict:
     messages: list[dict] = []
     if system_text:                      # None and "" are both "falsy"
         messages.append({"role": "system", "content": system_text})
     messages.append({"role": "user", "content": user_text})
-    return {"model": deployment, "messages": messages}</code></pre>
+    return {"model": model, "messages": messages}</code></pre>
 <p>Type hints (<code>str</code>, <code>str | None</code>, <code>-&gt; dict</code>) aren't enforced at runtime, but
   they document intent and let your editor catch mistakes. Frameworks also read them: LangChain builds tool
   schemas from them (Lecture 017) and FastMCP builds MCP schemas from them (Lecture 033).</p>

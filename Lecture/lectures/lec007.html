@@ -41,7 +41,7 @@ data: [DONE]</code></pre>
 <pre><code class="language-python">def stream_reply(client, messages):
     stream = client.chat.completions.create(model=..., messages=messages, stream=True)
     for chunk in stream:
-        if not chunk.choices:          # usage chunk, Azure content-filter chunk
+        if not chunk.choices:          # usage chunk, or Azure's content-filter chunk
             continue
         delta = chunk.choices[0].delta.content
         if delta:                      # role-only and final chunks have no content
@@ -78,7 +78,7 @@ Streaming      [.] first token (TTFT ≈ 0.5s)
 <ul class="checklist">
   <li>Answers appear progressively in the terminal, not all at once</li>
   <li>On exit the script prints time-to-first-token and total time; the first is much smaller</li>
-  <li>Chunks without <code>choices</code> (Azure content-filter / usage chunks) don't crash your code</li>
+  <li>Chunks without <code>choices</code> (the usage chunk, or Azure's content-filter chunk) don't crash your code</li>
   <li>All 5 checks pass</li>
 </ul>
 </section>

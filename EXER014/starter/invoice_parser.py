@@ -55,6 +55,10 @@ def parse_invoice(parser: Runnable, text: str) -> Invoice:
 
     Runnables accept a list of (role, content) tuples:
         [("system", "Extract the invoice data. ..."), ("human", text)]
+
+    State the rules about VALUES in the system instruction as well (dates as
+    YYYY-MM-DD, currency as an ISO code): the schema guarantees the shape, but
+    not every provider shows your field descriptions to the model.
     """
     # TODO
     raise NotImplementedError("parse_invoice")
