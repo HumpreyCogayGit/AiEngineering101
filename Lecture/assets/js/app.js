@@ -47,7 +47,7 @@
   topbar.className = "topbar";
   topbar.innerHTML = `
     <button class="icon-btn menu-btn" aria-label="Open navigation">☰</button>
-    <a class="brand" href="${ROOT}index.html">AI Engineer <span>Zero to Hero</span></a>
+    <a class="brand" href="${ROOT}index.html">AI Engineer: Zero to Hero</a>
     <div class="spacer"></div>
     <div class="progress" title="Lectures marked complete">
       <span class="progress-text"></span><div class="progress-bar"><i></i></div>
@@ -58,9 +58,9 @@
   sidebar.className = "sidebar";
   sidebar.setAttribute("aria-label", "Course navigation");
   let nav = `<div class="top-links">
-      <a href="${ROOT}index.html">🏠 Course home</a>
-      <a href="${ROOT}setup.html">⚙️ Setup guide</a>
-      <a href="${ROOT}glossary.html">📖 Glossary</a></div>`;
+      <a href="${ROOT}index.html">Course home</a>
+      <a href="${ROOT}setup.html">Setup guide</a>
+      <a href="${ROOT}glossary.html">Glossary</a></div>`;
   for (const m of COURSE.modules) {
     nav += `<h4>${m.title}</h4>`;
     for (const l of m.lectures) {
@@ -117,19 +117,25 @@
   if (CURRENT) {
     const info = ALL.find((l) => l.n === CURRENT);
     const module = COURSE.modules.find((m) => m.lectures.includes(info));
-    document.title = `${pad(CURRENT)} · ${info.title} — AI Engineer Course`;
+    document.title = `Lecture ${CURRENT}: ${info.title} – AI Engineer Course`;
 
-    // header chips
+    // header: large lecture number, module, then one plain sentence about time and the exercise
     const header = main.querySelector(".lecture-header");
     if (header && !header.querySelector(".meta")) {
-      const meta = document.createElement("div");
+      const no = document.createElement("span");
+      no.className = "lecture-no";
+      no.setAttribute("aria-label", `Lecture ${CURRENT}`);
+      no.textContent = pad(CURRENT);
+      const mod = document.createElement("p");
+      mod.className = "lecture-module";
+      mod.textContent = module.title;
+      header.prepend(no, mod);
+      const meta = document.createElement("p");
       meta.className = "meta";
-      meta.innerHTML = `<span class="chip">⏱ ~${info.minutes} min</span>
-        <span class="chip">🧪 <a href="${exerciseHref(CURRENT)}">EXER${pad(CURRENT)}</a></span>
-        <span class="chip">▶ <code>uv run python EXER${pad(CURRENT)}/check.py</code></span>`;
+      meta.innerHTML = `About ${info.minutes} minutes, plus exercise
+        <a href="${exerciseHref(CURRENT)}">EXER${pad(CURRENT)}</a>. Check your work with
+        <code>uv run python EXER${pad(CURRENT)}/check.py</code>.`;
       header.append(meta);
-      const kicker = header.querySelector(".kicker");
-      if (kicker && !kicker.textContent.trim()) kicker.textContent = `${module.title} · Lecture ${pad(CURRENT)}`;
     }
 
     // completion + pager
@@ -143,8 +149,8 @@
         <button class="btn complete-btn"></button>
       </div>
       <nav class="pager">
-        ${prev ? `<a class="prev" href="${lectureHref(prev.n)}"><small>← Previous</small>${pad(prev.n)} · ${prev.title}</a>` : ""}
-        ${next ? `<a class="next" href="${lectureHref(next.n)}"><small>Next →</small>${pad(next.n)} · ${next.title}</a>` : ""}
+        ${prev ? `<a class="prev" href="${lectureHref(prev.n)}"><small>Previous</small><span class="pager-no">${pad(prev.n)}</span><span class="pager-title">${prev.title}</span></a>` : ""}
+        ${next ? `<a class="next" href="${lectureHref(next.n)}"><small>Next</small><span class="pager-no">${pad(next.n)}</span><span class="pager-title">${next.title}</span></a>` : ""}
       </nav>`;
     main.append(footer);
     footer.querySelector(".complete-btn").addEventListener("click", () => setCompleted(CURRENT, !completed().has(CURRENT)));
@@ -176,9 +182,11 @@
   if (moduleList) {
     moduleList.innerHTML = COURSE.modules.map((m) => {
       const mins = m.lectures.reduce((a, l) => a + l.minutes, 0);
-      return `<div class="module-card"><h3>${m.title}<small>${m.lectures.length} lectures · ~${Math.round(mins / 60 * 10) / 10} h</small></h3><ol>` +
-        m.lectures.map((l) => `<li><a href="${lectureHref(l.n)}" data-n="${l.n}"><span class="num">EXER${pad(l.n)}</span><span class="title">${l.title}</span><span class="quiz-score" data-quiz="${l.n}"></span></a></li>`).join("") +
-        "</ol></div>";
+      const hours = Math.round(mins / 60 * 10) / 10;
+      return `<section class="module"><h3>${m.title}</h3>` +
+        `<p class="module-meta">${m.lectures.length} lectures, about ${hours} ${hours === 1 ? "hour" : "hours"}</p><ol>` +
+        m.lectures.map((l) => `<li><a href="${lectureHref(l.n)}" data-n="${l.n}"><span class="num">${pad(l.n)}</span><span class="title">${l.title}</span><span class="quiz-score" data-quiz="${l.n}"></span></a></li>`).join("") +
+        "</ol></section>";
     }).join("");
     const totalMin = ALL.reduce((a, l) => a + l.minutes, 0);
     document.querySelectorAll("[data-total-hours]").forEach((el) => (el.textContent = Math.round(totalMin / 60)));
@@ -186,7 +194,7 @@
     const done = completed();
     const nextUp = ALL.find((l) => !done.has(l.n)) || ALL[0];
     const cont = document.getElementById("continue-link");
-    if (cont) { cont.href = lectureHref(nextUp.n); cont.textContent = done.size ? `Continue: ${pad(nextUp.n)} · ${nextUp.title} →` : "Start with Lecture 001 →"; }
+    if (cont) { cont.href = lectureHref(nextUp.n); cont.textContent = done.size ? `Continue with ${pad(nextUp.n)}: ${nextUp.title}` : "Start Lecture 001"; }
   }
 
   // ------------------------------------------------------------ self-check quiz (data in quizzes.js)
