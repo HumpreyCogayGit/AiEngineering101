@@ -11,10 +11,10 @@ from your documents, cites its sources, and admits when it doesn't know.
 
 Complete the TODOs in `starter/rag_chain.py`:
 
-1. `RAG_PROMPT` — a grounding prompt with citation and "I don't know" rules
-2. `format_docs` — numbered passages with their sources
-3. `build_rag_chain` — retriever + prompt + model, returning answer **and** docs
-4. `cited_sources` — turn `[n]` markers back into file names
+1. `RAG_PROMPT`: a grounding prompt with citation and "I don't know" rules
+2. `format_docs`: numbered passages with their sources
+3. `build_rag_chain`: retriever + prompt + model, returning answer **and** docs
+4. `cited_sources`: turn `[n]` markers back into file names
 
 ## Run it
 

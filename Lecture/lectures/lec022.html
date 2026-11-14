@@ -21,9 +21,9 @@
 </header>
 
 <section id="overview"><h2>Overview</h2>
-<p>A model alone knows nothing about Nimbus Coffee's refund policy, and if asked it will make one up. RAG fixes that
-  by giving it the relevant facts at question time. It's the most widely deployed LLM pattern, because it works with
-  private, changing data without retraining anything.</p>
+<p>A model alone knows nothing about Nimbus Coffee's refund policy, and if asked it will make one up. RAG gives it the
+  relevant passages at question time and tells it to answer only from them. That works with private data that changes
+  every week, without retraining anything.</p>
 </section>
 
 <section id="concept"><h2>Concept</h2>
@@ -159,9 +159,12 @@ A: I don't know based on the available documents.
 <section id="discussion"><h2>Discussion</h2>
 <div class="qa"><p>RAG or fine-tuning for company knowledge?</p>
   <p>RAG for facts that change and must be cited. Fine-tuning for style, format or narrow skills. Fine-tuning doesn't
-  reliably teach facts and can't be updated daily.</p></div>
+  reliably teach facts (Ovadia et al., <a href="https://arxiv.org/abs/2312.05934">"Fine-Tuning or Retrieval?"</a>, 2023,
+  found retrieval beat unsupervised fine-tuning at adding knowledge) and can't be updated daily.</p></div>
 <div class="qa"><p>Should a customer bot ever say "I don't know"?</p>
-  <p>Yes, preferably with a next step ("contact support at …"). A wrong policy stated confidently costs more than an honest handoff.</p></div>
+  <p>Yes, preferably with a next step ("contact support at …"). A confidently wrong answer can bind the company: in
+  <em>Moffatt v. Air Canada</em> (2024 BCCRT 149) a tribunal made the airline honour a refund policy its website chatbot
+  had made up.</p></div>
 </section>
 
 <section id="quiz"><h2>Check Yourself</h2>
