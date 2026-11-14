@@ -1,7 +1,7 @@
-# EXER040 — the Nimbus Helpdesk as a container image (starter).
+# EXER041 — the Nimbus Helpdesk as a container image (starter).
 #
 # Build from the REPOSITORY ROOT, so the image can see pyproject.toml, aicourse/ and data/:
-#     docker build -f EXER040/starter/Dockerfile -t nimbus-helpdesk .
+#     docker build -f EXER041/starter/Dockerfile -t nimbus-helpdesk .
 # Run, with the configuration injected from your .env (the file itself is never in the image):
 #     docker run --rm -p 8000:8000 --env-file .env nimbus-helpdesk
 
@@ -25,7 +25,7 @@ COPY aicourse ./aicourse
 COPY data ./data
 COPY EXER037/solution ./EXER037/solution
 COPY EXER037/servers ./EXER037/servers
-COPY EXER040/starter/service.py ./EXER040/starter/service.py
+COPY EXER041/starter/service.py ./EXER041/starter/service.py
 
 # 4. TODO: do not run as root. Create a user, give it /app (it writes the vector index there), switch to it:
 #          RUN useradd --create-home --uid 10001 app && chown -R app:app /app
@@ -36,4 +36,4 @@ COPY EXER040/starter/service.py ./EXER040/starter/service.py
 #          CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"]
 
 # 6. TODO: start the service in exec form (a JSON list), so it receives the stop signal directly:
-#          CMD ["python", "EXER040/starter/service.py"]
+#          CMD ["python", "EXER041/starter/service.py"]

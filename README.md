@@ -4,7 +4,7 @@ A hands-on course that takes you from your first LLM API call to production-styl
 agents: messages, streaming, structured output, tool calling, CLI tools, RAG,
 LangGraph agents, MCP, observability, guardrails and evaluation.
 
-40 lectures and 40 exercises in 9 modules, built on **LangChain**, **LangGraph**,
+41 lectures and 41 exercises in 9 modules, built on **LangChain**, **LangGraph**,
 **Chroma** and **Streamlit**. The models run on the inference provider you choose:
 **Azure Foundry** in the cloud or **Ollama** on your own machine.
 
@@ -40,7 +40,7 @@ AiEngineerCourse/
 │   ├── fakes.py               fake models so checks can run offline
 │   └── stretch.py             lets stretch-goal code build on a reference solution
 ├── data/                      Nimbus Coffee Co. knowledge base + RAG eval questions
-├── EXER001/ … EXER040/        one folder per exercise
+├── EXER001/ … EXER041/        one folder per exercise
 ├── check_all.py               checks every exercise, and the lecture quizzes
 ├── check_quizzes.py           validates the self-check quizzes of the lecture site
 └── Lecture/                   the lecture site (plain HTML/CSS/JS, works offline)
@@ -142,7 +142,7 @@ Things that differ between providers, and how the course handles them:
 | 5 · Agents with LangGraph | 026–031 | Graph basics, ReAct agent, memory and persistence, human in the loop, agentic RAG, multi-agent |
 | 6 · MCP | 032–034 | MCP concepts and clients, building a server, multi-server agents |
 | 7 · Toward Production | 035–037 | Observability and cost, safety and guardrails, capstone |
-| 8 · Beyond the Capstone | 038–040 | Evaluating agents (tool-call trajectories), conversation memory strategies, deploying the capstone in a container |
+| 8 · Beyond the Capstone | 038–041 | Evaluating agents (tool-call trajectories), conversation memory strategies, context engineering (token budgets, compacting tool results, sub-agent isolation, position and noise), deploying the capstone in a container |
 
 ## Requirements
 
@@ -155,6 +155,6 @@ Things that differ between providers, and how the course handles them:
 - Any chat model with tool calling, structured output and image input works. The course is tested on a
   classic model (`gpt-4.1-mini`), on a reasoning model (gpt-5 family) and on a local model (`gemma4:e4b`). Reasoning models only accept
   the default `temperature`; the course detects that and leaves the parameter out (Lecture 004)
-- Optional: Node.js (MCP Inspector), a LangSmith account (tracing in EXER035), Docker (building the image in EXER040)
+- Optional: Node.js (MCP Inspector), a LangSmith account (tracing in EXER035), Docker (building the image in EXER041)
 
 See [Plan.MD](Plan.MD) for the course design.

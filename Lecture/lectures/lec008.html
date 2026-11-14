@@ -134,6 +134,11 @@ v3 few-shot      accuracy = highest, usually ≥ 80%</code></pre>
 <div class="qa"><p>When should you stop prompting and try something else?</p>
   <p>When accuracy plateaus. Next steps are structured outputs, retrieval of better context (RAG), a bigger model,
   or splitting the task into steps.</p></div>
+<div class="qa"><p>Is this the same thing as context engineering?</p>
+  <p>It is one part of it. Every call in this exercise has the same small context, so only the wording varies. In an agent the
+  prompt shares the window with tool definitions, history, retrieved documents and tool results, and those usually take most of
+  the tokens. Deciding what goes into the window, in what form and order, is context engineering:
+  <a href="lec040.html">Lecture 040</a>.</p></div>
 </section>
 
 <section id="quiz"><h2>Check Yourself</h2>

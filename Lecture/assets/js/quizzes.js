@@ -2704,6 +2704,72 @@ window.QUIZZES = {
   ],
   40: [
     {
+      q: "A call is 14,750 tokens: 41 for the system prompt, 193 for tool definitions, 41 for history and 14,475 for one tool result. Answers are slow and expensive. Where do you start?",
+      options: [
+        "Shorten the system prompt",
+        "Remove the tool definitions, since no tool is called on this step",
+        "Shrink the tool result: it is 98% of the call",
+        "Switch to a model with a larger context window",
+      ],
+      answer: 2,
+      why: [
+        "41 tokens is not where the cost is. Count the sections before tuning one.",
+        "The agent needs them to call tools, and at 193 tokens they are not the problem.",
+        "The biggest section is where the tokens go. Compact it or hand it to a sub-agent.",
+        "A larger window accepts more tokens. It does not make them cheaper or faster.",
+      ],
+    },
+    {
+      q: "The raw order response is cut to fit a 4,000-token budget. Which questions does that lose?",
+      options: [
+        "None: the model still sees most of the response",
+        "Questions about the orders after the cut, whatever they ask",
+        "Only questions about the system prompt",
+        "A random set, different on every call",
+      ],
+      answer: 1,
+      why: [
+        "In the exercise it lost 5 of 6 answers. Most of the response is not the part that was asked about.",
+        "Cutting keeps the start and drops the end. It does not know what was asked, so later orders are gone.",
+        "The system prompt comes first in priority order and is kept whole.",
+        "The cut is deterministic: the same tokens are dropped every time.",
+      ],
+    },
+    {
+      q: "With a sub-agent, the main call drops from 14,791 to 342 tokens, but the total per question is 14,900. When does the sub-agent save tokens?",
+      options: [
+        "Never: the total is higher",
+        "Always: the main call is 40 times smaller",
+        "Only when the sub-agent uses a cheaper model",
+        "When the main context is re-sent, as on every step of an agent loop",
+      ],
+      answer: 3,
+      why: [
+        "For one call, yes. In a loop the raw result would be re-sent on every step, while the sub-agent read it once.",
+        "The sub-agent still read the whole raw response. The tokens moved; they did not disappear.",
+        "That lowers the price per token, but it is not where the token saving comes from.",
+        "The findings are re-sent instead of the raw response, so the saving grows with every step.",
+      ],
+    },
+    {
+      q: "In your noise experiment, accuracy stays at 100% with the fact at the start, middle or end of 1,000 look-alike notes. What can you conclude?",
+      options: [
+        "This model coped with this task at this size; the noise still cost about 200 times the tokens",
+        "Lost in the middle is a myth",
+        "Noise is free, so add context just in case",
+        "The experiment is broken and should be removed",
+      ],
+      answer: 0,
+      why: [
+        "That is what was measured. A harder question, a smaller model or a longer context can give a different row.",
+        "It was measured on other models and tasks. Your run says nothing about those.",
+        "Every token of noise is paid for and slows the call, even when the answer survives.",
+        "A result you did not expect is still a result. It tells you about your model.",
+      ],
+    },
+  ],
+  41: [
+    {
       q: "Why does the deployed service read real environment variables only and ignore a `.env` file?",
       options: [
         "A `.env` file is slower to read",

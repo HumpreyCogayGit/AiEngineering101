@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deploying the Capstone</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/loader.js"></script>
+<script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="41">
+<main>
+<header class="lecture-header">
+  <h1>Deploying the Capstone</h1>
+  <p class="lede">A program on your laptop becomes a service when it takes its configuration from the environment, reports its own health, and runs the same way everywhere.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>The capstone works on your machine: it reads your <code>.env</code>, uses your virtual environment, and you start it by hand.
+  Nobody else can use it yet. This lecture packages it as a <strong>container image</strong> with a small HTTP API in front of
+  the assistant. The assistant itself does not change: <code>service.py</code> is a third thin shell around
+  <code>Assistant.ask</code>, next to the CLI and the Streamlit app (one core, many interfaces).</p>
+<p>The lecture rests on three ideas, none of them specific to AI services: configuration from the environment, health
+  checks, and a reproducible image.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>1. Configuration from the environment</h3>
+<p>Lecture 001 said "store config in the environment" and used a <code>.env</code> file as a convenience. In deployment the
+  convenience goes away: the <em>platform</em> (Docker, Kubernetes, Azure Container Apps) injects the variables, and
+  <strong>no file with secrets is shipped inside the image</strong>. An image is copied to registries and laptops; anything in it is published.</p>
+<pre><code class="language-python">from aicourse.settings import settings_from_environment
+
+settings_from_environment()     # real environment variables ONLY; a .env file is ignored
+# ConfigError: AZURE_OPENAI_API_KEY: is missing … Set these as environment variables of the running service.</code></pre>
+<p>The service checks its configuration at start-up and <strong>refuses to start</strong> when it is incomplete. A container
+  that cannot work should fail in the first second with a clear message, not on the first customer's question.</p>
+
+<h3>2. Health: liveness and readiness</h3>
+<p>A platform cannot see inside your process. It asks, over HTTP, every few seconds. The two kinds of question below
+  are the ones Kubernetes calls <a href="https://kubernetes.io/docs/concepts/configuration/liveness-readiness-startup-probes/">liveness
+  and readiness probes</a>, and other platforms use the same split:</p>
+<table>
+  <tr><th></th><th>Liveness <code>/healthz</code></th><th>Readiness <code>/readyz</code></th></tr>
+  <tr><td>Question</td><td>Is the process able to respond at all?</td><td>Can it serve a request right now?</td></tr>
+  <tr><td>If it fails</td><td>The platform <strong>restarts</strong> the container</td><td>The platform <strong>sends no traffic</strong> and waits</td></tr>
+  <tr><td>Should check</td><td>Nothing. Return 200</td><td>Configuration, files and local resources the service needs</td></tr>
+  <tr><td>Status codes</td><td>200</td><td>200 ready, 503 not ready (with the reasons)</td></tr>
+</table>
+<div class="callout danger"><span class="title">Do not call the model in a health check</span>
+  When the provider has a slow minute, every liveness check fails, the platform restarts
+  every container at once, and a slowdown has become an outage. It also costs tokens every few seconds, forever. Health checks
+  test <em>your</em> process, not your dependencies' uptime.</div>
+<pre><code class="language-python">def readiness(checks) -> tuple[int, dict]:
+    results = {}
+    for name, check in checks.items():
+        try:
+            check(); results[name] = "ok"
+        except Exception as exc:                 # report the problem, never crash
+            results[name] = f"{type(exc).__name__}: {exc}"
+    ready = all(v == "ok" for v in results.values())
+    return (200 if ready else 503), {"status": "ready" if ready else "not ready", "checks": results}</code></pre>
+
+<h3>3. A reproducible image</h3>
+<div class="mermaid">flowchart LR
+  L["uv.lock"] --> D["Layer: dependencies<br/>uv sync --frozen"]
+  C["aicourse/, data/, EXER037/, service.py"] --> A["Layer: application"]
+  D --> I["Image"]
+  A --> I
+  I --> R["Container<br/>USER app · PORT 8000"]
+  E["Environment variables<br/>(injected at run time)"] --> R
+  R --> H["HEALTHCHECK → /healthz"]</div>
+<table>
+  <tr><th>Dockerfile line</th><th>Why</th></tr>
+  <tr><td><code>COPY pyproject.toml uv.lock …</code> then <code>RUN uv sync --frozen</code>, <em>before</em> the application code</td><td>Exactly the tested versions. As its own layer it is rebuilt only when the lockfile changes, so a code change builds in seconds</td></tr>
+  <tr><td><code>COPY data ./data</code>, <code>COPY EXER037/solution …</code> (never <code>COPY . .</code>)</td><td>Only what the service needs. Nothing can leak that was never copied</td></tr>
+  <tr><td><code>USER app</code></td><td>A bug in the service, or an injected instruction, runs with a normal user's rights, not root's</td></tr>
+  <tr><td><code>EXPOSE 8000</code>, <code>HEALTHCHECK … /healthz</code></td><td>Tells the platform where the service listens and how to ask whether it is alive</td></tr>
+  <tr><td><code>CMD ["python", "…/service.py"]</code> (a JSON list)</td><td>Exec form: the service is process 1 and receives the stop signal itself, so it can shut down cleanly</td></tr>
+</table>
+<p>A <code>.dockerignore</code> is the second lock on the same door: <code>.env</code>, <code>.venv/</code>, <code>.chroma/</code> and
+  <code>.git/</code> are not even sent to the builder.</p>
+
+<h3>The routes as a function</h3>
+<p><code>route(method, path, body, ask) -> (status, json)</code> contains every decision of the API and no sockets, so the checks
+  call it directly. The few lines that speak HTTP are given. When the assistant raises, the caller gets a plain
+  <code>500</code> and the traceback goes to the log: error text can contain keys, URLs and internal names.</p>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>You complete <code>service.py</code> (port, configuration check, liveness, readiness, routes), the <code>Dockerfile</code> and
+  its <code>.dockerignore</code>. Then you build the image, run it with your configuration injected, and ask it a question.</p>
+<h3>Sample run</h3>
+<pre><code class="language-text">$ docker build -f EXER041/solution/Dockerfile -t nimbus-helpdesk .
+$ docker run --rm nimbus-helpdesk                           # no configuration: it refuses to start
+ERROR helpdesk: Course configuration problem:
+  - AZURE_OPENAI_ENDPOINT: is missing
+  - AZURE_OPENAI_API_KEY: is missing
+  - AZURE_OPENAI_CHAT_DEPLOYMENT: is missing
+Set these as environment variables of the running service.
+
+$ docker run -d --name helpdesk -p 8000:8000 --env-file .env nimbus-helpdesk
+$ curl localhost:8000/healthz
+{"status": "ok"}
+$ curl localhost:8000/readyz
+{"status": "ready", "checks": {"config": "ok", "knowledge_base": "ok"}}
+$ curl -X POST localhost:8000/ask -d '{"question": "Is shipping free?"}'
+{"thread_id": "28e2…", "answer": "Standard shipping is free for orders over **₱1,500**. … [shipping.md]",
+ "tools_used": ["search_knowledge_base"], "blocked": false, "reasons": [], "tokens": 1212}
+$ docker exec helpdesk whoami
+app
+$ docker inspect --format '{{.State.Health.Status}}' helpdesk
+healthy</code></pre>
+<p class="file-label">Captured from a real run. Your wording, numbers and timings will differ; the shape should match.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Configure a service from environment variables only, and fail fast when they are missing.</li>
+  <li>Implement liveness and readiness endpoints, and explain what each must not check.</li>
+  <li>Write a Dockerfile that installs locked dependencies, runs as a non-root user and declares a health check.</li>
+  <li>Keep secrets out of the image and out of error responses.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>The service refuses to start, naming the missing variables, when the environment is empty</li>
+  <li><code>/healthz</code> answers 200, and <code>/readyz</code> answers 503 with the reason when a check fails</li>
+  <li>Two questions with the same <code>thread_id</code> share a conversation</li>
+  <li>The image builds, the container answers a question, and <code>docker ps</code> shows it as <code>(healthy)</code></li>
+  <li>There is no <code>.env</code> in the image, and <code>whoami</code> inside the container is not <code>root</code></li>
+  <li>All 12 checks pass (offline; they do not need Docker)</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li><code>service_port</code>, <code>check_config</code>, <code>liveness</code>: a few lines each. Run the checks after each one.</li>
+  <li><code>readiness</code>: run <em>every</em> check, even after one failed, so the response lists everything that is wrong.</li>
+  <li><code>route</code>: handle the two health routes first, then <code>/ask</code> with its 400, 405 and 500 cases.</li>
+  <li>Start the service without Docker: <code>set -a; source .env; set +a</code>, then run <code>service.py</code> and use <code>curl</code>.</li>
+  <li>Complete the Dockerfile step by step. <code>check.py</code> reads it as text, so you get feedback without building.</li>
+  <li>Build, run, and check the three things a reviewer would: <code>docker ps</code> (healthy), <code>whoami</code> (not root), <code>ls -a /app</code> (no <code>.env</code>).</li>
+</ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Add a readiness check for the vector index, and build the index in a warm-up thread at start. <em>Done when:</em> <code>/readyz</code> answers 503 until the index exists and 200 afterwards, while <code>/healthz</code> stays 200.</li>
+  <li><strong>Connect (EXER035).</strong> Write one structured JSON log line per question, and add a <code>GET /stats</code> route with running totals. <em>Done when:</em> each question logs thread, seconds, tokens and tools (never the question text), and <code>/stats</code> returns the totals.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER041/stretch/</p>
+</div>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary><code>COPY . .</code></summary><div>
+  <p>It copies <code>.env</code>, <code>.git</code> and your local index into the image unless a <code>.dockerignore</code> stops it, and a missing ignore line is silent. Copy what you need, by name.</p></div></details>
+<details class="pitfall"><summary>Secrets in <code>ENV</code> or <code>ARG</code></summary><div>
+  <p>They are stored in the image's history and visible to anyone who pulls it. Pass secrets when the container starts (<code>--env-file</code>, the platform's secret store), never when the image is built.</p></div></details>
+<details class="pitfall"><summary>Listening on 127.0.0.1</summary><div>
+  <p>Inside a container, localhost is the container itself. A service bound to 127.0.0.1 works in the health check and is unreachable from outside. Bind to <code>0.0.0.0</code>.</p></div></details>
+<details class="pitfall"><summary>Quotes in <code>.env</code> with <code>--env-file</code></summary><div>
+  <p>Docker passes each line as written: <code>KEY="abc"</code> gives the value <code>"abc"</code> with the quotes. Write <code>KEY=abc</code>, as Lecture 001 recommended.</p></div></details>
+<details class="pitfall"><summary>State inside the container</summary><div>
+  <p>Conversations (<code>InMemorySaver</code>), notes and the vector index live in the container and vanish with it. Two replicas do not share them either. Real deployments move state out: a database checkpointer (Lecture 028) and a volume or a managed vector store.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>What is still missing before real customers could use this?</p>
+  <p>Authentication on <code>/ask</code>, rate limiting, HTTPS (usually from the platform), persistent state, a request timeout, structured logs and metrics, and a pipeline that runs the capstone evaluation before every release. The image is the unit all of those are built around.</p></div>
+<div class="qa"><p>Why a hand-written HTTP server instead of a web framework?</p>
+  <p>To keep the lecture about deployment and the dependencies unchanged. In a real project you would use a framework such as FastAPI for validation, async handlers and generated API docs. <code>route()</code> would become three small handler functions; nothing else in this lecture changes.</p></div>
+<div class="qa"><p>The first question to a new container is slow. Why, and what would you do?</p>
+  <p>The knowledge base is embedded and indexed on first use. Build the index at start-up and report "not ready" until it exists (stretch goal 1), bake it into the image, or use a shared vector store.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://docs.astral.sh/uv/guides/integration/docker/">uv: using uv in Docker</a></li>
+  <li><a href="https://docs.docker.com/build/building/best-practices/">Docker: building best practices</a></li>
+  <li><a href="https://12factor.net/config">The Twelve-Factor App: config</a></li>
+  <li><a href="https://kubernetes.io/docs/concepts/configuration/liveness-readiness-startup-probes/">Liveness, readiness and startup probes</a></li>
+  <li><a href="https://learn.microsoft.com/azure/container-apps/overview">Azure Container Apps: overview</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

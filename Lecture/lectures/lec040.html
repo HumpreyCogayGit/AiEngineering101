@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Deploying the Capstone</title>
+<title>Context Engineering</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/loader.js"></script>
 <script src="../assets/js/course.js"></script>
@@ -15,169 +15,194 @@
 <body data-root="../" data-lecture="40">
 <main>
 <header class="lecture-header">
-  <h1>Deploying the Capstone</h1>
-  <p class="lede">A program on your laptop becomes a service when it takes its configuration from the environment, reports its own health, and runs the same way everywhere.</p>
+  <h1>Context Engineering</h1>
+  <p class="lede">Prompt engineering is about the wording of one prompt. Context engineering is about everything the model reads on a call: what goes in, in what form, in what order, and what it costs.</p>
 </header>
 
 <section id="overview"><h2>Overview</h2>
-<p>The capstone works on your machine: it reads your <code>.env</code>, uses your virtual environment, and you start it by hand.
-  Nobody else can use it yet. This lecture packages it as a <strong>container image</strong> with a small HTTP API in front of
-  the assistant. The assistant itself does not change: <code>service.py</code> is a third thin shell around
-  <code>Assistant.ask</code>, next to the CLI and the Streamlit app (one core, many interfaces).</p>
-<p>The lecture rests on three ideas, none of them specific to AI services: configuration from the environment, health
-  checks, and a reproducible image.</p>
+<p>Lecture 008 tuned the wording of one prompt, and every call in it had the same, small context. In an agent the prompt is
+  a small part of what the model reads. The rest is tool definitions, conversation history, retrieved documents and tool results,
+  and it changes on every call. <strong>Context engineering</strong> is deciding what goes into that window and in what form.</p>
+<p>You have already done parts of it: trimming history (Lectures 006, 028), choosing chunks to retrieve (019–025), memory strategies
+  (039), separate agents (031). This lecture names the discipline and works through five parts of it on one example:
+  <strong>budgeting</strong>, <strong>long tool results</strong>, <strong>isolation</strong>, <strong>position and noise</strong>,
+  and <strong>measuring</strong>.</p>
 </section>
 
 <section id="concept"><h2>Concept</h2>
-<h3>1. Configuration from the environment</h3>
-<p>Lecture 001 said "store config in the environment" and used a <code>.env</code> file as a convenience. In deployment the
-  convenience goes away: the <em>platform</em> (Docker, Kubernetes, Azure Container Apps) injects the variables, and
-  <strong>no file with secrets is shipped inside the image</strong>. An image is copied to registries and laptops; anything in it is published.</p>
-<pre><code class="language-python">from aicourse.settings import settings_from_environment
-
-settings_from_environment()     # real environment variables ONLY; a .env file is ignored
-# ConfigError: AZURE_OPENAI_API_KEY: is missing … Set these as environment variables of the running service.</code></pre>
-<p>The service checks its configuration at start-up and <strong>refuses to start</strong> when it is incomplete. A container
-  that cannot work should fail in the first second with a clear message, not on the first customer's question.</p>
-
-<h3>2. Health: liveness and readiness</h3>
-<p>A platform cannot see inside your process. It asks, over HTTP, every few seconds. The two kinds of question below
-  are the ones Kubernetes calls <a href="https://kubernetes.io/docs/concepts/configuration/liveness-readiness-startup-probes/">liveness
-  and readiness probes</a>, and other platforms use the same split:</p>
-<table>
-  <tr><th></th><th>Liveness <code>/healthz</code></th><th>Readiness <code>/readyz</code></th></tr>
-  <tr><td>Question</td><td>Is the process able to respond at all?</td><td>Can it serve a request right now?</td></tr>
-  <tr><td>If it fails</td><td>The platform <strong>restarts</strong> the container</td><td>The platform <strong>sends no traffic</strong> and waits</td></tr>
-  <tr><td>Should check</td><td>Nothing. Return 200</td><td>Configuration, files and local resources the service needs</td></tr>
-  <tr><td>Status codes</td><td>200</td><td>200 ready, 503 not ready (with the reasons)</td></tr>
-</table>
-<div class="callout danger"><span class="title">Do not call the model in a health check</span>
-  When the provider has a slow minute, every liveness check fails, the platform restarts
-  every container at once, and a slowdown has become an outage. It also costs tokens every few seconds, forever. Health checks
-  test <em>your</em> process, not your dependencies' uptime.</div>
-<pre><code class="language-python">def readiness(checks) -> tuple[int, dict]:
-    results = {}
-    for name, check in checks.items():
-        try:
-            check(); results[name] = "ok"
-        except Exception as exc:                 # report the problem, never crash
-            results[name] = f"{type(exc).__name__}: {exc}"
-    ready = all(v == "ok" for v in results.values())
-    return (200 if ready else 503), {"status": "ready" if ready else "not ready", "checks": results}</code></pre>
-
-<h3>3. A reproducible image</h3>
+<h3>The window is a budget</h3>
+<p>Every call is assembled from sections. All of them are input tokens: you pay for them, they make the call slower, and
+  the model has to read past them to find what matters.</p>
 <div class="mermaid">flowchart LR
-  L["uv.lock"] --> D["Layer: dependencies<br/>uv sync --frozen"]
-  C["aicourse/, data/, EXER037/, service.py"] --> A["Layer: application"]
-  D --> I["Image"]
-  A --> I
-  I --> R["Container<br/>USER app · PORT 8000"]
-  E["Environment variables<br/>(injected at run time)"] --> R
-  R --> H["HEALTHCHECK → /healthz"]</div>
-<table>
-  <tr><th>Dockerfile line</th><th>Why</th></tr>
-  <tr><td><code>COPY pyproject.toml uv.lock …</code> then <code>RUN uv sync --frozen</code>, <em>before</em> the application code</td><td>Exactly the tested versions. As its own layer it is rebuilt only when the lockfile changes, so a code change builds in seconds</td></tr>
-  <tr><td><code>COPY data ./data</code>, <code>COPY EXER037/solution …</code> (never <code>COPY . .</code>)</td><td>Only what the service needs. Nothing can leak that was never copied</td></tr>
-  <tr><td><code>USER app</code></td><td>A bug in the service, or an injected instruction, runs with a normal user's rights, not root's</td></tr>
-  <tr><td><code>EXPOSE 8000</code>, <code>HEALTHCHECK … /healthz</code></td><td>Tells the platform where the service listens and how to ask whether it is alive</td></tr>
-  <tr><td><code>CMD ["python", "…/service.py"]</code> (a JSON list)</td><td>Exec form: the service is process 1 and receives the stop signal itself, so it can shut down cleanly</td></tr>
-</table>
-<p>A <code>.dockerignore</code> is the second lock on the same door: <code>.env</code>, <code>.venv/</code>, <code>.chroma/</code> and
-  <code>.git/</code> are not even sent to the builder.</p>
+  S["System prompt"] --> C["Context of one call"]
+  T["Tool definitions<br/>(sent every call)"] --> C
+  H["History"] --> C
+  R["Tool results"] --> C
+  Q["Question (last)"] --> C
+  C --> M[Model]</div>
+<p>The first step is to look at where the tokens go. One order lookup, counted per section:</p>
+<pre><code class="language-text">            system   tools   history   tool_result    total
+raw dump        41     193        41        14,475   14,750
+compacted       41     193        41         1,730    2,005</code></pre>
+<p>The prompt you would tune with Lecture 008 is 41 tokens of a 14,750-token call. In the raw version, 98% of the call is one
+  tool result. Tool definitions are easy to forget: an API sends them with every call, whether or not a tool is used.</p>
+<p>A hard budget forces a choice. The simplest choice is to cut whatever does not fit: fill the sections in priority order, keep
+  each one that fits whole, cut the first one that does not, and drop the rest. Cutting is safe for the system prompt, because it
+  comes first, but it is blind about the tool result: it keeps the first orders and loses the later ones, whatever was asked.</p>
 
-<h3>The routes as a function</h3>
-<p><code>route(method, path, body, ask) -> (status, json)</code> contains every decision of the API and no sockets, so the checks
-  call it directly. The few lines that speak HTTP are given. When the assistant raises, the caller gets a plain
-  <code>500</code> and the traceback goes to the log: error text can contain keys, URLs and internal names.</p>
+<h3>Long tool results: compact them</h3>
+<p>APIs return what their authors needed, not what your model needs. The order API returns warehouse bins, links, weights and
+  every tracking event. Support needs one line per order:</p>
+<pre><code class="language-text">N-5104 | 2026-02-05 | delivered | 12x Barako Bold, 1x Hand Grinder Pro | total 8130 PHP | J&amp;T Express JJ9682283881 | last: Delivered, signed by L. Navarro (Makati)</code></pre>
+<p>This is a <strong>projection</strong>: plain code that keeps the fields you choose. It costs nothing, it is deterministic,
+  and it can be tested offline. The compacted result is an eighth of the raw tokens and answered every question that the raw
+  response answered. The decision about which fields to keep is the engineering: drop the last tracking event and "Why was N-5126
+  returned?" can no longer be answered.</p>
+
+<h3>Isolation: give the raw material to a sub-agent</h3>
+<p>When you cannot know in advance which fields matter, let a model choose. A <strong>sub-agent</strong> is a separate call with its
+  own, clean context. It reads the raw response and the question and returns a few lines of findings. The main call sees only the
+  findings:</p>
+<pre><code class="language-python">findings, used = run_subagent(llm, question, raw_response)   # its own call: 14.5k tokens in
+sections["tool_result"] = f"Findings from the order lookup: {findings}"   # the main call: ~340 tokens</code></pre>
+<p>Isolation does not make the tokens go away. It moves them. The sub-agent still read 14.5k tokens, so for one call the total is
+  slightly <em>higher</em> than the raw dump. Isolation pays off when the main context is re-sent: an agent loop sends its whole
+  history on every step (Lecture 027), so a raw tool result in the history is paid for again on every later step, while the
+  sub-agent paid for it once. Lecture 031's multi-agent teams get the same benefit: each agent's context holds only its own job.</p>
+
+<h3>Position and noise</h3>
+<p>The model does not read a long context evenly. Two research results to know:</p>
+<ul>
+  <li><strong>Lost in the middle</strong> (Liu et al., 2023): on multi-document question answering, models did best when the
+    relevant passage was at the start or the end of the context, and noticeably worse when it was in the middle.</li>
+  <li><strong>Context rot</strong> (Chroma, 2025): across 18 models, accuracy fell as the input grew, even on simple tasks. It fell
+    faster when the question and the answer shared fewer words, and look-alike distractors made it worse.</li>
+</ul>
+<p>Two habits follow, and both are cheap: put the <strong>question last</strong>, after the long material, and do not add
+  material "just in case". Whether a given amount of noise hurts <em>your</em> model on <em>your</em> task is something to measure,
+  not to assume. The exercise places one fact at the start, in the middle or at the end of up to 1,000 notes about other customers
+  that look like it.</p>
+
+<h3>Measure accuracy and tokens together</h3>
+<p>Every option is a function <code>question → sections</code>, and one loop scores it on the same questions: accuracy, tokens
+  of the main call, and total tokens including any sub-agent. A context strategy earns its place on both axes:</p>
+<pre><code class="language-text">context            accuracy  main tokens  total tokens
+raw dump               100%       14,791        14,791
+raw, cut to 4000        17%        4,040         4,040     ← fits the budget, loses 5 of 6 answers
+compacted              100%        2,046         2,046     ← same answers, 1/7 of the tokens
+sub-agent              100%          342        14,900     ← small main call, same total</code></pre>
+<div class="callout warn"><span class="title">A bigger window is not a reason to fill it</span>
+  A model that accepts a million tokens still charges for every one, takes longer to answer, and has more to look past. The raw
+  dump and the compacted context gave the same answers here, and one of them cost seven times as much on every call.</div>
 </section>
 
 <section id="project"><h2>The Project</h2>
-<p>You complete <code>service.py</code> (port, configuration check, liveness, readiness, routes), the <code>Dockerfile</code> and
-  its <code>.dockerignore</code>. Then you build the image, run it with your configuration injected, and ask it a question.</p>
+<p>A wholesale customer, Bayani Café, asks about their orders. The order lookup returns <code>account.json</code>: 30 orders, 38 KB,
+  about 14,500 tokens. <code>cases.json</code> holds six questions about the orders, five facts about the café, and 1,000 look-alike
+  notes about other customers. You write the budgeting, compaction, sub-agent, placement and evaluation functions in
+  <code>context_engineering.py</code>; the script builds the context four ways and runs the noise experiment.</p>
 <h3>Sample run</h3>
-<pre><code class="language-text">$ docker build -f EXER040/solution/Dockerfile -t nimbus-helpdesk .
-$ docker run --rm nimbus-helpdesk                           # no configuration: it refuses to start
-ERROR helpdesk: Course configuration problem:
-  - AZURE_OPENAI_ENDPOINT: is missing
-  - AZURE_OPENAI_API_KEY: is missing
-  - AZURE_OPENAI_CHAT_DEPLOYMENT: is missing
-Set these as environment variables of the running service.
+<pre><code class="language-text">uv run python EXER040/solution/context_engineering.py
 
-$ docker run -d --name helpdesk -p 8000:8000 --env-file .env nimbus-helpdesk
-$ curl localhost:8000/healthz
-{"status": "ok"}
-$ curl localhost:8000/readyz
-{"status": "ready", "checks": {"config": "ok", "knowledge_base": "ok"}}
-$ curl -X POST localhost:8000/ask -d '{"question": "Is shipping free?"}'
-{"thread_id": "28e2…", "answer": "Standard shipping is free for orders over **₱1,500**. … [shipping.md]",
- "tools_used": ["search_knowledge_base"], "blocked": false, "reasons": [], "tokens": 1212}
-$ docker exec helpdesk whoami
-app
-$ docker inspect --format '{{.State.Health.Status}}' helpdesk
-healthy</code></pre>
-<p class="file-label">Captured from a real run. Your wording, numbers and timings will differ; the shape should match.</p>
+The order lookup returned 37,809 bytes. Where the tokens of one call go:
+
+  raw dump  system     41  tools    193  history     41  tool_result 14,475  total 14,750
+  compacted system     41  tools    193  history     41  tool_result  1,730  total  2,005
+
+6 questions about the account:
+
+context            accuracy  main tokens  total tokens   missed
+raw dump               100%       14,791        14,791   -
+raw, cut to 4000        17%        4,040         4,040   What was the grand total of order ; Which order was cancelled?; …
+compacted              100%        2,046         2,046   -
+sub-agent              100%          342        14,900   -
+
+One fact among look-alike notes of other customers (5 questions per row):
+
+distractors  position accuracy  tokens   missed
+          0  -            100%      91   -
+        200  start        100%   4,190   -
+        200  middle       100%   4,190   -
+        200  end          100%   4,190   -
+       1000  start        100%  20,619   -
+       1000  middle       100%  20,619   -
+       1000  end          100%  20,619   -</code></pre>
+<p class="file-label">Captured from a real run on a hosted model. Your wording, numbers and timings will differ; the shape should match.</p>
+<p>Read the last table carefully. On this model, single-fact lookups held at 100% in every position, up to 20,000 tokens of
+  noise: lost-in-the-middle did not show up at this size and on this task. The course's local Ollama model gave the same result
+  when we tried it with up to 24,000 tokens of noise. What did change is the price, 226 times the tokens
+  for the same answer. Run it on a small local model, on a harder question (one that needs two facts at once), or with longer noise,
+  and the accuracy column is where you look for the drop. The point of the experiment is that you know, for your model,
+  instead of guessing.</p>
 </section>
 
 <section id="goal"><h2>Goal</h2>
 <ol class="objectives">
-  <li>Configure a service from environment variables only, and fail fast when they are missing.</li>
-  <li>Implement liveness and readiness endpoints, and explain what each must not check.</li>
-  <li>Write a Dockerfile that installs locked dependencies, runs as a non-root user and declares a health check.</li>
-  <li>Keep secrets out of the image and out of error responses.</li>
+  <li>Count the tokens of each section of a call and enforce a budget in priority order.</li>
+  <li>Shrink a large tool result with a projection, and with a sub-agent, and say what each one costs.</li>
+  <li>Place a fact at different positions among different amounts of noise, and read the result for your model.</li>
+  <li>Compare ways of building the context on accuracy, main-call tokens and total tokens.</li>
 </ol>
 </section>
 
 <section id="success"><h2>Success Criteria</h2>
 <ul class="checklist">
-  <li>The service refuses to start, naming the missing variables, when the environment is empty</li>
-  <li><code>/healthz</code> answers 200, and <code>/readyz</code> answers 503 with the reason when a check fails</li>
-  <li>Two questions with the same <code>thread_id</code> share a conversation</li>
-  <li>The image builds, the container answers a question, and <code>docker ps</code> shows it as <code>(healthy)</code></li>
-  <li>There is no <code>.env</code> in the image, and <code>whoami</code> inside the container is not <code>root</code></li>
-  <li>All 12 checks pass (offline; they do not need Docker)</li>
+  <li>The script prints the tokens of each section for the raw and the compacted context</li>
+  <li>Cutting the raw response to a 4,000-token budget loses the answers about later orders</li>
+  <li>The compacted context answers as well as the raw dump for a fraction of the tokens</li>
+  <li>The sub-agent keeps the main call small, and the table shows that its total tokens did not go down</li>
+  <li>The noise table shows accuracy and tokens for every amount of noise and every position, and you can say what your model's numbers mean</li>
+  <li>All 7 checks pass (6 offline, 1 calls your model)</li>
 </ul>
 </section>
 
 <section id="walkthrough"><h2>Walkthrough</h2>
 <ol>
-  <li><code>service_port</code>, <code>check_config</code>, <code>liveness</code>: a few lines each. Run the checks after each one.</li>
-  <li><code>readiness</code>: run <em>every</em> check, even after one failed, so the response lists everything that is wrong.</li>
-  <li><code>route</code>: handle the two health routes first, then <code>/ask</code> with its 400, 405 and 500 cases.</li>
-  <li>Start the service without Docker: <code>set -a; source .env; set +a</code>, then run <code>service.py</code> and use <code>curl</code>.</li>
-  <li>Complete the Dockerfile step by step. <code>check.py</code> reads it as text, so you get feedback without building.</li>
-  <li>Build, run, and check the three things a reviewer would: <code>docker ps</code> (healthy), <code>whoami</code> (not root), <code>ls -a /app</code> (no <code>.env</code>).</li>
+  <li>Open <code>account.json</code> and read one order. Mark which fields a support agent would ever be asked about.</li>
+  <li><code>count_tokens</code> and <code>budget_report</code>: a dictionary in <code>SECTION_ORDER</code>, plus <code>"total"</code>.</li>
+  <li><code>fit_to_budget</code>: one loop with a <code>left</code> counter. Cut with the tokenizer (<code>encode</code>, slice, <code>decode</code>), not with characters, so the budget is exact. Leave room for <code>CUT_MARKER</code>.</li>
+  <li><code>compact_orders</code>: one f-string per order. The check tells you which values a line must contain.</li>
+  <li><code>run_subagent</code>: two messages, one call. Count its input and its answer, because that is what it cost.</li>
+  <li><code>needle_context</code>: copy the first n distractors, insert the needle. Do not change the list you were given.</li>
+  <li><code>evaluate</code>: the loop that produces a row. Keep the main-call tokens and the sub-agent tokens apart: they answer different questions.</li>
+  <li>Run it. Then change one thing: a budget of 8,000, or drop the last tracking event from the compact line. Does the table move the way you predicted?</li>
 </ol>
 <h3 id="stretch">Stretch goals</h3>
 <div class="stretch">
 <p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
 <ol>
-  <li><strong>Extend.</strong> Add a readiness check for the vector index, and build the index in a warm-up thread at start. <em>Done when:</em> <code>/readyz</code> answers 503 until the index exists and 200 afterwards, while <code>/healthz</code> stays 200.</li>
-  <li><strong>Connect (EXER035).</strong> Write one structured JSON log line per question, and add a <code>GET /stats</code> route with running totals. <em>Done when:</em> each question logs thread, seconds, tokens and tools (never the question text), and <code>/stats</code> returns the totals.</li>
+  <li><strong>Extend.</strong> Compact by question: keep only the orders the question names, and fall back to the full compact list when it names none. <em>Done when:</em> the table has a row for it next to <code>compacted</code>, and you can say which question needs the fallback.</li>
+  <li><strong>Connect (EXER027).</strong> An agent loop re-sends its whole history on every step. Count the input tokens of each step of an 8-step loop when the order lookup goes into the history raw, compacted, or through a sub-agent. <em>Done when:</em> the script prints the tokens of every step and the sum for all three, and you can say why the sub-agent's single-call cost is higher but its loop total is lower.</li>
 </ol>
 <p class="file-label">Reference code, for after you have tried: EXER040/stretch/</p>
 </div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
-<details class="pitfall"><summary><code>COPY . .</code></summary><div>
-  <p>It copies <code>.env</code>, <code>.git</code> and your local index into the image unless a <code>.dockerignore</code> stops it, and a missing ignore line is silent. Copy what you need, by name.</p></div></details>
-<details class="pitfall"><summary>Secrets in <code>ENV</code> or <code>ARG</code></summary><div>
-  <p>They are stored in the image's history and visible to anyone who pulls it. Pass secrets when the container starts (<code>--env-file</code>, the platform's secret store), never when the image is built.</p></div></details>
-<details class="pitfall"><summary>Listening on 127.0.0.1</summary><div>
-  <p>Inside a container, localhost is the container itself. A service bound to 127.0.0.1 works in the health check and is unreachable from outside. Bind to <code>0.0.0.0</code>.</p></div></details>
-<details class="pitfall"><summary>Quotes in <code>.env</code> with <code>--env-file</code></summary><div>
-  <p>Docker passes each line as written: <code>KEY="abc"</code> gives the value <code>"abc"</code> with the quotes. Write <code>KEY=abc</code>, as Lecture 001 recommended.</p></div></details>
-<details class="pitfall"><summary>State inside the container</summary><div>
-  <p>Conversations (<code>InMemorySaver</code>), notes and the vector index live in the container and vanish with it. Two replicas do not share them either. Real deployments move state out: a database checkpointer (Lecture 028) and a volume or a managed vector store.</p></div></details>
+<details class="pitfall"><summary>Tuning the prompt while the tool result is 98% of the call</summary><div>
+  <p>Count the sections first. The biggest section is where the tokens, and usually the problems, are.</p></div></details>
+<details class="pitfall"><summary>Cutting by characters</summary><div>
+  <p>Characters and tokens differ, most of all in JSON and in languages other than English. A character cut can still overflow the budget. Cut with the tokenizer.</p></div></details>
+<details class="pitfall"><summary>Compacting away the field a question needs</summary><div>
+  <p>A projection is only as good as its field list. Keep the questions you must answer next to the compaction code, and run them after every change to it.</p></div></details>
+<details class="pitfall"><summary>Reporting only the main-call tokens of a sub-agent</summary><div>
+  <p>342 tokens looks like a 40-times saving. The total says the sub-agent read the same 14.5k tokens. Report both, and say where the saving really comes from: re-sent context.</p></div></details>
+<details class="pitfall"><summary>Concluding "noise does not matter" from one run</summary><div>
+  <p>A 100% row says that this model, on this task, at this size, coped. A different model, a question that needs two facts, or a longer context can give a different row. And noise always costs tokens.</p></div></details>
 </section>
 
 <section id="discussion"><h2>Discussion</h2>
-<div class="qa"><p>What is still missing before real customers could use this?</p>
-  <p>Authentication on <code>/ask</code>, rate limiting, HTTPS (usually from the platform), persistent state, a request timeout, structured logs and metrics, and a pipeline that runs the capstone evaluation before every release. The image is the unit all of those are built around.</p></div>
-<div class="qa"><p>Why a hand-written HTTP server instead of a web framework?</p>
-  <p>To keep the lecture about deployment and the dependencies unchanged. In a real project you would use a framework such as FastAPI for validation, async handlers and generated API docs. <code>route()</code> would become three small handler functions; nothing else in this lecture changes.</p></div>
-<div class="qa"><p>The first question to a new container is slow. Why, and what would you do?</p>
-  <p>The knowledge base is embedded and indexed on first use. Build the index at start-up and report "not ready" until it exists (stretch goal 1), bake it into the image, or use a shared vector store.</p></div>
+<div class="qa"><p>Is prompt engineering still worth learning?</p>
+  <p>Yes. The system prompt is still a section of the context, and the techniques of Lecture 008 (clear instructions, delimiters,
+  examples, measuring) still decide how the model uses everything else. Context engineering adds the other sections.</p></div>
+<div class="qa"><p>When would you choose a sub-agent over a projection?</p>
+  <p>A projection when you know which fields matter: it is free, fast and testable. A sub-agent when you cannot know in advance,
+  for example a web page or a log file where the relevant part depends on the question, and when the main context will be re-sent
+  many times.</p></div>
+<div class="qa"><p>How do the earlier lectures fit in?</p>
+  <p>They are context engineering under other names. Retrieval (019–025) <em>selects</em> what goes in. Memory strategies (028, 039)
+  <em>compress</em> history. Multi-agent systems (031) <em>isolate</em> contexts. Long-term memory (028) <em>writes</em> facts outside the
+  window to bring back later.</p></div>
 </section>
 
 <section id="quiz"><h2>Check Yourself</h2>
@@ -187,11 +212,10 @@ healthy</code></pre>
 
 <section id="reading"><h2>Further Reading</h2>
 <ul>
-  <li><a href="https://docs.astral.sh/uv/guides/integration/docker/">uv: using uv in Docker</a></li>
-  <li><a href="https://docs.docker.com/build/building/best-practices/">Docker: building best practices</a></li>
-  <li><a href="https://12factor.net/config">The Twelve-Factor App: config</a></li>
-  <li><a href="https://kubernetes.io/docs/concepts/configuration/liveness-readiness-startup-probes/">Liveness, readiness and startup probes</a></li>
-  <li><a href="https://learn.microsoft.com/azure/container-apps/overview">Azure Container Apps: overview</a></li>
+  <li><a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents">Anthropic: Effective context engineering for AI agents</a></li>
+  <li><a href="https://www.langchain.com/blog/context-engineering-for-agents">LangChain: Context engineering for agents (write, select, compress, isolate)</a></li>
+  <li><a href="https://arxiv.org/abs/2307.03172">Liu et al.: Lost in the Middle: How Language Models Use Long Contexts</a></li>
+  <li><a href="https://www.trychroma.com/research/context-rot">Chroma: Context Rot: How Increasing Input Tokens Impacts LLM Performance</a></li>
 </ul>
 </section>
 </main>

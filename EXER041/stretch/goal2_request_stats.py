@@ -1,6 +1,6 @@
-"""EXER040 stretch goal 2 — one structured log line per question, and a /stats route (EXER035).
+"""EXER041 stretch goal 2 — one structured log line per question, and a /stats route (EXER035).
 
-    uv run python EXER040/stretch/goal2_request_stats.py      # offline: a fake assistant
+    uv run python EXER041/stretch/goal2_request_stats.py      # offline: a fake assistant
 
 In a container nobody watches the terminal. What the service did has to be
 in its logs, in a form a machine can read: ONE JSON object per line, written

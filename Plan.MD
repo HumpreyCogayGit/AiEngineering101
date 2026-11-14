@@ -116,7 +116,7 @@ The Walkthrough ends with the exercise's two **stretch goals**. Lectures 016–0
 
 ## 4. Curriculum
 
-40 exercises in 9 modules. Lecture `lecNNN.html` pairs with `EXERNNN`.
+41 exercises in 9 modules. Lecture `lecNNN.html` pairs with `EXERNNN`.
 
 ### Module 0 — Foundations
 
@@ -201,7 +201,8 @@ The Walkthrough ends with the exercise's two **stretch goals**. Lectures 016–0
 |---|---|---|---|
 | 038 | Evaluating Agents | A scorer for tool-call trajectories | trajectory, right tools / order / arguments, tolerant matching, reports that name the failure |
 | 039 | Conversation Memory Strategies | Trimming, summarizing and retrieval over past turns, compared | recall vs tokens per question, lossy summaries, indexing exchanges, setup cost |
-| 040 | Deploying the Capstone | The EXER037 assistant as an HTTP service in a container | configuration from the environment, liveness and readiness, Dockerfile layers, non-root user, no secrets in images |
+| 040 | Context Engineering | A context assembler for an order lookup, measured four ways, plus a position-and-noise experiment | token budget per section, compacting tool results, sub-agent isolation, position and noise in long contexts, accuracy vs tokens per call |
+| 041 | Deploying the Capstone | The EXER037 assistant as an HTTP service in a container | configuration from the environment, liveness and readiness, Dockerfile layers, non-root user, no secrets in images |
 
 ## 5. Build Phases
 
@@ -216,7 +217,9 @@ The Walkthrough ends with the exercise's two **stretch goals**. Lectures 016–0
 | 7. Module 5 | EXER026–031 | |
 | 8. Modules 6–7 | EXER032–037 | |
 | 9. Polish | Glossary, cross-links, full run-through of every exercise from a clean clone | |
-| 10. Extensions | Quizzes, stretch goals with reference code, worked examples, Module 8 (EXER038–040) | See [extended_plan.md](extended_plan.md) |
+| 10. Extensions | Quizzes, stretch goals with reference code, worked examples, Module 8 (EXER038–039, and Deploying the Capstone, now EXER041) | Built 2026-11-14. Its planning record, `extended_plan.md`, was removed once done; it is in the git history |
+| 11. Context Engineering | EXER040, added to Module 8 after EXER039; Deploying the Capstone moved from 040 to 041 | Follows the Phase D layout: quiz, two stretch goals with reference code |
+| 12. Review fixes and Module 9 | Corrections from the course review, a CI workflow, a stronger capstone evaluation, and EXER042–049 (Module 9 — Running in Production) | **Planned, not built.** Scope and checklist in section 8; reasoning in [improvement.md](improvement.md) |
 
 **Definition of done for each exercise**
 
@@ -235,7 +238,7 @@ The Walkthrough ends with the exercise's two **stretch goals**. Lectures 016–0
 4. **Observability (EXER035):** learners build their own callback-based tracker; LangSmith is an optional, documented add-on (env vars only, no code changes).
 5. **Solutions ship in the same repository** as the starters, in `solution/`.
 6. **Language:** course content is in English.
-7. **Not included:** fine-tuning, model training, and hosting on a cloud platform. EXER040 covers the container image and the health checks a platform needs; pushing the image to a registry and running it on Azure is left to the learner.
+7. **Not included:** fine-tuning, model training, and hosting on a cloud platform. EXER041 covers the container image and the health checks a platform needs; pushing the image to a registry and running it on Azure is left to the learner.
 
 ## 7. Implementation Notes
 
@@ -249,8 +252,75 @@ The Walkthrough ends with the exercise's two **stretch goals**. Lectures 016–0
 - **Offline checks need no `.env`:** the check runner substitutes placeholder settings for checks that are not marked `[live API]`; live checks are skipped with one clear message when the configuration is missing. `--offline` skips live checks on purpose.
 - **`check_all.py`** automates the definition of done: every solution passes, every untouched starter fails, and the quizzes are valid.
 - **Stretch goals** have reference code in `EXERnnn/stretch/`. It imports the reference solution through `aicourse.stretch.solution_module()` and never modifies it, so `check.py` is unaffected. Stretch code is run by hand, not by `check_all.py`; most of it calls the live model.
-- **`aicourse.settings.settings_from_environment()`** loads settings from real environment variables only (EXER040): a deployed service must not depend on a `.env` file.
+- **`aicourse.settings.settings_from_environment()`** loads settings from real environment variables only (EXER041): a deployed service must not depend on a `.env` file.
 - **Rules that must always hold are enforced in code, not only in prompts** (example: the EXER031 supervisor cannot finish before the writer has replied).
 - **`aicourse.rag.get_vector_store()`** returns one cached store per process, behind a lock: agents run parallel tool calls in threads, and opening the same Chroma folder twice at once fails.
 - **MCP exercises** ship their servers inside the exercise folder (`EXER032/servers`, `EXER034/servers`, `EXER037/servers`) so each exercise is self-contained.
 - **Lecture site:** `Lecture/assets/js/course.js` is the manifest; `app.js` builds navigation, progress (browser storage), checklists, copy buttons and diagrams. highlight.js 11.9.0 and Mermaid 10.9.1 are vendored for offline use.
+
+## 8. Planned: Review Fixes and Module 9 (Phase 12)
+
+Nothing in this section is built yet. Sections 1–7 describe the course as it exists; this section is the work queue. It comes from the course review in [improvement.md](improvement.md), whose findings were each checked against the files before being accepted.
+
+### Numbering decision
+
+**EXER001–041 keep their numbers. New lessons are appended as EXER042–049.**
+
+- Every new lesson builds on the deployed service (EXER041) or on lessons before it, so appending breaks no prerequisite order. Caching (045) also comes after identity (042) on purpose: a cache key must include the tenant.
+- The review suggested teaching Evaluating Agents (038) before the Capstone (037). The swap is not worth a renumber: EXER041 and one EXER038 stretch goal import EXER037 by path, and the same result is reached by adding an in-order tool check to the capstone evaluation (checklist B3) with a forward reference to Lecture 038.
+- The review suggested splitting Lecture 040. A split would push Deploying the Capstone to a third number in two days. The time estimate is raised instead (checklist B5).
+- Module 8 is renamed, not renumbered: "Beyond the Capstone" becomes "Evaluation, Context and Deployment".
+
+### Module 9 — Running in Production
+
+Each lesson changes the EXER041 service or the EXER037 assistant and follows the standard layout (starter, solution, `check.py`, quiz, two stretch goals with reference code).
+
+| # | Title | The learner builds | Key concepts |
+|---|---|---|---|
+| 042 | Identity and Tenant Boundaries | Bearer-token authentication on `/ask`; threads, notes and memory bound to the authenticated user; a test that user A cannot read or continue user B's thread | authentication vs authorization, identity from the credential and never from request JSON, per-user namespaces, server-side authorization of every stateful tool, permission-aware retrieval (filter documents by who may read them) |
+| 043 | Safe Side Effects | A refund tool that is safe to retry, and an agent run that is killed mid-tool and resumed without paying twice | idempotency keys, at-least-once execution, what a checkpoint replays on resume, separating "decide" from "commit", an audit record per side effect |
+| 044 | Operating Under Load | A concurrency limit and bounded queue in front of the service, graceful shutdown, and a local load test with a report | backpressure, HTTP 429/503 and `Retry-After`, deadlines and cancellation, per-user quotas and token budgets, p50/p95/p99, SLIs and SLOs, `SIGTERM` handling as process 1, HTTP 413 for oversized bodies |
+| 045 | Caching and Batch Work | An exact-match response cache and a measured prompt-prefix cache experiment on the helpdesk | cache keys (model, prompt version, tools, policy, tenant), invalidation, why semantic caches return wrong answers, stable prefixes for provider prompt caching, hit rate vs stale-answer rate, batch endpoints for offline work |
+| 046 | Model Selection and Routing | The existing evaluations run against two models, then a deterministic router with a fallback | quality vs latency vs cost per task, structured-output and tool-call reliability, cheap-first with escalation, provider fallback, re-evaluating when a model is retired or upgraded |
+| 047 | Privacy and Data Lifecycle | Deletion of one user's conversations, memory, notes and vector entries, with a check that retrieval and logs no longer expose them | data minimization before the model call, redaction in traces, retention periods, provider retention settings, deletion across stores, indexes, caches and backups |
+| 048 | Release-Gated Evaluation | A workflow that compares evaluation results with an approved baseline and fails on a per-category regression | prompts as versioned artifacts, baselines, per-category thresholds, deterministic gate vs manually triggered live evaluation, reports as build artifacts |
+| 049 | Learning from Production | A pipeline from user feedback and traces to new evaluation cases | thumbs up/down and implicit signals, sampling traces for review, turning a failure into a regression case, watching quality and cost drift over time |
+
+Still out of scope (unchanged from section 6): fine-tuning and LoRA, quantization, model-serving internals, audio and real-time interfaces, managed-cloud walkthroughs.
+
+### Checklist
+
+**A. Corrections to existing content** (small, do first)
+
+- [ ] A1. Lecture 041 and `EXER041/solution/Dockerfile`: stop claiming exec-form `CMD` gives a clean shutdown. The service has no `SIGTERM` handler, and a process 1 without one ignores the signal, so `docker stop` waits its 10 seconds and then kills. Reword now; the handler itself is built in EXER044.
+- [ ] A2. Lecture 024: reword "reasoning before score … improves judgments". Keep the short justification as a diagnostic, say it is not ground truth.
+- [ ] A3. Lecture 024: state that the exercise's 1–5 faithfulness score is a simplification and not the claim-level proportion RAGAS defines.
+- [ ] A4. Lecture 008: delimiters "separate instructions from data; not a prompt-injection defence by themselves (Lecture 036)".
+- [ ] A5. `EXER020/starter/ingest.py`: make the `load_html` docstring raw so `\s` no longer raises a `SyntaxWarning`.
+- [ ] A6. Run every stretch goal's reference code on Ollama (the one open item carried over from `extended_plan.md`).
+
+**B. Structure and assessment**
+
+- [ ] B1. Add `.github/workflows/checks.yml`: `uv sync --frozen`, then `uv run python check_all.py --offline`, on every push and pull request.
+- [ ] B2. Rename Module 8 to "Evaluation, Context and Deployment" in `course.js`, `quizzes.js` (comment), `README.md` and this file.
+- [ ] B3. Capstone evaluation: grow `EXER037/eval_set.json` from 8 cases to about 24, tagged by category (grounding, refusal, arithmetic, memory, tool use, safety); report a score per category; keep a small held-out file; add an optional in-order tool check with a pointer to Lecture 038. Update the 80% rule in the README and rubric to per-category.
+- [ ] B4. Judge calibration: add 15–20 human-labelled answers to EXER024 and report exact and adjacent agreement of the judge with them (as a third stretch-style lab or a replacement for goal 1).
+- [ ] B5. Raise the Lecture 040 estimate from 75 to 105 minutes; re-time Lectures 036 and 041.
+- [ ] B6. Transfer tasks: one unscaffolded task at the end of Modules 1, 4, 5 and 8, each with a short manual checklist and no starter.
+
+**C. Module 9** (one box per lesson; each closes only when the definition of done in section 5 holds)
+
+- [ ] C1. EXER042 Identity and Tenant Boundaries
+- [ ] C2. EXER043 Safe Side Effects
+- [ ] C3. EXER044 Operating Under Load
+- [ ] C4. EXER045 Caching and Batch Work
+- [ ] C5. EXER046 Model Selection and Routing
+- [ ] C6. EXER047 Privacy and Data Lifecycle
+- [ ] C7. EXER048 Release-Gated Evaluation
+- [ ] C8. EXER049 Learning from Production
+
+**D. After Module 9**
+
+- [ ] D1. Update sections 1–7 of this file, `README.md`, `course.js`, the glossary and the home page for 49 exercises in 10 modules.
+- [ ] D2. Rewrite the Lecture 041 Discussion answer "What is still missing before real customers could use this?" to point at Lectures 042–048.
+- [ ] D3. `check_all.py` on both providers: 49/49.

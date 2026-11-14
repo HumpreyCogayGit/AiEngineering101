@@ -47,7 +47,7 @@ uv.lock          exactly what we got  (langchain==1.5.0, ...)  ← reproducibili
 <div class="mermaid">flowchart LR
   E[".env (git-ignored)"] --> S["aicourse/settings.py<br/>validate + normalize"]
   V["real environment variables<br/>(win over .env)"] --> S
-  S --> X1[EXER001] & X2[EXER002] & X3["... EXER040"]</div>
+  S --> X1[EXER001] & X2[EXER002] & X3["... EXER041"]</div>
 <p><code>aicourse/settings.py</code> uses <strong>pydantic-settings</strong> to read and validate the
   values. It fails early with a readable message (for example "AZURE_OPENAI_API_KEY: is missing") instead of
   a confusing 401 deep inside a request.</p>

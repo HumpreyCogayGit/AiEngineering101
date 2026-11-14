@@ -1,187 +1,114 @@
-"""EXER040 checks. Run:  uv run python EXER040/check.py
-
-Everything is checked without Docker: the service functions are called directly, one real
-HTTP round trip runs against a local port, and the Dockerfile is read as text. Building and
-running the image is the manual part of the success criteria.
-"""
+"""EXER040 checks. Run:  uv run python EXER040/check.py"""
 
 import json
-import os
-import re
-import threading
-import urllib.error
-import urllib.request
 
 from aicourse.check import Checker
-from aicourse.settings import ConfigError
+from aicourse.fakes import fake_chat_model
+from aicourse.llm import get_chat_model
 
 checker = Checker(__file__)
-mod = checker.load("service.py")
-DOCKERFILE = checker.path("Dockerfile")
-IGNORE = checker.path("Dockerfile.dockerignore")
+mod = checker.load("context_engineering.py")
+
+ACCOUNT = json.loads(mod.ACCOUNT.read_text(encoding="utf-8"))
+CASES = json.loads(mod.CASES.read_text(encoding="utf-8"))
+RAW = json.dumps(ACCOUNT, ensure_ascii=False)
 
 
-def fake_ask(question, thread_id):
-    return {"answer": f"echo: {question}", "tools_used": [], "blocked": False, "reasons": [], "tokens": 0}
-
-
-def instructions(path):
-    """The Dockerfile's instructions, comments removed and continuation lines joined."""
-    text = "\n".join(line for line in path.read_text(encoding="utf-8").splitlines() if not line.strip().startswith("#"))
-    return [re.sub(r"\s+", " ", line).strip() for line in text.replace("\\\n", " ").splitlines() if line.strip()]
-
-
-@checker.check("service_port() reads PORT from the environment, defaults to 8000, rejects nonsense")
+@checker.check("count_tokens() and budget_report() count every section, in order, with a total")
 def _():
-    assert mod.service_port({}) == 8000
-    assert mod.service_port({"PORT": "9090"}) == 9090
-    for bad in ("abc", "0", "70000", ""):
-        try:
-            mod.service_port({"PORT": bad})
-        except ConfigError:
-            continue
-        raise AssertionError(f"PORT={bad!r} must raise ConfigError")
+    assert mod.count_tokens("hello world") == len(mod.ENCODING.encode("hello world"))
+    assert mod.count_tokens("") == 0
+    sections = {"system": "be brief", "tools": "[]", "history": "", "tool_result": "word " * 50}
+    report = mod.budget_report(sections)
+    assert list(report) == mod.SECTION_ORDER + ["total"], list(report)
+    assert report["tool_result"] == mod.count_tokens("word " * 50) and report["history"] == 0, report
+    assert report["total"] == sum(report[name] for name in mod.SECTION_ORDER), report
+    assert mod.budget_report({"system": "x"})["tools"] == 0, "a missing section counts as 0 tokens"
 
 
-@checker.check("check_config() reads the environment only, and names what is missing")
+@checker.check("fit_to_budget() keeps whole sections in order, cuts the first that overflows, empties the rest")
 def _():
-    names = [k for k in os.environ if k.startswith(("AZURE_OPENAI_", "OLLAMA_", "AICOURSE_"))]
-    saved = {k: os.environ.pop(k) for k in names}
-    try:
-        try:
-            mod.check_config()  # default provider, nothing set: must fail even if a .env file exists
-        except ConfigError as exc:
-            assert "is missing" in str(exc), exc
-        else:
-            raise AssertionError("with an empty environment the configuration must be rejected: "
-                                 "a deployed service must not read .env")
-        os.environ["AICOURSE_PROVIDER"] = "ollama"  # a provider whose block has defaults for everything
-        mod.check_config()
-    finally:
-        for k in ("AICOURSE_PROVIDER",):
-            os.environ.pop(k, None)
-        os.environ.update(saved)
+    sections = {"system": "one two three", "tools": "four five", "history": "word " * 200, "tool_result": "late"}
+    budget = mod.count_tokens("one two three") + mod.count_tokens("four five") + 60
+    fitted = mod.fit_to_budget(sections, budget)
+    assert fitted["system"] == sections["system"] and fitted["tools"] == sections["tools"], fitted
+    assert fitted["history"].endswith(mod.CUT_MARKER), "a cut section must say that it was cut"
+    assert fitted["history"].startswith("word word"), "cut from the END, keep the start"
+    assert fitted["tool_result"] == "", "sections after the cut one get no room"
+    assert mod.budget_report(fitted)["total"] <= budget, mod.budget_report(fitted)
+    assert mod.fit_to_budget(sections, 10_000) == sections, "everything fits: nothing changes"
+    raw_cut = mod.fit_to_budget(mod.base_sections(RAW), 4000)
+    assert mod.budget_report(raw_cut)["total"] <= 4000
 
 
-@checker.check("liveness() is always 200 and depends on nothing")
+@checker.check("compact_orders() keeps one line per order with what support needs, in a fraction of the tokens")
 def _():
-    assert mod.liveness() == (200, {"status": "ok"})
+    text = mod.compact_orders(ACCOUNT)
+    lines = text.splitlines()
+    assert len(lines) == len(ACCOUNT["orders"]) + 1, f"a header line plus one line per order, got {len(lines)}"
+    assert "Bayani Café" in lines[0] and "acct_88213" in lines[0] and "Marco Reyes" in lines[0], lines[0]
+    line = next(line for line in lines if line.startswith("N-5104"))
+    order = next(o for o in ACCOUNT["orders"] if o["order_id"] == "N-5104")
+    for part in (order["created_at"][:10], "delivered", "12x Barako Bold", "1x Hand Grinder Pro",
+                 str(order["totals"]["grand_total"]), order["shipping"]["carrier"],
+                 order["shipping"]["tracking_number"], "signed by L. Navarro", "Makati"):
+        assert part in line, f"{part!r} missing from: {line}"
+    assert "burr" in next(line for line in lines if line.startswith("N-5126")), "the last event explains the return"
+    assert "warehouse_bin" not in text and "B-0" not in text, "internal fields support never needs are dropped"
+    assert mod.count_tokens(text) < mod.count_tokens(RAW) / 5, (mod.count_tokens(text), mod.count_tokens(RAW))
 
 
-@checker.check("readiness() is 200 when every check passes, and 503 with ALL the reasons otherwise")
+@checker.check("run_subagent() reads the material in its own context and returns findings and its token cost")
 def _():
-    def broken():
-        raise RuntimeError("index missing")
-
-    def also_broken():
-        raise ValueError("no key")
-
-    status, body = mod.readiness({"a": lambda: None, "b": lambda: None})
-    assert status == 200 and body == {"status": "ready", "checks": {"a": "ok", "b": "ok"}}, body
-    status, body = mod.readiness({"a": broken, "b": lambda: None, "c": also_broken})
-    assert status == 503 and body["status"] == "not ready", body
-    assert "index missing" in body["checks"]["a"] and body["checks"]["b"] == "ok", body
-    assert "no key" in body["checks"]["c"], "every check must run, also after one has failed"
+    llm = fake_chat_model("  Order N-5121 was cancelled.  ")
+    findings, used = mod.run_subagent(llm, "Which order was cancelled?", "MATERIAL-XYZ")
+    assert findings == "Order N-5121 was cancelled.", repr(findings)
+    sent = llm.received[0]
+    assert len(sent) == 2 and sent[0].type == "system" and sent[0].content == mod.SUBAGENT_PROMPT, sent
+    assert "MATERIAL-XYZ" in sent[1].content and "Which order was cancelled?" in sent[1].content, sent[1].content
+    expected = sum(mod.count_tokens(m.content) + 4 for m in sent) + mod.count_tokens(findings)
+    assert used == expected, f"tokens used: {used}, expected input + answer = {expected}"
 
 
-@checker.check("route() serves /healthz, /readyz and POST /ask, and answers 400, 404 and 405 correctly")
+@checker.check("needle_context() places the needle at the start, in the middle or at the end of n distractors")
 def _():
-    assert mod.route("GET", "/healthz", b"", fake_ask)[0] == 200
-    assert mod.route("GET", "/readyz", b"", fake_ask)[0] in (200, 503)
-    status, body = mod.route("POST", "/ask", json.dumps({"question": " Hi? ", "thread_id": "t1"}).encode(), fake_ask)
-    assert status == 200 and body["answer"] == "echo: Hi?" and body["thread_id"] == "t1", body
-    status, body = mod.route("POST", "/ask", b'{"question": "Hi"}', fake_ask)
-    assert status == 200 and len(body["thread_id"]) >= 8, "a missing thread_id gets a new one"
-    assert mod.route("POST", "/ask", b"not json", fake_ask)[0] == 400
-    assert mod.route("POST", "/ask", b'{"q": "x"}', fake_ask)[0] == 400
-    assert mod.route("POST", "/ask", b'{"question": "  "}', fake_ask)[0] == 400
-    assert mod.route("GET", "/ask", b"", fake_ask)[0] == 405
-    assert mod.route("GET", "/secret", b"", fake_ask)[0] == 404
+    noise = [f"note {i}" for i in range(10)]
+    assert mod.needle_context("NEEDLE", noise, 0, "middle") == ["NEEDLE"]
+    start, middle, end = (mod.needle_context("NEEDLE", noise, 6, p) for p in ("start", "middle", "end"))
+    assert len(start) == len(middle) == len(end) == 7, "n distractors plus the needle"
+    assert start.index("NEEDLE") == 0 and middle.index("NEEDLE") == 3 and end.index("NEEDLE") == 6
+    assert [n for n in middle if n != "NEEDLE"] == noise[:6], "the first n distractors, in order"
+    assert noise == [f"note {i}" for i in range(10)], "the distractor list must not be changed"
 
 
-@checker.check("a failing assistant gives a 500 that does not leak the error text")
+@checker.check("evaluate() reports accuracy, main and total tokens per call, and the misses")
 def _():
-    def exploding(question, thread_id):
-        raise RuntimeError("api key sk-12345 rejected by https://internal.example")
+    llm = fake_chat_model("Order N-5121 was cancelled; the total was 7,600 PHP.")
+    probes = [{"question": "Which order was cancelled?", "expect_keywords": ["N-5121"]},
+              {"question": "Grand total?", "expect_keywords": ["7600"]},
+              {"question": "Where is it?", "expect_keywords": ["pasig"]}]
+    sections = {"system": "be brief", "tool_result": "data"}
+    result = mod.evaluate(llm, lambda q: (sections, 100), probes)
+    main = mod.count_message_tokens(mod.build_messages(sections, "Where is it?"))
+    assert result["accuracy"] == 2 / 3, result
+    assert result["missed"] == ["Where is it?"], result
+    assert abs(result["main_tokens"] - main) <= 2, (result, main)
+    assert result["total_tokens"] == result["main_tokens"] + 100, "total = main call + tokens spent elsewhere"
+    assert llm.received[0][-1].content.endswith("Question: Which order was cancelled?"), "the question goes last"
 
-    import logging
-    logging.getLogger("helpdesk").setLevel(logging.CRITICAL)  # keep the expected traceback out of the output
-    status, body = mod.route("POST", "/ask", b'{"question": "Hi"}', exploding)
-    assert status == 500 and "error" in body, body
-    assert "sk-12345" not in json.dumps(body) and "internal.example" not in json.dumps(body), body
 
-
-@checker.check("the service answers real HTTP requests")
+@checker.check("compacting keeps the answers that cutting loses; a sub-agent keeps the main call small  [live API]")
 def _():
-    server = mod.serve(0, fake_ask)  # port 0: the operating system picks a free one
-    port = server.server_address[1]
-    threading.Thread(target=server.serve_forever, daemon=True).start()
-    try:
-        with urllib.request.urlopen(f"http://127.0.0.1:{port}/healthz", timeout=5) as response:
-            assert response.status == 200 and json.loads(response.read()) == {"status": "ok"}
-            assert response.headers["Content-Type"].startswith("application/json")
-        request = urllib.request.Request(f"http://127.0.0.1:{port}/ask", data=b'{"question": "ping"}', method="POST")
-        with urllib.request.urlopen(request, timeout=5) as response:
-            assert json.loads(response.read())["answer"] == "echo: ping"
-        try:
-            urllib.request.urlopen(f"http://127.0.0.1:{port}/nope", timeout=5)
-        except urllib.error.HTTPError as exc:
-            assert exc.code == 404
-        else:
-            raise AssertionError("an unknown path must answer 404")
-    finally:
-        server.shutdown()
-        server.server_close()
-
-
-@checker.check("Dockerfile: locked dependencies, installed before the application code is copied")
-def _():
-    lines = instructions(DOCKERFILE)
-    sync = [i for i, line in enumerate(lines) if line.startswith("RUN") and "uv sync" in line]
-    assert sync, "install the dependencies with `uv sync`"
-    assert "--frozen" in lines[sync[0]] or "--locked" in lines[sync[0]], "use --frozen: install exactly what uv.lock says"
-    app_copy = [i for i, line in enumerate(lines) if line.startswith("COPY") and "service.py" in line]
-    assert app_copy and sync[0] < app_copy[0], "run uv sync BEFORE copying the application, so the layer is cached"
-
-
-@checker.check("Dockerfile: no secrets and no `COPY . .`")
-def _():
-    lines = instructions(DOCKERFILE)
-    for line in lines:
-        if line.startswith(("COPY", "ADD")):
-            parts = line.split()[1:]
-            assert "." not in parts[:-1] and "./" not in parts[:-1], f"copy only what the service needs, not everything: {line}"
-            assert not any(re.fullmatch(r"\.?/?\.env", part) for part in parts), f"never copy .env into an image: {line}"
-        if line.startswith(("ENV", "ARG")):
-            assert not re.search(r"(API_KEY|SECRET|PASSWORD|TOKEN)\s*=?\s*\S", line, re.I), \
-                f"no secrets in ENV or ARG, they stay in the image history: {line}"
-
-
-@checker.check("Dockerfile: runs as a non-root user")
-def _():
-    users = [line.split()[1] for line in instructions(DOCKERFILE) if line.startswith("USER")]
-    assert users, "add a USER instruction"
-    assert users[-1] not in ("root", "0"), "the last USER must not be root"
-
-
-@checker.check("Dockerfile: EXPOSE, a HEALTHCHECK on /healthz, and CMD in exec form")
-def _():
-    lines = instructions(DOCKERFILE)
-    assert any(line.startswith("EXPOSE") for line in lines), "EXPOSE the port"
-    health = [line for line in lines if line.startswith("HEALTHCHECK")]
-    assert health and "/healthz" in health[0], "add a HEALTHCHECK that requests /healthz"
-    commands = [line for line in lines if line.startswith("CMD")]
-    assert commands, "add a CMD that starts the service"
-    assert commands[-1].startswith("CMD [") and "service.py" in commands[-1], \
-        'start the service in exec form: CMD ["python", ".../service.py"]'
-
-
-@checker.check("Dockerfile.dockerignore keeps .env, .venv, .chroma and .git out of the build")
-def _():
-    patterns = {line.strip().rstrip("/") for line in IGNORE.read_text(encoding="utf-8").splitlines()
-                if line.strip() and not line.strip().startswith("#")}
-    for needed in (".env", ".venv", ".chroma", ".git"):
-        assert needed in patterns, f"{needed} is not ignored"
+    llm = get_chat_model(temperature=0)
+    results = {name: mod.evaluate(llm, builder, CASES["probes"])
+               for name, builder in mod.build_strategies(llm, ACCOUNT).items()}
+    raw, cut, compact, sub = results.values()
+    assert compact["accuracy"] >= 5 / 6, results
+    assert cut["accuracy"] < compact["accuracy"], "cutting the raw response loses the later orders"
+    assert compact["main_tokens"] < raw["main_tokens"] / 4, results
+    assert sub["accuracy"] >= 4 / 6, results
+    assert sub["main_tokens"] < raw["main_tokens"] / 10, results
+    assert sub["total_tokens"] > raw["main_tokens"], "the sub-agent still reads the raw response: isolation moves tokens"
 
 
 checker.run()

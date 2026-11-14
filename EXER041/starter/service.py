@@ -1,6 +1,6 @@
-"""EXER040 — Deploying the Capstone (starter).
+"""EXER041 — Deploying the Capstone (starter).
 
-    uv run python EXER040/starter/service.py              # the helpdesk as an HTTP service on port 8000
+    uv run python EXER041/starter/service.py              # the helpdesk as an HTTP service on port 8000
     curl localhost:8000/healthz
     curl localhost:8000/readyz
     curl -X POST localhost:8000/ask -d '{"question": "How long do I have to return unopened beans?"}'

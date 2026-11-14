@@ -275,7 +275,7 @@ def get_settings() -> Settings:
 def settings_from_environment() -> Settings:
     """Settings from real environment variables ONLY: any `.env` file is ignored.
 
-    This is how a deployed service is configured (EXER040): the platform injects
+    This is how a deployed service is configured (EXER041): the platform injects
     the variables, and no file with secrets is shipped inside the image. Not
     cached, so a health check always sees the current environment.
     """

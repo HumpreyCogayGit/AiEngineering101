@@ -1,7 +1,7 @@
-# EXER040 — the Nimbus Helpdesk as a container image (reference solution).
+# EXER041 — the Nimbus Helpdesk as a container image (reference solution).
 #
 # Build from the REPOSITORY ROOT, so the image can see pyproject.toml, aicourse/ and data/:
-#     docker build -f EXER040/solution/Dockerfile -t nimbus-helpdesk .
+#     docker build -f EXER041/solution/Dockerfile -t nimbus-helpdesk .
 # Run, with the configuration injected from your .env (the file itself is never in the image):
 #     docker run --rm -p 8000:8000 --env-file .env nimbus-helpdesk
 
@@ -24,7 +24,7 @@ RUN uv sync --frozen --no-dev
 COPY data ./data
 COPY EXER037/solution ./EXER037/solution
 COPY EXER037/servers ./EXER037/servers
-COPY EXER040/solution/service.py ./EXER040/solution/service.py
+COPY EXER041/solution/service.py ./EXER041/solution/service.py
 
 # 4. Do not run as root. The app user owns /app, so it can write its vector index and notes.
 RUN useradd --create-home --uid 10001 app && chown -R app:app /app
@@ -37,4 +37,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD ["python", "-c", "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ.get('PORT', '8000') + '/healthz', timeout=3)"]
 
 # 6. Exec form (a JSON list): the service is process 1 and receives the stop signal directly.
-CMD ["python", "EXER040/solution/service.py"]
+CMD ["python", "EXER041/solution/service.py"]

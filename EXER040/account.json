@@ -1,0 +1,2123 @@
+{
+  "request_id": "req_2f9c4e1a7b",
+  "api_version": "2026-06-01",
+  "account": {
+    "account_id": "acct_88213",
+    "name": "Bayani Café",
+    "type": "wholesale",
+    "tier": "gold",
+    "contact": {
+      "name": "Marco Reyes",
+      "email": "marco@bayanicafe.example",
+      "phone": "+63 917 555 0199"
+    },
+    "addresses": [
+      {
+        "address_id": "addr_7f3a91",
+        "line1": "18 Jupiter Street",
+        "city": "Makati",
+        "zip": "1209"
+      }
+    ],
+    "created_at": "2024-03-11T10:02:00+08:00",
+    "credit_limit": 60000,
+    "payment_terms": "invoice_30d"
+  },
+  "orders": [
+    {
+      "order_id": "N-5101",
+      "created_at": "2026-01-09T11:50:00+08:00",
+      "updated_at": "2026-01-11T17:50:00+08:00",
+      "status": "delivered",
+      "channel": "web",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-BH-250",
+          "name": "Benguet Highlands",
+          "qty": 8,
+          "unit_price": 480,
+          "warehouse_bin": "B-23-05"
+        }
+      ],
+      "totals": {
+        "subtotal": 3840,
+        "shipping_fee": 0,
+        "grand_total": 3840
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "Ninja Van",
+        "tracking_number": "NI6483755015",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 2000,
+        "events": [
+          {
+            "at": "2026-01-09T12:50:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-01-10T17:50:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by Ninja Van"
+          },
+          {
+            "at": "2026-01-11T03:50:00+08:00",
+            "code": "AT_HUB",
+            "location": "Pasig sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-01-11T17:50:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5101",
+        "status": "paid"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5101"
+      }
+    },
+    {
+      "order_id": "N-5102",
+      "created_at": "2026-01-16T12:44:00+08:00",
+      "updated_at": "2026-01-18T18:44:00+08:00",
+      "status": "delivered",
+      "channel": "web",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-BH-250",
+          "name": "Benguet Highlands",
+          "qty": 6,
+          "unit_price": 480,
+          "warehouse_bin": "B-23-01"
+        },
+        {
+          "sku": "EQ-CBB",
+          "name": "Cold Brew Bottle",
+          "qty": 1,
+          "unit_price": 980,
+          "warehouse_bin": "B-04-01"
+        }
+      ],
+      "totals": {
+        "subtotal": 3860,
+        "shipping_fee": 0,
+        "grand_total": 3860
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "J&T Express",
+        "tracking_number": "JJ9018238799",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 2700,
+        "events": [
+          {
+            "at": "2026-01-16T13:44:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-01-17T18:44:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by J&T Express"
+          },
+          {
+            "at": "2026-01-18T04:44:00+08:00",
+            "code": "AT_HUB",
+            "location": "Pasig sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-01-18T18:44:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5102",
+        "status": "paid"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5102"
+      }
+    },
+    {
+      "order_id": "N-5103",
+      "created_at": "2026-01-28T13:03:00+08:00",
+      "updated_at": "2026-01-30T19:03:00+08:00",
+      "status": "delivered",
+      "channel": "wholesale_portal",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-DC-250",
+          "name": "Decaf Cloud",
+          "qty": 2,
+          "unit_price": 550,
+          "warehouse_bin": "B-23-03"
+        },
+        {
+          "sku": "EQ-POK",
+          "name": "Nimbus Pour-Over Kit",
+          "qty": 1,
+          "unit_price": 2800,
+          "warehouse_bin": "B-02-05"
+        }
+      ],
+      "totals": {
+        "subtotal": 3900,
+        "shipping_fee": 0,
+        "grand_total": 3900
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "J&T Express",
+        "tracking_number": "JJ9701930182",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 1700,
+        "events": [
+          {
+            "at": "2026-01-28T14:03:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-01-29T19:03:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by J&T Express"
+          },
+          {
+            "at": "2026-01-30T05:03:00+08:00",
+            "code": "AT_HUB",
+            "location": "Pasig sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-01-30T19:03:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5103",
+        "status": "paid"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5103"
+      }
+    },
+    {
+      "order_id": "N-5104",
+      "created_at": "2026-02-05T11:34:00+08:00",
+      "updated_at": "2026-02-07T17:34:00+08:00",
+      "status": "delivered",
+      "channel": "wholesale_portal",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-BB-250",
+          "name": "Barako Bold",
+          "qty": 12,
+          "unit_price": 390,
+          "warehouse_bin": "B-13-03"
+        },
+        {
+          "sku": "EQ-HGP",
+          "name": "Hand Grinder Pro",
+          "qty": 1,
+          "unit_price": 3450,
+          "warehouse_bin": "B-04-02"
+        }
+      ],
+      "totals": {
+        "subtotal": 8130,
+        "shipping_fee": 0,
+        "grand_total": 8130
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "J&T Express",
+        "tracking_number": "JJ9682283881",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 4200,
+        "events": [
+          {
+            "at": "2026-02-05T12:34:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-02-06T17:34:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by J&T Express"
+          },
+          {
+            "at": "2026-02-07T03:34:00+08:00",
+            "code": "AT_HUB",
+            "location": "Mandaluyong sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-02-07T17:34:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5104",
+        "status": "paid"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5104"
+      }
+    },
+    {
+      "order_id": "N-5105",
+      "created_at": "2026-02-16T09:11:00+08:00",
+      "updated_at": "2026-02-18T15:11:00+08:00",
+      "status": "delivered",
+      "channel": "wholesale_portal",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-BH-250",
+          "name": "Benguet Highlands",
+          "qty": 2,
+          "unit_price": 480,
+          "warehouse_bin": "B-24-07"
+        }
+      ],
+      "totals": {
+        "subtotal": 960,
+        "shipping_fee": 120,
+        "grand_total": 1080
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "J&T Express",
+        "tracking_number": "JJ9651130279",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 500,
+        "events": [
+          {
+            "at": "2026-02-16T10:11:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-02-17T15:11:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by J&T Express"
+          },
+          {
+            "at": "2026-02-18T01:11:00+08:00",
+            "code": "AT_HUB",
+            "location": "Mandaluyong sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-02-18T15:11:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5105",
+        "status": "paid"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5105"
+      }
+    },
+    {
+      "order_id": "N-5106",
+      "created_at": "2026-02-26T10:11:00+08:00",
+      "updated_at": "2026-02-28T16:11:00+08:00",
+      "status": "delivered",
+      "channel": "phone",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-MAS-250",
+          "name": "Mount Apo Sunrise",
+          "qty": 2,
+          "unit_price": 520,
+          "warehouse_bin": "B-23-03"
+        }
+      ],
+      "totals": {
+        "subtotal": 1040,
+        "shipping_fee": 120,
+        "grand_total": 1160
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "J&T Express",
+        "tracking_number": "JJ4219583484",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 500,
+        "events": [
+          {
+            "at": "2026-02-26T11:11:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-02-27T16:11:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by J&T Express"
+          },
+          {
+            "at": "2026-02-28T02:11:00+08:00",
+            "code": "AT_HUB",
+            "location": "Mandaluyong sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-02-28T16:11:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5106",
+        "status": "paid"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5106"
+      }
+    },
+    {
+      "order_id": "N-5107",
+      "created_at": "2026-03-07T11:03:00+08:00",
+      "updated_at": "2026-03-09T17:03:00+08:00",
+      "status": "delivered",
+      "channel": "phone",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-NHB-250",
+          "name": "Nimbus House Blend",
+          "qty": 6,
+          "unit_price": 420,
+          "warehouse_bin": "B-22-07"
+        }
+      ],
+      "totals": {
+        "subtotal": 2520,
+        "shipping_fee": 0,
+        "grand_total": 2520
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "J&T Express",
+        "tracking_number": "JJ8166315552",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 1500,
+        "events": [
+          {
+            "at": "2026-03-07T12:03:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-03-08T17:03:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by J&T Express"
+          },
+          {
+            "at": "2026-03-09T03:03:00+08:00",
+            "code": "AT_HUB",
+            "location": "Pasig sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-03-09T17:03:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5107",
+        "status": "paid"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5107"
+      }
+    },
+    {
+      "order_id": "N-5108",
+      "created_at": "2026-03-18T11:21:00+08:00",
+      "updated_at": "2026-03-20T17:21:00+08:00",
+      "status": "delivered",
+      "channel": "phone",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-BB-250",
+          "name": "Barako Bold",
+          "qty": 6,
+          "unit_price": 390,
+          "warehouse_bin": "B-07-09"
+        },
+        {
+          "sku": "BEAN-NHB-250",
+          "name": "Nimbus House Blend",
+          "qty": 8,
+          "unit_price": 420,
+          "warehouse_bin": "B-06-04"
+        }
+      ],
+      "totals": {
+        "subtotal": 5700,
+        "shipping_fee": 0,
+        "grand_total": 5700
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "LBC",
+        "tracking_number": "LB1968715276",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 3500,
+        "events": [
+          {
+            "at": "2026-03-18T12:21:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-03-19T17:21:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by LBC"
+          },
+          {
+            "at": "2026-03-20T03:21:00+08:00",
+            "code": "AT_HUB",
+            "location": "Mandaluyong sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-03-20T17:21:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5108",
+        "status": "paid"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5108"
+      }
+    },
+    {
+      "order_id": "N-5109",
+      "created_at": "2026-03-28T09:32:00+08:00",
+      "updated_at": "2026-03-30T15:32:00+08:00",
+      "status": "delivered",
+      "channel": "wholesale_portal",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-DC-250",
+          "name": "Decaf Cloud",
+          "qty": 10,
+          "unit_price": 550,
+          "warehouse_bin": "B-16-06"
+        }
+      ],
+      "totals": {
+        "subtotal": 5500,
+        "shipping_fee": 0,
+        "grand_total": 5500
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "LBC",
+        "tracking_number": "LB6275824760",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 2500,
+        "events": [
+          {
+            "at": "2026-03-28T10:32:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-03-29T15:32:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by LBC"
+          },
+          {
+            "at": "2026-03-30T01:32:00+08:00",
+            "code": "AT_HUB",
+            "location": "Pasig sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-03-30T15:32:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5109",
+        "status": "paid"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5109"
+      }
+    },
+    {
+      "order_id": "N-5110",
+      "created_at": "2026-04-07T13:42:00+08:00",
+      "updated_at": "2026-04-09T19:42:00+08:00",
+      "status": "delivered",
+      "channel": "phone",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-NHB-250",
+          "name": "Nimbus House Blend",
+          "qty": 6,
+          "unit_price": 420,
+          "warehouse_bin": "B-23-03"
+        },
+        {
+          "sku": "BEAN-BB-250",
+          "name": "Barako Bold",
+          "qty": 6,
+          "unit_price": 390,
+          "warehouse_bin": "B-21-03"
+        },
+        {
+          "sku": "EQ-CBB",
+          "name": "Cold Brew Bottle",
+          "qty": 1,
+          "unit_price": 980,
+          "warehouse_bin": "B-17-09"
+        }
+      ],
+      "totals": {
+        "subtotal": 5840,
+        "shipping_fee": 0,
+        "grand_total": 5840
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "Ninja Van",
+        "tracking_number": "NI4950487110",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 4200,
+        "events": [
+          {
+            "at": "2026-04-07T14:42:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-04-08T19:42:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by Ninja Van"
+          },
+          {
+            "at": "2026-04-09T05:42:00+08:00",
+            "code": "AT_HUB",
+            "location": "Mandaluyong sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-04-09T19:42:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5110",
+        "status": "paid"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5110"
+      }
+    },
+    {
+      "order_id": "N-5111",
+      "created_at": "2026-04-16T09:21:00+08:00",
+      "updated_at": "2026-04-18T15:21:00+08:00",
+      "status": "delivered",
+      "channel": "phone",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-DC-250",
+          "name": "Decaf Cloud",
+          "qty": 8,
+          "unit_price": 550,
+          "warehouse_bin": "B-20-04"
+        },
+        {
+          "sku": "BEAN-BB-250",
+          "name": "Barako Bold",
+          "qty": 6,
+          "unit_price": 390,
+          "warehouse_bin": "B-27-02"
+        },
+        {
+          "sku": "BEAN-MAS-250",
+          "name": "Mount Apo Sunrise",
+          "qty": 6,
+          "unit_price": 520,
+          "warehouse_bin": "B-28-05"
+        },
+        {
+          "sku": "EQ-HGP",
+          "name": "Hand Grinder Pro",
+          "qty": 1,
+          "unit_price": 3450,
+          "warehouse_bin": "B-20-07"
+        }
+      ],
+      "totals": {
+        "subtotal": 13310,
+        "shipping_fee": 0,
+        "grand_total": 13310
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "J&T Express",
+        "tracking_number": "JJ4654532738",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 6200,
+        "events": [
+          {
+            "at": "2026-04-16T10:21:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-04-17T15:21:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by J&T Express"
+          },
+          {
+            "at": "2026-04-18T01:21:00+08:00",
+            "code": "AT_HUB",
+            "location": "Pasig sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-04-18T15:21:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5111",
+        "status": "paid"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5111"
+      }
+    },
+    {
+      "order_id": "N-5112",
+      "created_at": "2026-04-29T12:45:00+08:00",
+      "updated_at": "2026-05-01T18:45:00+08:00",
+      "status": "delivered",
+      "channel": "wholesale_portal",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-BH-250",
+          "name": "Benguet Highlands",
+          "qty": 10,
+          "unit_price": 480,
+          "warehouse_bin": "B-08-08"
+        },
+        {
+          "sku": "EQ-POK",
+          "name": "Nimbus Pour-Over Kit",
+          "qty": 1,
+          "unit_price": 2800,
+          "warehouse_bin": "B-06-08"
+        }
+      ],
+      "totals": {
+        "subtotal": 7600,
+        "shipping_fee": 0,
+        "grand_total": 7600
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "J&T Express",
+        "tracking_number": "JJ1309630300",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 3700,
+        "events": [
+          {
+            "at": "2026-04-29T13:45:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-04-30T18:45:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by J&T Express"
+          },
+          {
+            "at": "2026-05-01T04:45:00+08:00",
+            "code": "AT_HUB",
+            "location": "Mandaluyong sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-05-01T18:45:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5112",
+        "status": "paid"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5112"
+      }
+    },
+    {
+      "order_id": "N-5113",
+      "created_at": "2026-05-09T09:27:00+08:00",
+      "updated_at": "2026-05-11T15:27:00+08:00",
+      "status": "delivered",
+      "channel": "web",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-DC-250",
+          "name": "Decaf Cloud",
+          "qty": 4,
+          "unit_price": 550,
+          "warehouse_bin": "B-12-03"
+        },
+        {
+          "sku": "BEAN-MAS-250",
+          "name": "Mount Apo Sunrise",
+          "qty": 8,
+          "unit_price": 520,
+          "warehouse_bin": "B-14-01"
+        },
+        {
+          "sku": "BEAN-BB-250",
+          "name": "Barako Bold",
+          "qty": 8,
+          "unit_price": 390,
+          "warehouse_bin": "B-08-03"
+        }
+      ],
+      "totals": {
+        "subtotal": 9480,
+        "shipping_fee": 0,
+        "grand_total": 9480
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "Ninja Van",
+        "tracking_number": "NI7501762581",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 5000,
+        "events": [
+          {
+            "at": "2026-05-09T10:27:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-05-10T15:27:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by Ninja Van"
+          },
+          {
+            "at": "2026-05-11T01:27:00+08:00",
+            "code": "AT_HUB",
+            "location": "Pasig sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-05-11T15:27:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5113",
+        "status": "paid"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5113"
+      }
+    },
+    {
+      "order_id": "N-5114",
+      "created_at": "2026-05-19T09:13:00+08:00",
+      "updated_at": "2026-05-21T15:13:00+08:00",
+      "status": "delivered",
+      "channel": "wholesale_portal",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-BB-250",
+          "name": "Barako Bold",
+          "qty": 10,
+          "unit_price": 390,
+          "warehouse_bin": "B-24-04"
+        },
+        {
+          "sku": "EQ-CBB",
+          "name": "Cold Brew Bottle",
+          "qty": 1,
+          "unit_price": 980,
+          "warehouse_bin": "B-13-03"
+        }
+      ],
+      "totals": {
+        "subtotal": 4880,
+        "shipping_fee": 0,
+        "grand_total": 4880
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "LBC",
+        "tracking_number": "LB7558159933",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 3700,
+        "events": [
+          {
+            "at": "2026-05-19T10:13:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-05-20T15:13:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by LBC"
+          },
+          {
+            "at": "2026-05-21T01:13:00+08:00",
+            "code": "AT_HUB",
+            "location": "Pasig sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-05-21T15:13:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5114",
+        "status": "paid"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5114"
+      }
+    },
+    {
+      "order_id": "N-5115",
+      "created_at": "2026-05-26T13:50:00+08:00",
+      "updated_at": "2026-05-28T19:50:00+08:00",
+      "status": "delivered",
+      "channel": "phone",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-MAS-250",
+          "name": "Mount Apo Sunrise",
+          "qty": 4,
+          "unit_price": 520,
+          "warehouse_bin": "B-26-08"
+        },
+        {
+          "sku": "BEAN-BH-250",
+          "name": "Benguet Highlands",
+          "qty": 6,
+          "unit_price": 480,
+          "warehouse_bin": "B-01-05"
+        },
+        {
+          "sku": "BEAN-NHB-250",
+          "name": "Nimbus House Blend",
+          "qty": 8,
+          "unit_price": 420,
+          "warehouse_bin": "B-04-05"
+        },
+        {
+          "sku": "EQ-CBB",
+          "name": "Cold Brew Bottle",
+          "qty": 1,
+          "unit_price": 980,
+          "warehouse_bin": "B-13-02"
+        }
+      ],
+      "totals": {
+        "subtotal": 9300,
+        "shipping_fee": 0,
+        "grand_total": 9300
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "Ninja Van",
+        "tracking_number": "NI9588957681",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 5700,
+        "events": [
+          {
+            "at": "2026-05-26T14:50:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-05-27T19:50:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by Ninja Van"
+          },
+          {
+            "at": "2026-05-28T05:50:00+08:00",
+            "code": "AT_HUB",
+            "location": "Mandaluyong sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-05-28T19:50:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5115",
+        "status": "paid"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5115"
+      }
+    },
+    {
+      "order_id": "N-5116",
+      "created_at": "2026-06-07T13:22:00+08:00",
+      "updated_at": "2026-06-09T19:22:00+08:00",
+      "status": "delivered",
+      "channel": "web",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-MAS-250",
+          "name": "Mount Apo Sunrise",
+          "qty": 2,
+          "unit_price": 520,
+          "warehouse_bin": "B-12-03"
+        }
+      ],
+      "totals": {
+        "subtotal": 1040,
+        "shipping_fee": 120,
+        "grand_total": 1160
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "J&T Express",
+        "tracking_number": "JJ6037930703",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 500,
+        "events": [
+          {
+            "at": "2026-06-07T14:22:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-06-08T19:22:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by J&T Express"
+          },
+          {
+            "at": "2026-06-09T05:22:00+08:00",
+            "code": "AT_HUB",
+            "location": "Pasig sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-06-09T19:22:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5116",
+        "status": "paid"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5116"
+      }
+    },
+    {
+      "order_id": "N-5117",
+      "created_at": "2026-06-15T09:07:00+08:00",
+      "updated_at": "2026-06-17T15:07:00+08:00",
+      "status": "delivered",
+      "channel": "web",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-BB-250",
+          "name": "Barako Bold",
+          "qty": 6,
+          "unit_price": 390,
+          "warehouse_bin": "B-27-02"
+        },
+        {
+          "sku": "BEAN-DC-250",
+          "name": "Decaf Cloud",
+          "qty": 2,
+          "unit_price": 550,
+          "warehouse_bin": "B-29-01"
+        },
+        {
+          "sku": "EQ-HGP",
+          "name": "Hand Grinder Pro",
+          "qty": 1,
+          "unit_price": 3450,
+          "warehouse_bin": "B-30-03"
+        }
+      ],
+      "totals": {
+        "subtotal": 6890,
+        "shipping_fee": 0,
+        "grand_total": 6890
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "Ninja Van",
+        "tracking_number": "NI8643612516",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 3200,
+        "events": [
+          {
+            "at": "2026-06-15T10:07:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-06-16T15:07:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by Ninja Van"
+          },
+          {
+            "at": "2026-06-17T01:07:00+08:00",
+            "code": "AT_HUB",
+            "location": "Mandaluyong sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-06-17T15:07:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5117",
+        "status": "paid"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5117"
+      }
+    },
+    {
+      "order_id": "N-5118",
+      "created_at": "2026-06-28T13:31:00+08:00",
+      "updated_at": "2026-06-30T19:31:00+08:00",
+      "status": "delivered",
+      "channel": "web",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-NHB-250",
+          "name": "Nimbus House Blend",
+          "qty": 10,
+          "unit_price": 420,
+          "warehouse_bin": "B-19-03"
+        },
+        {
+          "sku": "BEAN-BB-250",
+          "name": "Barako Bold",
+          "qty": 10,
+          "unit_price": 390,
+          "warehouse_bin": "B-29-04"
+        }
+      ],
+      "totals": {
+        "subtotal": 8100,
+        "shipping_fee": 0,
+        "grand_total": 8100
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "LBC",
+        "tracking_number": "LB8531936238",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 5000,
+        "events": [
+          {
+            "at": "2026-06-28T14:31:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-06-29T19:31:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by LBC"
+          },
+          {
+            "at": "2026-06-30T05:31:00+08:00",
+            "code": "AT_HUB",
+            "location": "Pasig sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-06-30T19:31:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5118",
+        "status": "paid"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5118"
+      }
+    },
+    {
+      "order_id": "N-5119",
+      "created_at": "2026-07-07T11:24:00+08:00",
+      "updated_at": "2026-07-09T17:24:00+08:00",
+      "status": "delivered",
+      "channel": "wholesale_portal",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-BB-250",
+          "name": "Barako Bold",
+          "qty": 6,
+          "unit_price": 390,
+          "warehouse_bin": "B-19-05"
+        },
+        {
+          "sku": "BEAN-DC-250",
+          "name": "Decaf Cloud",
+          "qty": 6,
+          "unit_price": 550,
+          "warehouse_bin": "B-05-07"
+        },
+        {
+          "sku": "EQ-HGP",
+          "name": "Hand Grinder Pro",
+          "qty": 1,
+          "unit_price": 3450,
+          "warehouse_bin": "B-29-09"
+        }
+      ],
+      "totals": {
+        "subtotal": 9090,
+        "shipping_fee": 0,
+        "grand_total": 9090
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "Ninja Van",
+        "tracking_number": "NI5347416600",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 4200,
+        "events": [
+          {
+            "at": "2026-07-07T12:24:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-07-08T17:24:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by Ninja Van"
+          },
+          {
+            "at": "2026-07-09T03:24:00+08:00",
+            "code": "AT_HUB",
+            "location": "Pasig sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-07-09T17:24:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5119",
+        "status": "paid"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5119"
+      }
+    },
+    {
+      "order_id": "N-5120",
+      "created_at": "2026-07-18T12:50:00+08:00",
+      "updated_at": "2026-07-20T18:50:00+08:00",
+      "status": "delivered",
+      "channel": "phone",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-BH-250",
+          "name": "Benguet Highlands",
+          "qty": 4,
+          "unit_price": 480,
+          "warehouse_bin": "B-01-03"
+        },
+        {
+          "sku": "BEAN-MAS-250",
+          "name": "Mount Apo Sunrise",
+          "qty": 2,
+          "unit_price": 520,
+          "warehouse_bin": "B-16-07"
+        },
+        {
+          "sku": "EQ-HGP",
+          "name": "Hand Grinder Pro",
+          "qty": 1,
+          "unit_price": 3450,
+          "warehouse_bin": "B-23-02"
+        }
+      ],
+      "totals": {
+        "subtotal": 6410,
+        "shipping_fee": 0,
+        "grand_total": 6410
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "Ninja Van",
+        "tracking_number": "NI9430752134",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 2700,
+        "events": [
+          {
+            "at": "2026-07-18T13:50:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-07-19T18:50:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by Ninja Van"
+          },
+          {
+            "at": "2026-07-20T04:50:00+08:00",
+            "code": "AT_HUB",
+            "location": "Pasig sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-07-20T18:50:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5120",
+        "status": "paid"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5120"
+      }
+    },
+    {
+      "order_id": "N-5121",
+      "created_at": "2026-07-25T12:27:00+08:00",
+      "updated_at": "2026-07-25T15:27:00+08:00",
+      "status": "cancelled",
+      "channel": "phone",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "EQ-CBB",
+          "name": "Cold Brew Bottle",
+          "qty": 4,
+          "unit_price": 980,
+          "warehouse_bin": "B-15-02"
+        }
+      ],
+      "totals": {
+        "subtotal": 3920,
+        "shipping_fee": 0,
+        "grand_total": 3920
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "Ninja Van",
+        "tracking_number": "NI3959036088",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 4800,
+        "events": [
+          {
+            "at": "2026-07-25T13:27:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-07-25T15:27:00+08:00",
+            "code": "CANCELLED",
+            "location": "web",
+            "detail": "Cancelled by customer before roasting"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5121",
+        "status": "open"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5121"
+      }
+    },
+    {
+      "order_id": "N-5122",
+      "created_at": "2026-08-04T09:44:00+08:00",
+      "updated_at": "2026-08-06T15:44:00+08:00",
+      "status": "delivered",
+      "channel": "phone",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-DC-250",
+          "name": "Decaf Cloud",
+          "qty": 8,
+          "unit_price": 550,
+          "warehouse_bin": "B-05-02"
+        },
+        {
+          "sku": "BEAN-BB-250",
+          "name": "Barako Bold",
+          "qty": 8,
+          "unit_price": 390,
+          "warehouse_bin": "B-30-09"
+        },
+        {
+          "sku": "BEAN-BH-250",
+          "name": "Benguet Highlands",
+          "qty": 6,
+          "unit_price": 480,
+          "warehouse_bin": "B-13-07"
+        }
+      ],
+      "totals": {
+        "subtotal": 10400,
+        "shipping_fee": 0,
+        "grand_total": 10400
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "J&T Express",
+        "tracking_number": "JJ3020708021",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 5500,
+        "events": [
+          {
+            "at": "2026-08-04T10:44:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-08-05T15:44:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by J&T Express"
+          },
+          {
+            "at": "2026-08-06T01:44:00+08:00",
+            "code": "AT_HUB",
+            "location": "Mandaluyong sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-08-06T15:44:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5122",
+        "status": "paid"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5122"
+      }
+    },
+    {
+      "order_id": "N-5123",
+      "created_at": "2026-08-14T13:26:00+08:00",
+      "updated_at": "2026-08-16T19:26:00+08:00",
+      "status": "delivered",
+      "channel": "web",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-DC-250",
+          "name": "Decaf Cloud",
+          "qty": 6,
+          "unit_price": 550,
+          "warehouse_bin": "B-21-05"
+        },
+        {
+          "sku": "BEAN-BH-250",
+          "name": "Benguet Highlands",
+          "qty": 4,
+          "unit_price": 480,
+          "warehouse_bin": "B-26-05"
+        },
+        {
+          "sku": "BEAN-BB-250",
+          "name": "Barako Bold",
+          "qty": 4,
+          "unit_price": 390,
+          "warehouse_bin": "B-16-08"
+        }
+      ],
+      "totals": {
+        "subtotal": 6780,
+        "shipping_fee": 0,
+        "grand_total": 6780
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "Ninja Van",
+        "tracking_number": "NI1379124228",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 3500,
+        "events": [
+          {
+            "at": "2026-08-14T14:26:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-08-15T19:26:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by Ninja Van"
+          },
+          {
+            "at": "2026-08-16T05:26:00+08:00",
+            "code": "AT_HUB",
+            "location": "Pasig sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-08-16T19:26:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5123",
+        "status": "paid"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5123"
+      }
+    },
+    {
+      "order_id": "N-5124",
+      "created_at": "2026-08-24T09:41:00+08:00",
+      "updated_at": "2026-08-26T15:41:00+08:00",
+      "status": "delivered",
+      "channel": "web",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-BB-250",
+          "name": "Barako Bold",
+          "qty": 6,
+          "unit_price": 390,
+          "warehouse_bin": "B-28-03"
+        }
+      ],
+      "totals": {
+        "subtotal": 2340,
+        "shipping_fee": 0,
+        "grand_total": 2340
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "LBC",
+        "tracking_number": "LB9524136511",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 1500,
+        "events": [
+          {
+            "at": "2026-08-24T10:41:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-08-25T15:41:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by LBC"
+          },
+          {
+            "at": "2026-08-26T01:41:00+08:00",
+            "code": "AT_HUB",
+            "location": "Pasig sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-08-26T15:41:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5124",
+        "status": "paid"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5124"
+      }
+    },
+    {
+      "order_id": "N-5125",
+      "created_at": "2026-09-05T13:58:00+08:00",
+      "updated_at": "2026-09-07T19:58:00+08:00",
+      "status": "delivered",
+      "channel": "wholesale_portal",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-NHB-250",
+          "name": "Nimbus House Blend",
+          "qty": 2,
+          "unit_price": 420,
+          "warehouse_bin": "B-23-02"
+        },
+        {
+          "sku": "EQ-CBB",
+          "name": "Cold Brew Bottle",
+          "qty": 1,
+          "unit_price": 980,
+          "warehouse_bin": "B-26-06"
+        }
+      ],
+      "totals": {
+        "subtotal": 1820,
+        "shipping_fee": 0,
+        "grand_total": 1820
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "Ninja Van",
+        "tracking_number": "NI1633827335",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 1700,
+        "events": [
+          {
+            "at": "2026-09-05T14:58:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-09-06T19:58:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by Ninja Van"
+          },
+          {
+            "at": "2026-09-07T05:58:00+08:00",
+            "code": "AT_HUB",
+            "location": "Pasig sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-09-07T19:58:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5125",
+        "status": "paid"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5125"
+      }
+    },
+    {
+      "order_id": "N-5126",
+      "created_at": "2026-09-15T11:04:00+08:00",
+      "updated_at": "2026-09-20T11:04:00+08:00",
+      "status": "returned",
+      "channel": "web",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "EQ-HGP",
+          "name": "Hand Grinder Pro",
+          "qty": 2,
+          "unit_price": 3450,
+          "warehouse_bin": "B-03-03"
+        }
+      ],
+      "totals": {
+        "subtotal": 6900,
+        "shipping_fee": 0,
+        "grand_total": 6900
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "J&T Express",
+        "tracking_number": "JJ1292774402",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 2400,
+        "events": [
+          {
+            "at": "2026-09-15T12:04:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-09-16T17:04:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by J&T Express"
+          },
+          {
+            "at": "2026-09-17T03:04:00+08:00",
+            "code": "AT_HUB",
+            "location": "Mandaluyong sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-09-17T17:04:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          },
+          {
+            "at": "2026-09-20T11:04:00+08:00",
+            "code": "RETURNED",
+            "location": "Quezon City roastery",
+            "detail": "Returned: grinder burrs misaligned"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5126",
+        "status": "open"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5126"
+      }
+    },
+    {
+      "order_id": "N-5127",
+      "created_at": "2026-09-24T11:08:00+08:00",
+      "updated_at": "2026-09-26T17:08:00+08:00",
+      "status": "delivered",
+      "channel": "phone",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-BH-250",
+          "name": "Benguet Highlands",
+          "qty": 2,
+          "unit_price": 480,
+          "warehouse_bin": "B-14-08"
+        },
+        {
+          "sku": "BEAN-BB-250",
+          "name": "Barako Bold",
+          "qty": 6,
+          "unit_price": 390,
+          "warehouse_bin": "B-12-08"
+        }
+      ],
+      "totals": {
+        "subtotal": 3300,
+        "shipping_fee": 0,
+        "grand_total": 3300
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "J&T Express",
+        "tracking_number": "JJ9205768599",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 2000,
+        "events": [
+          {
+            "at": "2026-09-24T12:08:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-09-25T17:08:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by J&T Express"
+          },
+          {
+            "at": "2026-09-26T03:08:00+08:00",
+            "code": "AT_HUB",
+            "location": "Mandaluyong sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-09-26T17:08:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5127",
+        "status": "paid"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5127"
+      }
+    },
+    {
+      "order_id": "N-5128",
+      "created_at": "2026-10-05T10:15:00+08:00",
+      "updated_at": "2026-10-07T16:15:00+08:00",
+      "status": "delivered",
+      "channel": "web",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-MAS-250",
+          "name": "Mount Apo Sunrise",
+          "qty": 8,
+          "unit_price": 520,
+          "warehouse_bin": "B-16-08"
+        },
+        {
+          "sku": "EQ-HGP",
+          "name": "Hand Grinder Pro",
+          "qty": 1,
+          "unit_price": 3450,
+          "warehouse_bin": "B-28-03"
+        }
+      ],
+      "totals": {
+        "subtotal": 7610,
+        "shipping_fee": 0,
+        "grand_total": 7610
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "J&T Express",
+        "tracking_number": "JJ9249042271",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 3200,
+        "events": [
+          {
+            "at": "2026-10-05T11:15:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-10-06T16:15:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by J&T Express"
+          },
+          {
+            "at": "2026-10-07T02:15:00+08:00",
+            "code": "AT_HUB",
+            "location": "Pasig sorting hub",
+            "detail": "Arrived at sorting hub"
+          },
+          {
+            "at": "2026-10-07T16:15:00+08:00",
+            "code": "DELIVERED",
+            "location": "Makati",
+            "detail": "Delivered, signed by L. Navarro"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5128",
+        "status": "paid"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5128"
+      }
+    },
+    {
+      "order_id": "N-5129",
+      "created_at": "2026-10-15T09:42:00+08:00",
+      "updated_at": "2026-10-17T01:42:00+08:00",
+      "status": "in_transit",
+      "channel": "phone",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-MAS-250",
+          "name": "Mount Apo Sunrise",
+          "qty": 8,
+          "unit_price": 520,
+          "warehouse_bin": "B-04-09"
+        },
+        {
+          "sku": "BEAN-DC-250",
+          "name": "Decaf Cloud",
+          "qty": 4,
+          "unit_price": 550,
+          "warehouse_bin": "B-10-05"
+        }
+      ],
+      "totals": {
+        "subtotal": 6360,
+        "shipping_fee": 0,
+        "grand_total": 6360
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "Ninja Van",
+        "tracking_number": "NI2432123605",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 3000,
+        "events": [
+          {
+            "at": "2026-10-15T10:42:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-10-16T15:42:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by Ninja Van"
+          },
+          {
+            "at": "2026-10-17T01:42:00+08:00",
+            "code": "AT_HUB",
+            "location": "Pasig sorting hub",
+            "detail": "Arrived at sorting hub"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5129",
+        "status": "open"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5129"
+      }
+    },
+    {
+      "order_id": "N-5130",
+      "created_at": "2026-10-26T12:37:00+08:00",
+      "updated_at": "2026-10-28T04:37:00+08:00",
+      "status": "in_transit",
+      "channel": "phone",
+      "currency": "PHP",
+      "items": [
+        {
+          "sku": "BEAN-NHB-250",
+          "name": "Nimbus House Blend",
+          "qty": 16,
+          "unit_price": 420,
+          "warehouse_bin": "B-30-02"
+        }
+      ],
+      "totals": {
+        "subtotal": 6720,
+        "shipping_fee": 0,
+        "grand_total": 6720
+      },
+      "shipping": {
+        "method": "standard",
+        "carrier": "LBC",
+        "tracking_number": "LB7457569792",
+        "address_id": "addr_7f3a91",
+        "weight_grams": 4000,
+        "events": [
+          {
+            "at": "2026-10-26T13:37:00+08:00",
+            "code": "ORDER_RECEIVED",
+            "location": "web",
+            "detail": "Order received"
+          },
+          {
+            "at": "2026-10-27T18:37:00+08:00",
+            "code": "PICKED_UP",
+            "location": "Quezon City roastery",
+            "detail": "Picked up by LBC"
+          },
+          {
+            "at": "2026-10-28T04:37:00+08:00",
+            "code": "AT_HUB",
+            "location": "Pasig sorting hub",
+            "detail": "Arrived at sorting hub"
+          }
+        ]
+      },
+      "payment": {
+        "method": "invoice_30d",
+        "invoice_number": "INV-2026-5130",
+        "status": "open"
+      },
+      "_links": {
+        "self": "/v2/orders/N-5130"
+      }
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "per_page": 50,
+    "total": 30,
+    "next": null
+  }
+}

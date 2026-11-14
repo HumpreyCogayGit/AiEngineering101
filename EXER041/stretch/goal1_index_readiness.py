@@ -1,6 +1,6 @@
-"""EXER040 stretch goal 1 — do not report "ready" before the vector index exists.
+"""EXER041 stretch goal 1 — do not report "ready" before the vector index exists.
 
-    uv run python EXER040/stretch/goal1_index_readiness.py      # offline: a temporary, empty index folder
+    uv run python EXER041/stretch/goal1_index_readiness.py      # offline: a temporary, empty index folder
 
 The first question to a fresh container is slow: the knowledge base is
 embedded and indexed on first use. With the exercise's checks the container
