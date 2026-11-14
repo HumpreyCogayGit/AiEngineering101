@@ -37,8 +37,11 @@
 </table>
 
 <h3>Approximate nearest neighbours</h3>
-<p>Comparing with every vector is O(n). Chroma builds an <strong>HNSW</strong> index (a navigable graph of neighbours)
-  that finds <em>approximately</em> the closest vectors in far less time, trading a tiny bit of accuracy for big speed gains.
+<p>Comparing with every vector is O(n). Chroma builds an <strong>HNSW</strong> index (Hierarchical Navigable Small World:
+  layers of graphs that link each vector to its near neighbours; Malkov and Yashunin,
+  <a href="https://arxiv.org/abs/1603.09320">2016</a>). A search walks the graph from a coarse layer to a fine one and finds
+  <em>approximately</em> the closest vectors: it can occasionally miss a true nearest neighbour, and in exchange its search
+  time grows roughly with the logarithm of the collection size instead of linearly.
   We set the distance to <code>cosine</code>, so <strong>smaller distance = more similar</strong> (distance = 1 − similarity).</p>
 
 <h3>Using it through LangChain</h3>

@@ -11,10 +11,10 @@ with scores and metadata filters, and make ingestion idempotent.
 
 Complete the TODOs in `starter/vector_store.py`:
 
-1. `make_id` — deterministic, content-based ids
-2. `open_store` — a persistent Chroma collection using cosine distance
-3. `add_chunks` — only add chunks that aren't stored yet
-4. `search` — `similarity_search_with_score` with an optional `source` filter
+1. `make_id`: deterministic, content-based ids
+2. `open_store`: a persistent Chroma collection using cosine distance
+3. `add_chunks`: only add chunks that aren't stored yet
+4. `search`: `similarity_search_with_score` with an optional `source` filter
 
 ## Run it
 
