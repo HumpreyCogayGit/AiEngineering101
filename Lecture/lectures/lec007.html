@@ -17,7 +17,7 @@
 <header class="lecture-header">
   <h1>Streaming</h1>
   <p class="lede">A 20-second answer feels slow; the same answer appearing word by word after 0.5 seconds
-    feels fast. Streaming doesn't make the model faster, but users experience it as much faster.</p>
+    feels fast. Streaming doesn't make the model generate any faster; it shows the first words sooner.</p>
 </header>
 
 <section id="overview"><h2>Overview</h2>
@@ -28,7 +28,9 @@
 
 <section id="concept"><h2>Concept</h2>
 <h3>Server-Sent Events (SSE)</h3>
-<p>The HTTP response stays open and the server writes lines like these:</p>
+<p>Server-Sent Events is a format from the HTML standard: the response has the content type
+  <code>text/event-stream</code>, stays open, and the server writes <code>data:</code> lines, each event followed
+  by a blank line. A chat completion stream looks like this (blank lines omitted):</p>
 <pre><code class="language-text">data: {"choices":[{"delta":{"role":"assistant","content":""}}]}
 data: {"choices":[{"delta":{"content":"Rivers"}}]}
 data: {"choices":[{"delta":{"content":" wind"}}]}

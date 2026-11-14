@@ -11,9 +11,9 @@ deltas, and measure why streaming *feels* so much faster.
 
 Complete the TODOs in `starter/streaming.py`:
 
-1. `stream_reply` — a generator that yields each text delta
-2. `collect` — consume a stream, print as you go, return the full text
-3. `stream_with_usage` — also capture token usage from the final chunk
+1. `stream_reply`: a generator that yields each text delta
+2. `collect`: consume a stream, print as you go, return the full text
+3. `stream_with_usage`: also capture token usage from the final chunk
 
 ## Run it
 
