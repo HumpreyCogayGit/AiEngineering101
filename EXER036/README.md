@@ -39,7 +39,7 @@ uv run python EXER036/check.py
 - [ ] The guarded summarizer exposes nothing (no secret, no untrusted link) and does not
       block the benign emails
 - [ ] You can name which layer stopped each attack (hint: the four stealthy emails get past
-      the input heuristics — which layers are left?)
+      the input heuristics, so which layers are left?)
 - [ ] All 11 checks pass
 
 > Guardrails reduce risk; they don't remove it. The strongest defence is design:
