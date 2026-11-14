@@ -5,19 +5,19 @@
 ## Goal
 
 Improve retrieval quality with keyword + vector hybrid search, rank fusion,
-MMR, multi-query rewriting and LLM reranking — and **measure** each one with
+MMR, multi-query rewriting and LLM reranking, and **measure** each one with
 hit rate instead of trusting intuition.
 
 ## Tasks
 
 Complete the TODOs in `starter/better_retrieval.py`:
 
-1. `BM25Retriever` — keyword search with `rank_bm25`
-2. `reciprocal_rank_fusion` — merge several rankings
-3. `multi_query` — ask the model for alternative phrasings
-4. `hit_rate` — the metric that decides what works
+1. `BM25Retriever`: keyword search with `rank_bm25`
+2. `reciprocal_rank_fusion`: merge several rankings
+3. `multi_query`: ask the model for alternative phrasings
+4. `hit_rate`: the metric that decides what works
 
-(`llm_rerank` is provided — read it.)
+(`llm_rerank` is provided. Read it.)
 
 ## Run it
 

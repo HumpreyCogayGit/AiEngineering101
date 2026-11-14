@@ -21,20 +21,23 @@
 </header>
 
 <section id="overview"><h2>Overview</h2>
-<p>Most RAG failures are retrieval failures. Vector search has predictable weaknesses: exact terms (product codes,
+<p>When a RAG answer is wrong, check retrieval first. Vector search has predictable weaknesses: exact terms (product codes,
   names, numbers), vague or oddly worded questions, and near-duplicate results crowding out variety. Each technique
   here targets one weakness, and each has a cost. The deciding tool is a metric: <strong>hit rate</strong>.</p>
 </section>
 
 <section id="concept"><h2>Concept</h2>
 <h3>1. Hybrid search: keywords + vectors</h3>
-<p><strong>BM25</strong> is the classic keyword ranking: it rewards query words that appear in a chunk, especially
-  rare words. It's excellent where embeddings are weak: "Liberica", "BL-2026-0412", "Maginhawa". Combining both
+<p><strong>BM25</strong> (Okapi BM25, from Robertson and colleagues' probabilistic relevance framework) is the classic
+  keyword ranking: it rewards query words that appear in a chunk, weights rare words more (inverse document frequency),
+  gives diminishing returns for repeating a word, and corrects for chunk length. It's strong where embeddings are weak: "Liberica", "BL-2026-0412", "Maginhawa". Combining both
   approaches is called hybrid search.</p>
 
 <h3>2. Reciprocal Rank Fusion (RRF)</h3>
 <p>BM25 scores and cosine distances aren't on the same scale, so you can't simply add them. RRF uses only <em>ranks</em>:</p>
-<pre><code class="language-text">score(doc) = Σ over rankings of  1 / (k + rank)        k = 60 by convention
+<p>(Cormack, Clarke and Büttcher, <a href="https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf">SIGIR 2009</a>,
+  where k = 60 comes from.)</p>
+<pre><code class="language-text">score(doc) = Σ over rankings of  1 / (k + rank)        k = 60
 
 doc A: rank 1 in vector, rank 3 in BM25  → 1/61 + 1/63 = 0.0323
 doc B: rank 2 in vector, rank 1 in BM25  → 1/62 + 1/61 = 0.0325   ← wins: high in both</code></pre>
@@ -44,8 +47,8 @@ doc B: rank 2 in vector, rank 1 in BM25  → 1/62 + 1/61 = 0.0325   ← wins: hi
   F --> K[Top k]</div>
 
 <h3>3. MMR: diversity</h3>
-<p>Maximal Marginal Relevance picks each next result to be relevant to the query <em>and</em> different from those
-  already picked. Use it when the top results are near-duplicates.</p>
+<p>Maximal Marginal Relevance (Carbonell and Goldstein, 1998) picks each next result to be relevant to the query
+  <em>and</em> different from those already picked, with a weight that sets the balance between the two. Use it when the top results are near-duplicates.</p>
 
 <h3>4. Multi-query rewriting</h3>
 <p>Ask the model for several rephrasings ("money back" → "refund policy", "return window"), search with each, and
@@ -57,7 +60,8 @@ doc B: rank 2 in vector, rank 1 in BM25  → 1/62 + 1/61 = 0.0325   ← wins: hi
 
 <h3>Measure: hit rate @ k</h3>
 <pre><code class="language-text">hit rate = share of test questions whose expected source appears in the top k results</code></pre>
-<p><code>data/eval_questions.json</code> holds 20 questions with the expected source file. Every technique gets a number,
+<p><code>data/eval_questions.json</code> holds 20 questions. 19 name the source file that answers them; the 20th is
+  out of scope on purpose (Lecture 024 uses it), so hit rate is computed over 19. Every technique gets a number,
   and you keep only what improves it.</p>
 <p><strong>Pick k to match the question you are asking.</strong> With k = 4 you ask "is the right document somewhere
   in what the model will read?". On a small knowledge base nearly every strategy passes that, so the table tells you
@@ -162,9 +166,9 @@ robusta vs arabica coffee beans for intense full-bodied espresso</code></pre>
 <details class="pitfall"><summary>Adding raw scores from different systems</summary><div>
   <p>A BM25 score of 12 and a cosine distance of 0.3 aren't comparable. Fuse ranks (RRF) or normalize carefully.</p></div></details>
 <details class="pitfall"><summary>Tuning on a tiny test set</summary><div>
-  <p>20 questions is a start. One question changes hit rate by 5 points, so don't over-read small differences.</p></div></details>
+  <p>19 questions is a start. One question changes hit rate by about 5 points, so don't over-read small differences.</p></div></details>
 <details class="pitfall"><summary>Stacking every technique</summary><div>
-  <p>Multi-query + reranking can triple latency for a small gain. Add complexity only when the metric justifies it.</p></div></details>
+  <p>Multi-query plus reranking adds two model calls to every question, often for a small gain. Add complexity only when the metric justifies it.</p></div></details>
 </section>
 
 <section id="discussion"><h2>Discussion</h2>
@@ -172,8 +176,8 @@ robusta vs arabica coffee beans for intense full-bodied espresso</code></pre>
   <p>Retrieval found the right document, but maybe not the right <em>chunk</em>, or the generation step misused it.
   Lecture 024 evaluates generation separately.</p></div>
 <div class="qa"><p>How does a managed service do this?</p>
-  <p>Azure AI Search offers hybrid search with built-in RRF and a semantic reranker out of the box. What you build
-  here is what it does internally.</p></div>
+  <p>Azure AI Search offers hybrid search fused with RRF and an optional semantic reranker. What you build here is
+  the same design in miniature.</p></div>
 </section>
 
 <section id="quiz"><h2>Check Yourself</h2>
