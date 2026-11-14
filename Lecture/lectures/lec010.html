@@ -16,8 +16,8 @@
 <main>
 <header class="lecture-header">
   <h1>Building a CLI App</h1>
-  <p class="lede">The terminal is where developers live. A good command-line tool composes with everything else:
-    pipes, scripts, cron jobs and CI.</p>
+  <p class="lede">A command-line tool that reads stdin, writes results to stdout and returns an exit code can be
+    used from pipes, scripts, cron jobs and CI. This lecture turns the Module 1 code into one.</p>
 </header>
 
 <section id="overview"><h2>Overview</h2>
@@ -51,15 +51,17 @@ if __name__ == "__main__":
   <tr><td><strong>stdin</strong>: read input from a pipe; <code>-</code> means "stdin"</td><td><code>cat notes.txt | ask.py summarize -</code></td></tr>
   <tr><td><strong>stdout</strong> for results</td><td>The answer only, so it can be piped on</td></tr>
   <tr><td><strong>stderr</strong> for errors and diagnostics</td><td><code>typer.echo(msg, err=True)</code></td></tr>
-  <tr><td><strong>Exit codes</strong>: 0 = success, non-zero = failure</td><td>1 = file problem, 2 = configuration problem</td></tr>
+  <tr><td><strong>Exit codes</strong>: 0 = success, non-zero = failure</td><td>1 = file problem, 2 = configuration problem (Click, which Typer is built on, also exits with 2 on a usage error such as <code>-t abc</code>)</td></tr>
 </table>
 <pre><code class="language-bash">uv run python EXER010/solution/ask.py summarize missing.txt || echo "it failed, and scripts can tell"
 git diff | uv run python EXER010/solution/ask.py summarize - --words 40   # summarize your changes</code></pre>
 
 <h3>Testable by design</h3>
-<p>The tool gets its client through a small <code>get_client()</code> function. Tests replace that one function
-  with a fake, and Typer's <code>CliRunner</code> invokes commands in-process and captures output and exit codes.
-  This is <em>dependency injection</em> in its simplest form.</p>
+<p>The tool gets its client through a small <code>get_client()</code> function, and nowhere else. That single
+  function is a <em>seam</em>: <code>check.py</code> replaces it on the module with one that returns a fake
+  (monkeypatching), and Typer's <code>CliRunner</code> invokes commands in-process and captures output and exit codes.
+  Passing the client in as a parameter instead would be <em>dependency injection</em>; the seam gets the same
+  testability with less plumbing in a small script.</p>
 </section>
 
 <section id="project"><h2>The Project</h2>
@@ -135,8 +137,7 @@ exit code: 1</code></pre>
 
 <section id="discussion"><h2>Discussion</h2>
 <div class="qa"><p>Why build a CLI when a web UI is friendlier?</p>
-  <p>Automation. A CLI can run in CI to review pull requests, in cron to summarize logs, or in a shell pipeline. Many
-  production AI features start as internal CLI tools.</p></div>
+  <p>Automation. A CLI can run in CI to review pull requests, in cron to summarize logs, or in a shell pipeline.</p></div>
 <div class="qa"><p>What would you add next?</p>
   <p>A <code>--json</code> output flag for scripts, a config file for defaults, and caching of identical requests.</p></div>
 </section>
