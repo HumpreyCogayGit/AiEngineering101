@@ -17,7 +17,7 @@
 
   const root = document.documentElement;
   root.classList.add("booting");
-  const MIN_MS = 1600, MAX_MS = 4500;
+  const MIN_MS = 2600, MAX_MS = 5500;
   const started = performance.now();
 
   // ---------------------------------------------------------------- brain geometry (side view, front to the left)

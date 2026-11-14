@@ -135,7 +135,7 @@ html.booting body { visibility: hidden; }
   justify-items: center; gap: 4px; background: var(--bg); cursor: pointer; transition: opacity .45s ease;
 }
 .boot-loader.lifting { opacity: 0; pointer-events: none; }
-.boot-loader canvas { width: min(420px, 86vw); height: auto; aspect-ratio: 7 / 5; }
+.boot-loader canvas { width: min(640px, 92vw); height: auto; aspect-ratio: 7 / 5; }
 .boot-loader p { margin: 0; font-weight: 700; font-size: 17px; color: var(--text); }
 .boot-loader small { color: var(--muted); font-size: 13px; }
 .meta { margin: 14px 0 0; font-size: 15px; color: var(--muted); }
