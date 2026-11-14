@@ -23,7 +23,8 @@
 <section id="overview"><h2>Overview</h2>
 <p>The RAG chain from Lecture 022 is a straight line, and it fails quietly: it retrieves for "hi there", answers from
   irrelevant chunks, and never retries a bad search. Graphs let us add decisions and a retry loop around retrieval,
-  combining Module 4 and Module 5.</p>
+  combining Module 4 and Module 5. Grading the retrieved chunks and acting on the grade is the idea behind Corrective RAG
+  (Yan et al., <a href="https://arxiv.org/abs/2401.15884">"CRAG"</a>, 2024); this lecture builds a small version of it.</p>
 </section>
 
 <section id="concept"><h2>Concept</h2>
