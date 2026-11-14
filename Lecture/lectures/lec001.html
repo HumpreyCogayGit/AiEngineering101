@@ -17,7 +17,8 @@
 <header class="lecture-header">
   <h1>Setup and First Check</h1>
   <p class="lede">Before talking to any model you need a reproducible environment and a safe place for secrets.
-    This lecture sets both up, and explains why professionals care so much about them.</p>
+    This lecture sets up both: a virtual environment pinned by <code>uv.lock</code>, and a git-ignored
+    <code>.env</code> that is validated before any request goes out.</p>
 </header>
 
 <section id="overview"><h2>Overview</h2>
@@ -30,8 +31,8 @@
 
 <section id="concept"><h2>Concept</h2>
 <h3>Virtual environments and uv</h3>
-<p>A <em>virtual environment</em> is a private folder of Python packages for one project, so projects
-  don't fight over versions. <code>uv</code> creates it (<code>.venv/</code>), installs the exact versions
+<p>A <em>virtual environment</em> is a directory with its own Python interpreter and its own installed
+  packages, isolated from the system Python and from other projects, so two projects can pin different versions. <code>uv</code> creates it (<code>.venv/</code>), installs the exact versions
   pinned in <code>uv.lock</code>, and runs commands inside it with <code>uv run</code>. Two people who run
   <code>uv sync</code> on the same lockfile get the same packages.</p>
 <pre><code class="language-text">pyproject.toml   what we need     ("langchain", "streamlit", ...)
@@ -74,7 +75,7 @@ uv.lock          exactly what we got  (langchain==1.5.0, ...)  ← reproducibili
 <h3>Azure Foundry: resource, deployment, endpoint</h3>
 <table>
   <tr><th>Term</th><th>Meaning</th></tr>
-  <tr><td>Resource</td><td>Your Azure account object that hosts models. It has an <strong>endpoint</strong> URL and <strong>keys</strong>.</td></tr>
+  <tr><td>Resource</td><td>The Foundry (Azure OpenAI) resource you create in your Azure subscription. It holds your deployments and has an <strong>endpoint</strong> URL and <strong>keys</strong>.</td></tr>
   <tr><td>Model</td><td>A model family/version, e.g. <code>gpt-4.1-mini</code>.</td></tr>
   <tr><td>Deployment</td><td>A named instance of a model in your resource, with its own quota. <strong>Your code addresses the deployment name.</strong></td></tr>
 </table>
@@ -139,7 +140,7 @@ API key         : ****</code></pre>
   <li>Open <code>EXER001/starter/check_setup.py</code>. Each TODO function raises <code>NotImplementedError</code> until you replace it.</li>
   <li><code>python_version_ok()</code>: <code>sys.version_info</code> is a tuple like <code>(3, 12, 14, 'final', 0)</code>, and tuples compare element by element.</li>
   <li><code>masked_key()</code>: string slicing. <code>key[:4]</code> gives the first four characters, <code>key[-4:]</code> the last four.</li>
-  <li><code>load_config()</code>: one line. The heavy lifting is in <code>aicourse/settings.py</code>, which is worth reading.</li>
+  <li><code>load_config()</code>: one line. <code>aicourse/settings.py</code> does the reading, validation and provider selection, so read it once.</li>
   <li>Run the script, then the checks. Run <code>check.py --solution</code> to see the reference pass.</li>
 </ol>
 <div class="callout tip"><span class="title">How the checks work</span>

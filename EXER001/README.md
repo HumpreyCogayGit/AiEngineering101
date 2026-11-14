@@ -5,7 +5,7 @@
 ## Goal
 
 Get a working development environment and prove that your configuration loads
-correctly — without ever printing your secret key.
+correctly, without ever printing your secret key.
 
 ## Before you start
 
