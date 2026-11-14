@@ -18,8 +18,8 @@ and an employee handbook PDF. All RAG exercises use it.
 Complete the TODOs in `starter/ingest.py`:
 
 1. `load_text`, `load_html` (clean out scripts and navigation), `load_pdf` (one Document per page)
-2. `load_directory` — pick the loader by file extension
-3. `chunk_documents` — `RecursiveCharacterTextSplitter` plus a `chunk_id`
+2. `load_directory`: pick the loader by file extension
+3. `chunk_documents`: `RecursiveCharacterTextSplitter` plus a `chunk_id`
 
 ## Run it
 

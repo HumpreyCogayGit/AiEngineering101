@@ -16,14 +16,13 @@
 <main>
 <header class="lecture-header">
   <h1>Loading and Chunking</h1>
-  <p class="lede">RAG quality is decided before any model is called. Good answers need clean text, useful metadata,
-    and chunks that each hold one complete idea.</p>
+  <p class="lede">Much of a RAG system's quality is settled before any model is called. Good answers need clean text,
+    useful metadata, and chunks that each hold one complete idea.</p>
 </header>
 
 <section id="overview"><h2>Overview</h2>
-<p>The ingestion pipeline turns a folder of files into chunks ready to embed. It's unglamorous and it matters
-  enormously: navigation menus in your HTML, page numbers lost from PDFs, or a chunk that cuts a policy in half all
-  become wrong answers later. We'll use the Nimbus Coffee knowledge base in <code>data/knowledge_base/</code>.</p>
+<p>The ingestion pipeline turns a folder of files into chunks ready to embed. Mistakes made here show up later as wrong
+  answers: navigation menus left in your HTML, page numbers lost from PDFs, or a chunk that cuts a policy in half. We'll use the Nimbus Coffee knowledge base in <code>data/knowledge_base/</code>.</p>
 </section>
 
 <section id="concept"><h2>Concept</h2>
@@ -94,8 +93,8 @@ chunk 1 (552)  ## Damaged or wrong items … 7 days with a photo … ## In-store
 <p><strong>At 1,500</strong> the whole policy is one chunk, and one vector has to stand for returns, damaged items, café purchases
   and subscriptions together. A question about cancelling a subscription now competes with every other topic in that vector, and
   the prompt receives all four sections to answer about one.</p>
-<p>So for this document, 600 is not a magic number. It is simply the size at which a chunk is about as long as one or two of its
-  sections. Look at your own documents' sections before you pick a size.</p>
+<p>For this document, 600 works because a chunk of that size is about as long as one or two of its sections. Look at your own
+  documents' sections before you pick a size.</p>
 <p class="file-label">Captured from a real run. Your ids, wording and numbers will differ; the shape will not.</p>
 </section>
 
