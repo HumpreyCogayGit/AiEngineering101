@@ -17,7 +17,8 @@
 <header class="lecture-header">
   <h1>Messages and Roles</h1>
   <p class="lede">The model has no memory. A chatbot only "remembers" because your code resends the whole
-    conversation on every turn. Once you see this, many design decisions become obvious.</p>
+    conversation on every turn. That one fact explains why chat costs grow each turn, why long chats need trimming,
+    and why your code, not the provider, decides what the bot remembers.</p>
 </header>
 
 <section id="overview"><h2>Overview</h2>
@@ -34,7 +35,9 @@
   <tr><td><code>user</code></td><td>The end user</td><td>Questions and instructions.</td></tr>
   <tr><td><code>assistant</code></td><td>The model (or you, for few-shot examples)</td><td>Previous replies.</td></tr>
 </table>
-<p>A fourth role, <code>tool</code>, carries tool results (Lecture 016).</p>
+<p>A fourth role, <code>tool</code>, carries tool results (Lecture 016). OpenAI's reasoning models also accept a
+  <code>developer</code> role that does the job of <code>system</code>; <code>system</code> still works on both
+  providers in this course, so the exercises use it.</p>
 
 <h3>Stateless: memory is your job</h3>
 <div class="mermaid">sequenceDiagram
@@ -52,8 +55,8 @@
 <ul>
   <li><strong>Cost grows every turn.</strong> You pay for the whole history each time.</li>
   <li><strong>History has a limit.</strong> It must fit in the context window, so long chats need trimming (Lecture 006) or summarizing.</li>
-  <li><strong>You control the memory.</strong> You can edit, filter or inject messages, which is powerful and also a responsibility.</li>
-  <li><strong>Servers scale easily.</strong> Any server can handle any request, since nothing is stored model-side.</li>
+  <li><strong>You control the memory.</strong> You can edit, filter or inject messages, and the model treats whatever you send as the real conversation.</li>
+  <li><strong>Servers scale easily.</strong> The Chat Completions API stores nothing between requests, so any server can handle any request. (OpenAI's newer Responses API can keep the history server-side with <code>previous_response_id</code>; this course uses Chat Completions.)</li>
 </ul>
 
 <h3>The system prompt</h3>

@@ -12,9 +12,9 @@ conversation each turn.
 
 Complete the TODOs in `starter/chatbot.py`:
 
-1. `Conversation` — store the message list, starting with the system prompt
+1. `Conversation`: store the message list, starting with the system prompt
 2. `add_user`, `add_assistant`, `reset`
-3. `chat_turn` — send the full history, store the reply, return it
+3. `chat_turn`: send the full history, store the reply, return it
 
 ## Run it
 
