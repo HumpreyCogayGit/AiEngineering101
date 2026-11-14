@@ -4,7 +4,7 @@
 
 ## Goal
 
-Understand embeddings, the foundation of RAG: text in, vector out, and
+Understand embeddings, which most RAG systems use for retrieval: text in, vector out, and
 "similar meaning" becomes "small angle between vectors".
 
 ## Before you start
@@ -21,9 +21,9 @@ Vectors from different embedding models have different sizes and cannot be compa
 
 Complete the TODOs in `starter/embeddings.py`:
 
-1. `embed_texts` — batch-embed texts with `client.embeddings.create`
-2. `cosine_similarity` — with numpy
-3. `search` — score and rank a small corpus
+1. `embed_texts`: batch-embed texts with `client.embeddings.create`
+2. `cosine_similarity`: with numpy
+3. `search`: score and rank a small corpus
 
 ## Run it
 

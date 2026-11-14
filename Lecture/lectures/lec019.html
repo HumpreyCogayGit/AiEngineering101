@@ -17,12 +17,14 @@
 <header class="lecture-header">
   <h1>Embeddings and Similarity</h1>
   <p class="lede">"How do I get my money back?" and "refund policy" share no words but mean the same thing.
-    Embeddings let a computer measure that, and they're the foundation of RAG.</p>
+    Embeddings let a computer measure that, and most RAG systems use them to find the passages that answer a question.</p>
 </header>
 
 <section id="overview"><h2>Overview</h2>
-<p>Module 4 teaches <strong>Retrieval-Augmented Generation (RAG)</strong>: answering questions from <em>your</em>
-  documents. Step one is semantic search, finding text by meaning rather than by keyword. An <strong>embedding
+<p>Module 4 teaches <strong>Retrieval-Augmented Generation (RAG)</strong>: at question time, retrieve the passages of
+  <em>your</em> documents that are relevant, and give them to the model as context for its answer (the term comes from
+  Lewis et al., <a href="https://arxiv.org/abs/2005.11401">"Retrieval-Augmented Generation for Knowledge-Intensive NLP
+  Tasks"</a>, 2020). Step one is semantic search, finding text by meaning rather than by keyword. An <strong>embedding
   model</strong> makes that possible by turning text into vectors.</p>
 </section>
 
@@ -41,7 +43,7 @@
 <h3>Cosine similarity</h3>
 <pre><code class="language-text">cos(θ) = (a · b) / (|a| × |b|)
 
- 1.0  same direction    → same meaning
+ 1.0  same direction    → closest in meaning
  0.0  perpendicular     → unrelated
 -1.0  opposite</code></pre>
 <pre><code class="language-python">import numpy as np
@@ -63,7 +65,7 @@ def cosine_similarity(a, b):
 <table>
   <tr><th></th><th>Embedding model</th><th>Chat model</th></tr>
   <tr><td>Output</td><td>A vector</td><td>Text</td></tr>
-  <tr><td>Cost</td><td>Very cheap</td><td>Much more</td></tr>
+  <tr><td>Cost (list price per 1M tokens)</td><td>$0.02 for <code>text-embedding-3-small</code></td><td>$0.40 in, $1.60 out for <code>gpt-4.1-mini</code></td></tr>
   <tr><td>Used for</td><td>Search, clustering, deduplication, recommendation</td><td>Generating answers</td></tr>
 </table>
 <h3 id="worked">Worked example: one query, from text to ranking</h3>
