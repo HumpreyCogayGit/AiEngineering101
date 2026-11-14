@@ -16,12 +16,12 @@
 <main>
 <header class="lecture-header">
   <h1>Multi-Agent Systems</h1>
-  <p class="lede">Split work across specialist agents coordinated by a supervisor, and learn when that's worth its
-    considerable cost.</p>
+  <p class="lede">Split work across specialist agents coordinated by a supervisor, and learn when that's worth the
+    cost: on this lecture's task the supervisor team made 11 model calls where a two-agent handoff made 3.</p>
 </header>
 
 <section id="overview"><h2>Overview</h2>
-<p>One agent with twenty tools and a two-page system prompt gets confused. A common response is to split it: specialist
+<p>One agent with twenty tools and a two-page system prompt picks tools less reliably, and every call pays for all of them. A common response is to split it: specialist
   agents with focused prompts and tools, and a coordinator that routes work between them. LangGraph makes each
   specialist a subgraph and the coordination a graph.</p>
 </section>
@@ -100,9 +100,9 @@ builder.add_node("researcher", research, destinations=("writer", END))   # no co
 
 <h3>When <em>not</em> to use multi-agent</h3>
 <div class="callout warn"><span class="title">Multi-agent is expensive</span>
-  Every hop is another LLM call: supervisor, worker, supervisor, worker, supervisor. Latency and cost often triple,
-  and failures become harder to debug. Try first: a better prompt, fewer tools, a fixed workflow (Lecture 026), or one agent with good tools.
-  Choose multi-agent when tasks need truly separate tools, permissions, or context.</div>
+  Every hop is another LLM call: supervisor, worker, supervisor, worker, supervisor. In the worked example below the
+  supervisor team read about 13,000 input tokens where the handoff team read about 1,700, and failures become harder to debug. Try first: a better prompt, fewer tools, a fixed workflow (Lecture 026), or one agent with good tools.
+  Choose multi-agent when tasks need separate tools, permissions or context.</div>
 <h3 id="worked">Worked example: the shared state after every step</h3>
 <p>The supervisor team on the two-part email (broken grinder, and "can I bring my dog?"). Each row is the shared state after one
   node. <code>messages</code> shows who wrote each message.</p>

@@ -5,7 +5,7 @@
 ## Goal
 
 Build a supervisor that coordinates specialist agents, and learn when a team
-of agents is worth its extra cost — and when a single agent is better.
+of agents is worth its extra cost, and when a single agent is better.
 
 ## The project
 
@@ -23,10 +23,10 @@ START → supervisor ─┬→ researcher ─┐
 
 Complete the TODOs in `starter/team.py`:
 
-1. `make_workers` — the two sub-agents
-2. `build_team` — the supervisor node (with the "no FINISH before the writer" guard)
+1. `make_workers`: the two sub-agents
+2. `build_team`: the supervisor node (with the "no FINISH before the writer" guard)
    and the worker wrapper
-3. `build_handoff_team` — the same two agents with no supervisor: each node returns
+3. `build_handoff_team`: the same two agents with no supervisor: each node returns
    `Command(goto=..., update=...)` to pass control directly
 
 ## Run it
