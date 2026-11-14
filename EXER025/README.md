@@ -10,9 +10,9 @@ every answer.
 
 ## Tasks
 
-1. `starter/docs_logic.py` — `load_uploaded`, `build_index` (in-memory, per session),
+1. `starter/docs_logic.py`: `load_uploaded`, `build_index` (in-memory, per session),
    `condense_question` (rewrite follow-ups), `answer`
-2. `starter/app.py` — build the index from uploads, show sources in an expander
+2. `starter/app.py`: build the index from uploads, show sources in an expander
 
 ## Run it
 
