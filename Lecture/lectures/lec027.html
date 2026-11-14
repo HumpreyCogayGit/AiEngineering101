@@ -17,7 +17,7 @@
 <header class="lecture-header">
   <h1>An Agent from Scratch</h1>
   <p class="lede">An agent is a loop: think, act, observe, repeat. In LangGraph that's two nodes and one conditional
-    edge, and once you've built it yourself, every agent framework becomes readable.</p>
+    edge. Build it once yourself and you can recognise the same loop inside <code>create_agent</code> and other agent frameworks.</p>
 </header>
 
 <section id="overview"><h2>Overview</h2>
@@ -28,8 +28,10 @@
 
 <section id="concept"><h2>Concept</h2>
 <h3>The ReAct loop</h3>
-<p><strong>Re</strong>ason + <strong>Act</strong>: the model reasons about the task, acts by calling tools, observes the
-  results, and repeats until it can answer.</p>
+<p><strong>Re</strong>ason + <strong>Act</strong> (Yao et al., <a href="https://arxiv.org/abs/2210.03629">"ReAct"</a>, 2022):
+  the model reasons about the task, acts by calling tools, observes the results, and repeats until it can answer. In the
+  paper the model writes its reasoning as a "Thought:" line before each action. With native tool calling the reasoning is
+  usually not written out (or stays hidden inside a reasoning model), but the act-observe loop is the same.</p>
 <div class="mermaid">flowchart LR
   S((START)) --> A[agent<br/>model with tools]
   A -->|tool_calls| T[tools<br/>ToolNode]
@@ -55,7 +57,8 @@ builder.add_edge("tools", "agent")                  # ← the loop</code></pre>
     conversation and can change between runs.</li>
   <li><strong><code>ToolNode</code></strong> runs every requested tool (in parallel when there are several) and returns <code>ToolMessage</code>s.
     With <code>handle_tool_errors=True</code>, exceptions become error messages the model can react to, instead of crashing the run.</li>
-  <li><strong>Recursion limit</strong>: each node execution is a "step". Invoke with <code>{"recursion_limit": 12}</code>;
+  <li><strong>Recursion limit</strong>: LangGraph counts <em>supersteps</em>, and in this graph each node execution is one.
+    Invoke with <code>{"recursion_limit": 12}</code>;
     exceeding it raises <code>GraphRecursionError</code>, your guard against runaway loops (and runaway bills).</li>
 </ul>
 
@@ -149,7 +152,7 @@ builder.add_edge("tools", "agent")                  # ← the loop</code></pre>
   <p>It decides: when it replies without tool calls, the loop ends. That's flexible but not guaranteed, which is why the recursion limit exists.</p></div>
 <div class="qa"><p>When would you replace the free loop with a fixed workflow?</p>
   <p>When the steps are always the same (look up, then compute, then answer). Fixed graphs are faster, cheaper and
-  more predictable. Agents shine when the path genuinely depends on intermediate results.</p></div>
+  more predictable. An agent is worth its cost when the path depends on intermediate results.</p></div>
 </section>
 
 <section id="quiz"><h2>Check Yourself</h2>

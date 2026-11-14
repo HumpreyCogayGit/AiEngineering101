@@ -4,16 +4,16 @@
 
 ## Goal
 
-Build the ReAct agent loop yourself as a LangGraph graph — an `agent` node, a
-`tools` node and one conditional edge — and protect it from infinite loops.
+Build the ReAct agent loop yourself as a LangGraph graph (an `agent` node, a
+`tools` node and one conditional edge) and protect it from infinite loops.
 
 ## Tasks
 
 Complete the TODOs in `starter/react_agent.py`:
 
-1. `should_continue` — the conditional edge
-2. `build_agent` — `MessagesState`, the two nodes, the loop
-3. `run` — invoke with a `recursion_limit` and handle `GraphRecursionError`
+1. `should_continue`: the conditional edge
+2. `build_agent`: `MessagesState`, the two nodes, the loop
+3. `run`: invoke with a `recursion_limit` and handle `GraphRecursionError`
 
 ## Run it
 
