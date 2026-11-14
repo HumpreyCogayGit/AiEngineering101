@@ -5,7 +5,7 @@
 ## Goal
 
 Pause an agent before risky actions, let a human approve, edit or reject them,
-and resume — using `interrupt()`, `Command(resume=...)` and a checkpointer.
+and resume, using `interrupt()`, `Command(resume=...)` and a checkpointer.
 
 ## The project
 
