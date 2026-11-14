@@ -17,7 +17,7 @@
 
   const root = document.documentElement;
   root.classList.add("booting");
-  const MIN_MS = 2600, MAX_MS = 5500;
+  const MIN_MS = 3800, MAX_MS = 6500;
   const started = performance.now();
 
   // ---------------------------------------------------------------- brain geometry (side view, front to the left)
@@ -72,6 +72,25 @@
   stemRings[0].forEach((idx) => { link(idx, nearest(idx, "cortex")); link(idx, nearest(idx, "cerebellum")); });
   nodes.forEach((n, i) => { if (n.part === "cerebellum" && n.y < .3) link(i, nearest(i, "cortex")); });
 
+  // ---------------------------------------------------------------- build-up
+  // Every point flies in from one of a few random origins around the brain, starting at a random moment and
+  // accelerating (ease-in) until it lands. Wires appear as their two ends arrive; signals start once all have landed.
+  const BUILD_STAGGER = 0.9, BUILD_FLIGHT = 0.7, BUILD_TOTAL = BUILD_STAGGER + BUILD_FLIGHT; // seconds
+  const easeIn = (p) => p * p * p;
+  const origins = Array.from({ length: 6 }, (_, i) => {
+    const a = (i / 6) * Math.PI * 2 + Math.random() * 0.8, r = 0.95 + Math.random() * 0.3; // just inside the frame
+    return { x: Math.cos(a) * r, y: Math.sin(a) * r * 0.8, z: (Math.random() - 0.5) * 1.6 };
+  });
+  nodes.forEach((n) => {
+    const o = origins[Math.floor(Math.random() * origins.length)];
+    n.fx = o.x + (Math.random() - 0.5) * 0.3;
+    n.fy = o.y + (Math.random() - 0.5) * 0.3;
+    n.fz = o.z + (Math.random() - 0.5) * 0.3;
+    n.delay = Math.random() * BUILD_STAGGER;
+    n.k = 0;          // 0 = not started .. 1 = landed (eased)
+    n.landed = false;
+  });
+
   // ---------------------------------------------------------------- signals
   const pulses = [];
   function fire(i, hops, from) {
@@ -100,23 +119,28 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
-  let last = 0, spawn = 0;
+  let last = 0, spawn = 0, mountedAt = 0;
   function frame(now) {
     const dt = Math.min(.05, (now - (last || now)) / 1000);
     last = now;
     const t = (now - started) / 1000;
+    const bt = (now - mountedAt) / 1000; // time since the loader appeared
     const ry = -0.35 + Math.sin(t * 0.7) * 0.55, rx = 0.12;
     const cy = Math.cos(ry), sy = Math.sin(ry), cx = Math.cos(rx), sx = Math.sin(rx);
     const scale = Math.min(w / 2.3, h / 1.85), ox = w / 2, oy = h * 0.45;
     for (const n of nodes) {
-      const x1 = n.x * cy - n.z * sy, z1 = n.z * cy + n.x * sy;
-      const y2 = n.y * cx - z1 * sx, z2 = z1 * cx + n.y * sx;
-      n.s = 3.2 / (3.2 - z2);
+      const p = Math.max(0, Math.min(1, (bt - n.delay) / BUILD_FLIGHT));
+      n.k = p > 0 ? Math.max(0.001, easeIn(p)) : 0;
+      if (p === 1 && !n.landed) { n.landed = true; n.glow = 1; } // small flash on landing
+      const x = n.fx + (n.x - n.fx) * n.k, y = n.fy + (n.y - n.fy) * n.k, z = n.fz + (n.z - n.fz) * n.k;
+      const x1 = x * cy - z * sy, z1 = z * cy + x * sy;
+      const y2 = y * cx - z1 * sx, z2 = z1 * cx + y * sx;
+      n.s = 3.2 / (3.2 - Math.max(-2, Math.min(2, z2)));
       n.sx = ox + x1 * scale * n.s; n.sy = oy + y2 * scale * n.s; n.sz = z2;
       n.glow = Math.max(0, n.glow - dt * 1.6);
     }
     spawn += dt;
-    if (spawn > 0.11) { spawn = 0; fire(Math.floor(Math.random() * nodes.length), 5, -1); }
+    if (bt > BUILD_TOTAL && spawn > 0.11) { spawn = 0; fire(Math.floor(Math.random() * nodes.length), 5, -1); }
     for (let i = pulses.length - 1; i >= 0; i--) {
       const p = pulses[i];
       p.t += dt * p.speed;
@@ -129,15 +153,18 @@
     const depth = (z) => Math.max(0, Math.min(1, (z + .65) / 1.3)); // 0 far .. 1 near
     for (const e of edges) {
       const a = nodes[e.a], b = nodes[e.b], d = depth((a.sz + b.sz) / 2);
+      const built = Math.max(0, Math.min(1, (Math.min(a.k, b.k) - 0.8) / 0.2)); // only once both ends have nearly landed
+      if (built <= 0) continue;
       e.heat = Math.max(0, e.heat - dt * 1.2);
-      ctx.globalAlpha = 0.12 + d * 0.38 + e.heat * 0.35;
+      ctx.globalAlpha = (0.12 + d * 0.38 + e.heat * 0.35) * built;
       ctx.strokeStyle = e.heat > .05 ? colors.accent : colors.wire;
       ctx.lineWidth = (0.6 + d * 0.7) * a.s;
       ctx.beginPath(); ctx.moveTo(a.sx, a.sy); ctx.lineTo(b.sx, b.sy); ctx.stroke();
     }
     for (const n of nodes) {
-      const d = depth(n.sz);
-      ctx.globalAlpha = 0.3 + d * 0.6;
+      if (n.k <= 0) continue;
+      const d = depth(Math.max(-.65, Math.min(.65, n.sz)));
+      ctx.globalAlpha = (0.3 + d * 0.6) * (0.35 + 0.65 * n.k);
       ctx.fillStyle = n.glow > .05 ? colors.accent : colors.wire;
       ctx.beginPath(); ctx.arc(n.sx, n.sy, (1.3 + d * 1.2 + n.glow * 2.2) * n.s, 0, Math.PI * 2); ctx.fill();
     }
@@ -182,6 +209,7 @@
     readColors();
     size();
     addEventListener("resize", size);
+    mountedAt = performance.now();
     raf = requestAnimationFrame(frame);
   }
   document.addEventListener("DOMContentLoaded", mount);
