@@ -16,8 +16,8 @@
 <main>
 <header class="lecture-header">
   <h1>Reliability</h1>
-  <p class="lede">In production, API calls fail regularly: rate limits, timeouts, overloaded servers. Reliable apps
-    expect failure and handle each kind appropriately.</p>
+  <p class="lede">Hosted LLM APIs answer 429 when you exceed your quota, time out under load, and sometimes fail with a
+    5xx. This lecture sorts those errors into "retry" and "don't retry", and handles each kind.</p>
 </header>
 
 <section id="overview"><h2>Overview</h2>
@@ -45,7 +45,9 @@ attempt 3 fails → wait ~2 s       delay = min(cap, base × 2^(attempt-1)) + ra
 attempt 4 fails → give up, raise</code></pre>
 <p><strong>Why exponential?</strong> If the service is overloaded, hammering it makes things worse; backing off gives
   it room to recover. <strong>Why jitter?</strong> Without randomness, a thousand clients that failed together retry
-  together and overload the service again (a "thundering herd").</p>
+  together and overload the service again (a "thundering herd"). AWS's
+  <a href="https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/">Exponential Backoff and Jitter</a>
+  measures how much jitter reduces the total work.</p>
 <div class="callout info"><span class="title">The SDK already retries</span>
   The <code>openai</code> client retries 2 times by default (<code>max_retries</code>). In this exercise we turn that
   off with <code>with_options(max_retries=0)</code> to build it ourselves. In real projects, configure the SDK's
@@ -53,7 +55,8 @@ attempt 4 fails → give up, raise</code></pre>
 
 <h3>Concurrency with a limit</h3>
 <p>LLM calls spend most of their time waiting on the network, so running them concurrently with <code>asyncio</code>
-  gives big speed-ups. Unlimited concurrency triggers 429s, so cap it with a <strong>semaphore</strong>:</p>
+  divides the wall-clock time by roughly the number in flight, as long as the server keeps up. Unlimited concurrency
+  triggers 429s, so cap it with a <strong>semaphore</strong>:</p>
 <pre><code class="language-python">semaphore = asyncio.Semaphore(3)            # at most 3 in flight
 
 async def limited(prompt):

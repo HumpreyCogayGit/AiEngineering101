@@ -12,9 +12,9 @@ calls concurrently with a limit.
 
 Complete the TODOs in `starter/reliable.py`:
 
-1. `backoff_delay` — exponential growth, a cap, and jitter
-2. `call_with_retry` — retry only the errors in `RETRYABLE`
-3. `complete_many` — `asyncio.Semaphore` + `asyncio.gather`
+1. `backoff_delay`: exponential growth, a cap, and jitter
+2. `call_with_retry`: retry only the errors in `RETRYABLE`
+3. `complete_many`: `asyncio.Semaphore` + `asyncio.gather`
 
 ## Run it
 
