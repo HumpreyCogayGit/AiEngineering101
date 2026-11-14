@@ -16,8 +16,8 @@
 <main>
 <header class="lecture-header">
   <h1>The SDK and Model Parameters</h1>
-  <p class="lede">Swap hand-written HTTP for the official SDK, then learn the dials that shape every answer:
-    tokens, temperature, output limits, and what they cost.</p>
+  <p class="lede">Swap hand-written HTTP for the <code>openai</code> SDK, then learn the parameters that shape every answer
+    (temperature and the output cap), the unit everything is measured in (tokens), and what a request costs.</p>
 </header>
 
 <section id="overview"><h2>Overview</h2>
@@ -58,7 +58,7 @@ enc.encode("hello world")                    # [24912, 2375]  -> 2 tokens</code>
 <table>
   <tr><th>Temperature</th><th>Behaviour</th><th>Use for</th></tr>
   <tr><td>0 – 0.3</td><td>Almost always picks the most likely token: focused, repeatable</td><td>Extraction, classification, code, factual Q&amp;A</td></tr>
-  <tr><td>0.7 – 1.0</td><td>Balanced (1.0 is the default)</td><td>Chat, writing</td></tr>
+  <tr><td>0.7 – 1.0</td><td>Balanced (1.0 is the default on OpenAI models; a local model's default comes from its Modelfile)</td><td>Chat, writing</td></tr>
   <tr><td>1.2 – 2.0</td><td>More surprising choices, eventually incoherent</td><td>Brainstorming, names</td></tr>
 </table>
 <p>Even at temperature 0, outputs are <em>not guaranteed</em> to be identical across calls. Don't build systems
@@ -120,8 +120,9 @@ with this model. Only the default (1) value is supported.</code></pre>
 <h3>Cost</h3>
 <p>You pay per token, with different prices for input (prompt) and output (completion), quoted per million tokens:</p>
 <pre><code class="language-text">cost = prompt_tokens × input_price / 1,000,000  +  completion_tokens × output_price / 1,000,000</code></pre>
-<p>Output tokens usually cost 3–5× more than input tokens. Long system prompts and long chat histories are paid
-  again on <em>every</em> request.</p>
+<p>Output tokens cost several times more than input tokens: at list prices, 4× for gpt-4.1-mini ($0.40 in, $1.60 out)
+  and 8× for gpt-5-mini ($0.25 in, $2.00 out). Check your provider's price page, because these change. Long system
+  prompts and long chat histories are paid again on <em>every</em> request.</p>
 </section>
 
 <section id="project"><h2>The Project</h2>
