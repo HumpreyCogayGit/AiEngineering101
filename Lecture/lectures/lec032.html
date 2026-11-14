@@ -16,8 +16,8 @@
 <main>
 <header class="lecture-header">
   <h1>MCP Concepts and Using a Server</h1>
-  <p class="lede">The Model Context Protocol is a standard plug between AI applications and tools. Write a tool server
-    once, and any MCP-aware app can use it.</p>
+  <p class="lede">The Model Context Protocol (MCP) is an open protocol, published by Anthropic in November 2024, that
+    standardizes how AI applications connect to tools and data. Write a tool server once, and any MCP-aware app can use it.</p>
 </header>
 
 <section id="overview"><h2>Overview</h2>
@@ -36,6 +36,7 @@
   end
   C1 <-->|"JSON-RPC over stdio"| S1["MCP server: coffee<br/>(local subprocess)"]
   C2 <-->|"JSON-RPC over HTTP"| S2["MCP server: remote service"]</div>
+<p>All messages between client and server are JSON-RPC 2.0 requests, responses and notifications.</p>
 <table>
   <tr><th>Role</th><th>Is</th></tr>
   <tr><td><strong>Host</strong></td><td>The app the user interacts with; it contains the LLM and decides what to call</td></tr>

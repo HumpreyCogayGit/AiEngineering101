@@ -4,8 +4,8 @@
 
 ## Goal
 
-Understand the Model Context Protocol — hosts, clients, servers, transports,
-and the three capability types (tools, resources, prompts) — by talking to an
+Understand the Model Context Protocol (hosts, clients, servers, transports,
+and the three capability types: tools, resources, prompts) by talking to an
 MCP server directly, then handing its tools to a LangChain agent.
 
 ## The server
@@ -13,7 +13,7 @@ MCP server directly, then handing its tools to a LangChain agent.
 [servers/coffee_server.py](servers/coffee_server.py) is ready-made. It
 exposes 3 tools, 1 resource and 1 prompt over **stdio**. Read it first.
 
-Optional — explore it visually with the MCP Inspector (needs Node.js):
+Optional: explore it visually with the MCP Inspector (needs Node.js):
 
 ```bash
 npx @modelcontextprotocol/inspector uv run python EXER032/servers/coffee_server.py
