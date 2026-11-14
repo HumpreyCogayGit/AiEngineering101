@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "skills": {
+    "anti-slop-writing": {
+      "source": "Kaos599/professional-skills",
+      "sourceType": "github",
+      "skillPath": "skills/anti-slop-writing/SKILL.md",
+      "computedHash": "961f33ce7bc3f8e31ca159a4a1f0192b22381cbf32696dd245a0f45dd314a4bf"
+    },
+    "tech-blog-series": {
+      "source": "Kaos599/professional-skills",
+      "sourceType": "github",
+      "skillPath": "skills/tech-blog-series/SKILL.md",
+      "computedHash": "a2ef896faa0fec039569a5e161206b12dfe62785deaa8d5987fc33f6fe8e31d6"
+    },
+    "technical-content-writer": {
+      "source": "Kaos599/professional-skills",
+      "sourceType": "github",
+      "skillPath": "skills/technical-content-writer/SKILL.md",
+      "computedHash": "3e38205083acc1ca69b6df169659b31eaa910778eda10cf112bb44be0f79b410"
+    }
+  }
+}
