@@ -9,8 +9,8 @@ chat elements and streaming to the UI.
 
 ## Tasks
 
-1. `starter/chat_logic.py` — `to_langchain_messages`, `stream_answer`
-2. `starter/app.py` — session state, re-drawing history, handling the prompt, clear button
+1. `starter/chat_logic.py`: `to_langchain_messages`, `stream_answer`
+2. `starter/app.py`: session state, re-drawing history, handling the prompt, clear button
 
 ## Run it
 

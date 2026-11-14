@@ -16,14 +16,14 @@
 <main>
 <header class="lecture-header">
   <h1>Streamlit Chat App</h1>
-  <p class="lede">Put your chatbot in the browser with pure Python. The key idea to grasp is that Streamlit
-    re-runs your whole script on every interaction.</p>
+  <p class="lede">Put your chatbot in the browser with pure Python. Streamlit re-runs your whole script from the top
+    on every interaction, so anything that must survive between runs goes in <code>st.session_state</code>.</p>
 </header>
 
 <section id="overview"><h2>Overview</h2>
 <p><a href="https://streamlit.io">Streamlit</a> turns a Python script into a web app: no HTML, no JavaScript, no
-  routes. It has built-in chat elements and can stream a generator straight into the page. It's ideal for
-  prototypes, internal tools and demos, which is most of what AI engineers build first.</p>
+  routes. It has built-in chat elements and can stream a generator straight into the page, which makes it a good fit
+  for prototypes, internal tools and demos.</p>
 </section>
 
 <section id="concept"><h2>Concept</h2>
@@ -34,7 +34,7 @@
   B --> D[Ordinary variables are re-created from scratch]
   B --> E[st.session_state survives]
   E --> F[Page is redrawn]</div>
-<p>This is the single most important idea. A list created with <code>messages = []</code> at the top of the script is
+<p>A list created with <code>messages = []</code> at the top of the script is
   empty again on every run. Anything that must persist goes in <strong><code>st.session_state</code></strong>, a
   per-browser-session dictionary.</p>
 <pre><code class="language-python">if "messages" not in st.session_state:       # only on the first run
@@ -54,7 +54,7 @@ if prompt := st.chat_input("Ask me anything"):   # None unless the user just sen
 
 <h3>Caching expensive objects</h3>
 <p><code>@st.cache_resource</code> creates an object (model client, vector store) once and reuses it across re-runs and sessions.
-  Without it, you'd rebuild the client on every keystroke.</p>
+  Without it, you'd rebuild the client on every rerun, which means every message sent and every widget changed.</p>
 
 <h3>Keep logic out of the UI file</h3>
 <p><code>app.py</code> only draws; <code>chat_logic.py</code> converts messages and streams. The logic can then be
