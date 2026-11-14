@@ -135,7 +135,10 @@
       const meta = document.createElement("p");
       meta.className = "meta";
       meta.innerHTML = `About ${info.minutes} minutes, plus exercise
-        <a href="${exerciseHref(CURRENT)}">EXER${pad(CURRENT)}</a>. Check your work with
+        <a class="ext" href="${exerciseHref(CURRENT)}" target="_blank" rel="noopener">EXER${pad(CURRENT)}<svg
+          class="ext-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M9 2h5v5M14 2 7.5 8.5M12 9.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h3.5"
+          fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span
+          class="sr-only"> (opens in a new tab)</span></a>. Check your work with
         <code>uv run python EXER${pad(CURRENT)}/check.py</code>.`;
       header.append(meta);
     }
