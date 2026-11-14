@@ -16,10 +16,10 @@ a formal table, a casual email, and a hosting statement.
 
 Complete the TODOs in `starter/invoice_parser.py`:
 
-1. The `Invoice` Pydantic model (fields **with descriptions** — they guide the model)
+1. The `Invoice` Pydantic model (fields **with descriptions**, which guide the model)
 2. `build_parser`, `parse_invoice`
-3. `validate_totals` — do the line items add up to the stated total?
-4. `parse_safely` — `include_raw=True` for graceful failure
+3. `validate_totals`: do the line items add up to the stated total?
+4. `parse_safely`: `include_raw=True` for graceful failure
 
 ## Run it
 
@@ -32,7 +32,7 @@ uv run python EXER014/check.py
 
 - [ ] All three invoices parse into `Invoice` objects with correct totals
 - [ ] Dates in three different formats all come out as `YYYY-MM-DD`
-- [ ] Every invoice prints `[OK]` — the line items add up
+- [ ] Every invoice prints `[OK]`: the line items add up
 - [ ] All 5 checks pass
 
 ## Stretch goals

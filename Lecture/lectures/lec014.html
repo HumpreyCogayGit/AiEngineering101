@@ -21,8 +21,9 @@
 </header>
 
 <section id="overview"><h2>Overview</h2>
-<p>Lecture 009 used the SDK's <code>parse()</code>. LangChain offers the same capability for any chat model through
-  <code>with_structured_output()</code>, and the result is a runnable you can put in chains. We extract invoices in
+<p>Lecture 009 used the SDK's <code>parse()</code>. LangChain offers the same capability through
+  <code>with_structured_output()</code> on any chat model that supports tool calling or a JSON-schema response format,
+  and the result is a runnable you can put in chains. We extract invoices in
   three very different formats and add a second layer of validation: do the numbers add up?</p>
 </section>
 
@@ -97,7 +98,7 @@ invoice_003.txt: CN-88213 | CLOUDNEST HOSTING | 2026-06-01 | USD 84.00  [OK]
 <ul class="checklist">
   <li>All three invoices parse into <code>Invoice</code> objects with correct totals</li>
   <li>Dates in three different formats all come out as <code>YYYY-MM-DD</code></li>
-  <li>Every invoice prints <code>[OK]</code> — the line items add up</li>
+  <li>Every invoice prints <code>[OK]</code>: the line items add up</li>
   <li>All 5 checks pass</li>
 </ul>
 </section>
@@ -130,8 +131,8 @@ invoice_003.txt: CN-88213 | CLOUDNEST HOSTING | 2026-06-01 | USD 84.00  [OK]
 
 <section id="discussion"><h2>Discussion</h2>
 <div class="qa"><p>An invoice fails the total check. Is the model wrong, or the invoice?</p>
-  <p>Either is possible, and that's the point. Route mismatches to a person rather than auto-correcting. Many real
-  invoices contain errors, and finding them is valuable.</p></div>
+  <p>Either is possible. Route mismatches to a person rather than auto-correcting, because real invoices do contain
+  errors and catching one before it is paid is part of the job.</p></div>
 <div class="qa"><p>How would you know your parser is 98% accurate?</p>
   <p>A labelled set of invoices with expected values, scored field by field. The same evaluation discipline as Lecture 008, applied to extraction.</p></div>
 </section>
