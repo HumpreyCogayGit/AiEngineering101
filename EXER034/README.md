@@ -16,9 +16,9 @@ servers, and auditing every tool call.
 
 Complete the TODOs in `starter/multi_server_agent.py`:
 
-1. `ALLOWED_TOOLS` — everything the assistant needs, nothing more
-2. `connections` — two stdio servers; pass `NOTES_FILE` through `env`
-3. `load_tools` — prefixed names + allowlist filter
+1. `ALLOWED_TOOLS`: everything the assistant needs, nothing more
+2. `connections`: two stdio servers; pass `NOTES_FILE` through `env`
+3. `load_tools`: prefixed names + allowlist filter
 4. `AuditLog.on_tool_start`
 
 ## Run it
