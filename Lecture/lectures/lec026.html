@@ -21,7 +21,8 @@
 </header>
 
 <section id="overview"><h2>Overview</h2>
-<p>LangGraph is LangChain's library for stateful, controllable workflows and agents. <code>create_agent</code> from
+<p>LangGraph is the LangChain team's low-level orchestration framework and runtime for stateful workflows and agents:
+  you describe the steps as a graph, and it runs them, saves state between them, and lets you pause and resume. <code>create_agent</code> from
   Lecture 017 is itself a LangGraph graph. Before adding LLMs, we learn the mechanics with plain Python functions: a
   support-ticket router with no model at all.</p>
 </section>
@@ -176,8 +177,10 @@ Streaming the updates of each node:
   <p>Use code when rules are clear and testable (priority keywords, thresholds); use an LLM when judgment over
   language is needed. Graphs make mixing both natural, with a deterministic skeleton and LLM decisions where they add value.</p></div>
 <div class="qa"><p>"Workflow" or "agent"?</p>
-  <p>A workflow has paths you designed; an agent's path is chosen by the model at runtime. Prefer workflows when you
-  can: they're predictable, cheaper and easier to test. Use agent loops where flexibility is genuinely needed.</p></div>
+  <p>A workflow has paths you designed; an agent's path is chosen by the model at runtime (the distinction Anthropic
+  draws in <a href="https://www.anthropic.com/engineering/building-effective-agents">"Building effective agents"</a>,
+  2024). Prefer workflows when you can: they're predictable, cheaper and easier to test. Use agent loops where the
+  steps can't be known in advance.</p></div>
 </section>
 
 <section id="quiz"><h2>Check Yourself</h2>
