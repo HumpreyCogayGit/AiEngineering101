@@ -5,7 +5,7 @@
 ## Goal
 
 Combine everything from the course into one assistant that customers and staff
-of Nimbus Coffee Co. can actually use — then prove it works with an evaluation.
+of Nimbus Coffee Co. could use, then measure it with an evaluation.
 
 ## What you are building
 
@@ -55,7 +55,7 @@ uv run python EXER037/check.py
 
 ## Rubric (self-review or peer review)
 
-| Area | 1 — needs work | 2 — solid | 3 — excellent |
+| Area | 1: needs work | 2: solid | 3: excellent |
 |---|---|---|---|
 | **Correctness** | eval < 80% | eval ≥ 80% | eval 100%, and you added 5+ cases of your own |
 | **Grounding** | answers without sources | cites sources | refuses cleanly when documents don't cover it |
