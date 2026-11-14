@@ -48,16 +48,17 @@ The four open questions at the end of this file were answered before the work st
 ## How it was verified
 
 - `uv run python check_all.py` on the hosted provider: 40/40 exercises (every solution passes, every
-  untouched starter fails) and 166 quiz questions valid. EXER038–040 also pass on Ollama (`gemma4:e4b`).
+  untouched starter fails) and 166 quiz questions valid. The same run passes on Ollama (below).
 - Every stretch goal's reference code was run once on the hosted provider. The five Streamlit stretch
   apps were run headless (`streamlit.testing`) against the live model.
 - EXER040: the image was built and the container run; it reported `healthy`, ran as a non-root user,
   held no `.env`, and answered a question.
 - The Further Reading links of lectures 038–040 were checked and answer.
-- **Not run:** two paths that reach outside the machine: `EXER026/stretch/goal2_graph_png.py --png`
-  (sends the diagram text to mermaid.ink) and `EXER032/stretch/goal2_second_server.py npx …` (downloads
-  and starts a public MCP server). Both are optional arguments; the default paths of both scripts were run.
-- **Not done:** a full live run of exercises 001–037 and of the stretch code on Ollama.
+- The two paths that reach outside the machine were run on request: `EXER026/stretch/goal2_graph_png.py --png`
+  (renders through mermaid.ink) and `EXER032/stretch/goal2_second_server.py npx -y @modelcontextprotocol/server-everything`
+  (the public MCP reference server).
+- `AICOURSE_PROVIDER=ollama uv run python check_all.py` with `gemma4:e4b`: 40/40 exercises.
+- **Not done:** running the stretch reference code on Ollama.
 
 The original plan follows, unchanged except for this status section.
 
