@@ -15,7 +15,7 @@
 <main>
   <header class="lecture-header">
     <h1>Setup Guide</h1>
-    <p class="lede">Three things: the Python toolchain, an inference provider that runs the models (Azure Foundry in the cloud, or Ollama on your own machine), and a <code>.env</code> file.
+    <p class="lede">Get the course code, then three things: the Python toolchain, an inference provider that runs the models (Azure Foundry in the cloud, or Ollama on your own machine), and a <code>.env</code> file.
       Budget about 30–45 minutes the first time.</p>
   </header>
 
@@ -29,9 +29,17 @@ brew install uv
 
 # Windows (PowerShell)
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"</code></pre>
+  <h3>Get the course code</h3>
+  <p>All 40 exercises (starter code, reference solutions, stretch goals and checks) live in one repository.
+    You download it once; there is nothing to fetch per lecture.</p>
+  <pre><code class="language-bash">git clone https://github.com/HumpreyCogayGit/AiEngineering101.git
+cd AiEngineering101</code></pre>
+  <p>No git? On the <a href="https://github.com/HumpreyCogayGit/AiEngineering101">GitHub page</a> choose
+    <strong>Code → Download ZIP</strong>, unzip it, and open a terminal in the unzipped folder.
+    Work in the <code>starter/</code> folders; <code>solution/</code> is there for when you want to compare.</p>
   <h3>Install the course dependencies</h3>
-  <pre><code class="language-bash">cd AiEngineerCourse        # the repository root
-uv sync                    # downloads Python 3.12 if needed and installs everything
+  <pre><code class="language-bash">cd AiEngineering101        # the repository root
+uv sync                   # downloads Python 3.12 if needed and installs everything
 uv run python --version    # should print Python 3.12.x</code></pre>
   <div class="callout tip"><span class="title">Why one root environment?</span>
     All 40 exercises share the root <code>pyproject.toml</code>, <code>uv.lock</code> and <code>.env</code>.
