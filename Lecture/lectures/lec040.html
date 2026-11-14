@@ -24,8 +24,8 @@
   Nobody else can use it yet. This lecture packages it as a <strong>container image</strong> with a small HTTP API in front of
   the assistant. The assistant itself does not change: <code>service.py</code> is a third thin shell around
   <code>Assistant.ask</code>, next to the CLI and the Streamlit app (one core, many interfaces).</p>
-<p>Three ideas carry the whole lecture, and they apply to any service you will ever deploy: configuration from the
-  environment, health checks, and a reproducible image.</p>
+<p>The lecture rests on three ideas, none of them specific to AI services: configuration from the environment, health
+  checks, and a reproducible image.</p>
 </section>
 
 <section id="concept"><h2>Concept</h2>
@@ -41,7 +41,9 @@ settings_from_environment()     # real environment variables ONLY; a .env file i
   that cannot work should fail in the first second with a clear message, not on the first customer's question.</p>
 
 <h3>2. Health: liveness and readiness</h3>
-<p>A platform cannot see inside your process. It asks, over HTTP, every few seconds:</p>
+<p>A platform cannot see inside your process. It asks, over HTTP, every few seconds. The two kinds of question below
+  are the ones Kubernetes calls <a href="https://kubernetes.io/docs/concepts/configuration/liveness-readiness-startup-probes/">liveness
+  and readiness probes</a>, and other platforms use the same split:</p>
 <table>
   <tr><th></th><th>Liveness <code>/healthz</code></th><th>Readiness <code>/readyz</code></th></tr>
   <tr><td>Question</td><td>Is the process able to respond at all?</td><td>Can it serve a request right now?</td></tr>
@@ -50,7 +52,7 @@ settings_from_environment()     # real environment variables ONLY; a .env file i
   <tr><td>Status codes</td><td>200</td><td>200 ready, 503 not ready (with the reasons)</td></tr>
 </table>
 <div class="callout danger"><span class="title">Do not call the model in a health check</span>
-  It looks thorough and it is a trap. When the provider has a slow minute, every liveness check fails, the platform restarts
+  When the provider has a slow minute, every liveness check fails, the platform restarts
   every container at once, and a slowdown has become an outage. It also costs tokens every few seconds, forever. Health checks
   test <em>your</em> process, not your dependencies' uptime.</div>
 <pre><code class="language-python">def readiness(checks) -> tuple[int, dict]:
