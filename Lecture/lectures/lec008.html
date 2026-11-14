@@ -16,14 +16,15 @@
 <main>
 <header class="lecture-header">
   <h1>Prompt Engineering Basics</h1>
-  <p class="lede">A prompt is a specification. Vague specs give vague results. A few techniques fix most problems,
-    and you should measure the result rather than trust your impression.</p>
+  <p class="lede">A prompt is a specification, and a vague one gets vague answers. This lecture applies the standard
+    techniques to one classifier and measures each version on labelled data instead of judging by eye.</p>
 </header>
 
 <section id="overview"><h2>Overview</h2>
-<p>We build a support-ticket classifier three times. Version 1 is the prompt most people write first. Version 2 adds
+<p>We build a support-ticket classifier three times. Version 1 is a one-line request. Version 2 adds
   clear instructions, definitions, delimiters and an output format. Version 3 adds examples. A labelled dataset
-  tells us which version is actually better. This "change, then measure" loop is the core skill of AI engineering.</p>
+  tells us which version is actually better. Lectures 024 and 038 run the same change-then-measure loop on RAG
+  pipelines and agents.</p>
 </section>
 
 <section id="concept"><h2>Concept</h2>
@@ -34,11 +35,15 @@
   <tr><td><strong>Explicit options with definitions</strong></td><td>"billing: payments, refunds, invoices …"</td><td>Removes guesswork at the boundaries between categories.</td></tr>
   <tr><td><strong>Output format</strong></td><td>"Reply with the category name only, lowercase."</td><td>Makes the output parseable by code.</td></tr>
   <tr><td><strong>Delimiters</strong></td><td><code>&lt;ticket&gt; … &lt;/ticket&gt;</code></td><td>Separates instructions from data, and helps against injection (Lecture 036).</td></tr>
-  <tr><td><strong>Few-shot examples</strong></td><td>user/assistant pairs showing input → label</td><td>Shows the task instead of only describing it. Very effective for format and edge cases.</td></tr>
+  <tr><td><strong>Few-shot examples</strong></td><td>user/assistant pairs showing input → label</td><td>Shows the task instead of only describing it. Most useful for output format and edge cases.</td></tr>
   <tr><td><strong>Low temperature</strong></td><td><code>**model_params(temperature=0)</code></td><td>Consistent outputs for classification. <code>model_params</code> leaves the parameter out on models that reject it (Lecture 004).</td></tr>
 </table>
 
 <h3>Few-shot as messages</h3>
+<p><em>Few-shot prompting</em> means putting a handful of solved examples in the prompt; the model picks up the
+  task from them without any training (the term comes from Brown et al.,
+  <a href="https://arxiv.org/abs/2005.14165">"Language Models are Few-Shot Learners"</a>, 2020). In a chat API
+  each example is a user message followed by the assistant answer you want:</p>
 <pre><code class="language-python">messages = [
     {"role": "system", "content": SYSTEM_V2},
     {"role": "user", "content": "&lt;ticket&gt;My refund hasn't arrived.&lt;/ticket&gt;"},
@@ -53,7 +58,8 @@
   A[Write / change prompt] --> B[Run on labelled dataset]
   B --> C[Accuracy + look at failures]
   C --> A</div>
-<p>Trying three examples by hand tells you little. A dataset of even 16 labelled cases shows real differences.
+<p>Trying three examples by hand tells you little. A dataset of 16 labelled cases already shows large differences
+  between versions. Each ticket is worth 6.25 points of accuracy, though, so a gap of one or two tickets is noise.
   Keep two rules:</p>
 <ul>
   <li><strong>Never put test cases in the prompt.</strong> If your few-shot examples come from the test set, the
@@ -123,8 +129,8 @@ v3 few-shot      accuracy = highest, usually ≥ 80%</code></pre>
 
 <section id="discussion"><h2>Discussion</h2>
 <div class="qa"><p>Is prompt engineering a temporary skill that better models will make obsolete?</p>
-  <p>The tricks change; the core doesn't. Clear specifications, examples and measurement matter for people too.
-  What gets less important over time is wording superstition.</p></div>
+  <p>Specific tricks lose value as models improve. Clear specifications, examples and measurement keep theirs, and
+  they work when you brief a person too. What matters less over time is wording superstition.</p></div>
 <div class="qa"><p>When should you stop prompting and try something else?</p>
   <p>When accuracy plateaus. Next steps are structured outputs, retrieval of better context (RAG), a bigger model,
   or splitting the task into steps.</p></div>

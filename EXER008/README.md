@@ -4,8 +4,8 @@
 
 ## Goal
 
-Learn the prompt techniques that matter most — clear instructions, a fixed
-output format, delimiters and few-shot examples — and **measure** their effect
+Learn the prompt techniques that matter most (clear instructions, a fixed
+output format, delimiters and few-shot examples) and **measure** their effect
 instead of guessing.
 
 ## The project
@@ -17,8 +17,8 @@ A support-ticket classifier with four labels: `billing`, `technical`, `account`,
 
 Complete the TODOs in `starter/prompts.py`:
 
-1. `SYSTEM_V2` + `build_messages_v2` — instructions, label definitions, `<ticket>` delimiters
-2. `FEW_SHOT_EXAMPLES` + `build_messages_v3` — add worked examples as message pairs
+1. `SYSTEM_V2` + `build_messages_v2`: instructions, label definitions, `<ticket>` delimiters
+2. `FEW_SHOT_EXAMPLES` + `build_messages_v3`: add worked examples as message pairs
 3. `normalize_label` and `classify`
 
 ## Run it
