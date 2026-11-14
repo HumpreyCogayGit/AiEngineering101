@@ -8,7 +8,12 @@
   const ALL = COURSE.modules.flatMap((m) => m.lectures);
   const pad = (n) => String(n).padStart(3, "0");
   const lectureHref = (n) => `${ROOT}lectures/lec${pad(n)}.html`;
-  const exerciseHref = (n) => `${ROOT}../EXER${pad(n)}/README.md`;
+  // Exercises live outside Lecture/, which is all GitHub Pages publishes. Opened from disk, link the local
+  // README; served over http(s), link the exercise folder in the repository instead.
+  const REPO = "https://github.com/HumpreyCogayGit/AiEngineering101/tree/main";
+  const exerciseHref = (n) => location.protocol === "file:"
+    ? `${ROOT}../EXER${pad(n)}/README.md`
+    : `${REPO}/EXER${pad(n)}`;
 
   // ------------------------------------------------------------ storage (always optional)
   const store = {
