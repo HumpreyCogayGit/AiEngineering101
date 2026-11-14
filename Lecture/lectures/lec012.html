@@ -20,7 +20,8 @@
 </header>
 
 <section id="overview"><h2>Overview</h2>
-<p>LangChain is a library of standard interfaces and integrations for LLM applications. Its central abstraction is
+<p>LangChain describes itself as an open-source framework with a prebuilt agent architecture and integrations for
+  models and tools. Under the agent layer it is a set of standard interfaces, and the central one is
   the <strong>chat model</strong>: one interface (<code>invoke</code>, <code>stream</code>, <code>batch</code>) whether
   the model is on Azure, OpenAI, Anthropic, or running locally. Everything else in Modules 2–7 builds on it.</p>
 </section>
@@ -70,12 +71,15 @@ reply.usage_metadata   # tokens, standardized</code></pre></div>
   <tr><td><code>reply.content</code></td><td>A string <em>or</em> a list of content blocks, depending on the model</td><td>Passing a message on unchanged; reading non-text blocks</td></tr>
 </table>
 <pre><code class="language-python">reply = llm.invoke("Say hi")
-reply.content   # classic model:   'Hi'
-                # reasoning model: [{'type': 'text', 'text': 'Hi', 'annotations': [], 'id': 'msg_...'}]
+reply.content   # Chat Completions API: 'Hi'
+                # Responses API:        [{'type': 'text', 'text': 'Hi', 'annotations': [], 'id': 'msg_...'}]
 reply.text      # 'Hi' on both</code></pre>
-<p>The reason is underneath LangChain. For newer OpenAI models (the gpt-5 family) <code>ChatOpenAI</code> talks to the
-  <em>Responses API</em> instead of the Chat Completions API you used in Module 1, and that API returns answers as
-  blocks. The same is true for streamed chunks. Code that does <code>reply.content.lower()</code> works on one model and
+<p>The reason is underneath LangChain. <code>ChatOpenAI</code> normally calls the Chat Completions API you used in
+  Module 1, which returns a string. It switches to OpenAI's <em>Responses API</em> when you pass
+  <code>use_responses_api=True</code> or <code>output_version="responses/v1"</code>, use a Responses-only feature
+  (reasoning summaries, built-in tools), or pick a model that only exists there (the <code>-pro</code> models), and that
+  API returns answers as blocks. Other providers' chat models (Anthropic's, for example) return blocks too, and so do
+  streamed chunks. Code that does <code>reply.content.lower()</code> works on one model and
   raises <code>AttributeError: 'list' object has no attribute 'lower'</code> on the next. <strong>Read answers with
   <code>.text</code> everywhere</strong> and your code survives a model change.</p>
 
@@ -150,7 +154,7 @@ Memory: Your favourite colour is teal.</code></pre>
 <details class="pitfall"><summary>Outdated tutorials</summary><div>
   <p>LangChain changed a lot between versions. Old imports (<code>from langchain.chat_models import …</code>) and classes (<code>LLMChain</code>, <code>ConversationChain</code>) are legacy. This course uses LangChain 1.x with <code>langchain_core</code> and <code>langchain_openai</code>.</p></div></details>
 <details class="pitfall"><summary><code>content</code> isn't always a string</summary><div>
-  <p>On reasoning, multimodal and tool-using models, <code>AIMessage.content</code> is a list of blocks, so string methods fail on it. Use <code>.text</code> whenever you need the answer as a string, including on streamed chunks.</p></div></details>
+  <p>With the Responses API, with multimodal output, and with some other providers' models, <code>AIMessage.content</code> is a list of blocks, so string methods fail on it. Use <code>.text</code> whenever you need the answer as a string, including on streamed chunks.</p></div></details>
 </section>
 
 <section id="discussion"><h2>Discussion</h2>

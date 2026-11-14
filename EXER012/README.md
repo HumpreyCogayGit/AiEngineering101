@@ -12,10 +12,10 @@ gives you: typed messages, one interface for every provider, and `invoke`,
 
 Complete the TODOs in `starter/lc_chat.py`:
 
-1. `make_llm` — build `ChatOpenAI` by hand from settings
-2. `ask` — `SystemMessage` + `HumanMessage`, then `invoke`
+1. `make_llm`: build `ChatOpenAI` by hand from settings
+2. `ask`: `SystemMessage` + `HumanMessage`, then `invoke`
 3. `batch_ask`, `stream_print`
-4. `LCConversation.send` — the EXER005 chatbot with message objects
+4. `LCConversation.send`: the EXER005 chatbot with message objects
 
 ## Run it
 
