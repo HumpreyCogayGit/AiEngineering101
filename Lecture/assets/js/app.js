@@ -47,7 +47,7 @@
   topbar.className = "topbar";
   topbar.innerHTML = `
     <button class="icon-btn menu-btn" aria-label="Open navigation">☰</button>
-    <a class="brand" href="${ROOT}index.html">AI Engineering: Zero to 40</a>
+    <a class="brand" href="${ROOT}index.html">AI Engineering: Building with LLMs</a>
     <div class="spacer"></div>
     <div class="progress" title="Lectures marked complete">
       <span class="progress-text"></span><div class="progress-bar"><i></i></div>
@@ -117,7 +117,7 @@
   if (CURRENT) {
     const info = ALL.find((l) => l.n === CURRENT);
     const module = COURSE.modules.find((m) => m.lectures.includes(info));
-    document.title = `Lecture ${CURRENT}: ${info.title} – AI Engineering: Zero to 40`;
+    document.title = `Lecture ${CURRENT}: ${info.title} – AI Engineering: Building with LLMs`;
 
     // header: where you are (module link / position), then one plain sentence about time and the exercise
     const header = main.querySelector(".lecture-header");

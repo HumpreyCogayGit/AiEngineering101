@@ -201,7 +201,7 @@
     overlay = document.createElement("div");
     overlay.className = "boot-loader";
     overlay.setAttribute("role", "status");
-    overlay.innerHTML = `<canvas aria-hidden="true"></canvas><p>AI Engineering: Zero to 40</p><small>Loading. Click to skip.</small>`;
+    overlay.innerHTML = `<canvas aria-hidden="true"></canvas><p>AI Engineering: Building with LLMs</p><small>Loading. Click to skip.</small>`;
     overlay.addEventListener("click", lift);
     document.body.append(overlay);
     canvas = overlay.querySelector("canvas");

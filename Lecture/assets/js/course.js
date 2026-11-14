@@ -1,6 +1,6 @@
 /* The course manifest. Adding a lecture = one entry here + one lectures/lecNNN.html file. */
 window.COURSE = {
-  title: "AI Engineering: Zero to 40",
+  title: "AI Engineering: Building with LLMs",
   modules: [
     { title: "Module 0: Foundations", lectures: [
       { n: 1, title: "Setup and First Check", minutes: 45 },
