@@ -12,9 +12,9 @@ Store, plus trimming so long conversations still fit the context window.
 
 Complete the TODOs in `starter/memory_bot.py`:
 
-1. `recall` — read a user's facts from the store
-2. the `chat` node — inject facts into the system prompt, trim history
-3. the `save_memories` node — extract and store new facts
+1. `recall`: read a user's facts from the store
+2. the `chat` node: inject facts into the system prompt, trim history
+3. the `save_memories` node: extract and store new facts
 4. compile with a checkpointer and a store
 5. `sqlite_checkpointer`
 
@@ -28,7 +28,7 @@ uv run python EXER028/check.py
 ## Success criteria
 
 - [ ] Thread A remembers "Bea"; thread C (another user) does not
-- [ ] Thread B (same user, new thread) avoids dairy — long-term memory works
+- [ ] Thread B (same user, new thread) avoids dairy, so long-term memory works
 - [ ] Re-running the script restores thread A from SQLite
 - [ ] All 6 checks pass (offline)
 

@@ -121,7 +121,7 @@ Run again: thread A's conversation is restored from SQLite.</code></pre>
 <section id="success"><h2>Success Criteria</h2>
 <ul class="checklist">
   <li>Thread A remembers "Bea"; thread C (another user) does not</li>
-  <li>Thread B (same user, new thread) avoids dairy — long-term memory works</li>
+  <li>Thread B (same user, new thread) avoids dairy, so long-term memory works</li>
   <li>Re-running the script restores thread A from SQLite</li>
   <li>All 6 checks pass (offline)</li>
 </ul>
@@ -149,7 +149,7 @@ Run again: thread A's conversation is restored from SQLite.</code></pre>
 <details class="pitfall"><summary>Reusing one thread_id for everyone</summary><div>
   <p>Every user then shares one conversation. Thread ids must be unique per conversation, and in a real app tied to an authenticated user.</p></div></details>
 <details class="pitfall"><summary>Remembering everything</summary><div>
-  <p>"User said hi" isn't a durable fact. Extract selectively, deduplicate, and let users see and delete what you've stored, since privacy laws may require it.</p></div></details>
+  <p>"User said hi" isn't a durable fact. Extract selectively, deduplicate, and let users see and delete what you've stored. Privacy law can require it: the GDPR's right to erasure (Article 17) is one example.</p></div></details>
 <details class="pitfall"><summary>Trimming that breaks tool-call pairs</summary><div>
   <p>A window that starts with a <code>ToolMessage</code> whose request was trimmed is invalid. <code>trim_messages</code> options like <code>start_on</code> exist for this.</p></div></details>
 </section>
