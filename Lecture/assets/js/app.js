@@ -47,7 +47,7 @@
   topbar.className = "topbar";
   topbar.innerHTML = `
     <button class="icon-btn menu-btn" aria-label="Open navigation">☰</button>
-    <a class="brand" href="${ROOT}index.html">AI Engineer: Zero to Hero</a>
+    <a class="brand" href="${ROOT}index.html">AI Engineering: Zero to 40</a>
     <div class="spacer"></div>
     <div class="progress" title="Lectures marked complete">
       <span class="progress-text"></span><div class="progress-bar"><i></i></div>
@@ -117,19 +117,16 @@
   if (CURRENT) {
     const info = ALL.find((l) => l.n === CURRENT);
     const module = COURSE.modules.find((m) => m.lectures.includes(info));
-    document.title = `Lecture ${CURRENT}: ${info.title} – AI Engineer Course`;
+    document.title = `Lecture ${CURRENT}: ${info.title} – AI Engineering: Zero to 40`;
 
-    // header: large lecture number, module, then one plain sentence about time and the exercise
+    // header: where you are (module link / position), then one plain sentence about time and the exercise
     const header = main.querySelector(".lecture-header");
     if (header && !header.querySelector(".meta")) {
-      const no = document.createElement("span");
-      no.className = "lecture-no";
-      no.setAttribute("aria-label", `Lecture ${CURRENT}`);
-      no.textContent = pad(CURRENT);
-      const mod = document.createElement("p");
-      mod.className = "lecture-module";
-      mod.textContent = module.title;
-      header.prepend(no, mod);
+      const crumb = document.createElement("p");
+      crumb.className = "lecture-crumb";
+      crumb.innerHTML = `<a href="${ROOT}index.html#module-${COURSE.modules.indexOf(module)}">${module.title}</a>
+        <span aria-hidden="true">/</span> Lecture ${CURRENT} of ${ALL.length}`;
+      header.prepend(crumb);
       const meta = document.createElement("p");
       meta.className = "meta";
       meta.innerHTML = `About ${info.minutes} minutes, plus exercise
@@ -180,10 +177,10 @@
   // ------------------------------------------------------------ home page module list
   const moduleList = document.getElementById("module-list");
   if (moduleList) {
-    moduleList.innerHTML = COURSE.modules.map((m) => {
+    moduleList.innerHTML = COURSE.modules.map((m, mi) => {
       const mins = m.lectures.reduce((a, l) => a + l.minutes, 0);
       const hours = Math.round(mins / 60 * 10) / 10;
-      return `<section class="module"><h3>${m.title}</h3>` +
+      return `<section class="module" id="module-${mi}"><h3>${m.title}</h3>` +
         `<p class="module-meta">${m.lectures.length} lectures, about ${hours} ${hours === 1 ? "hour" : "hours"}</p><ol>` +
         m.lectures.map((l) => `<li><a href="${lectureHref(l.n)}" data-n="${l.n}"><span class="num">${pad(l.n)}</span><span class="title">${l.title}</span><span class="quiz-score" data-quiz="${l.n}"></span></a></li>`).join("") +
         "</ol></section>";

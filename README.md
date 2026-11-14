@@ -1,4 +1,4 @@
-# AI Engineer: Zero to Hero
+# AI Engineering: Zero to 40
 
 A hands-on course that takes you from your first LLM API call to production-style
 agents: messages, streaming, structured output, tool calling, CLI tools, RAG,

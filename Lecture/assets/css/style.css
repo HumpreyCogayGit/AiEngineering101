@@ -121,13 +121,23 @@ strong { font-weight: 700; }
 hr { border: 0; border-top: 1px solid var(--border); margin: 32px 0; }
 .lede { font-size: 1.15rem; line-height: 1.55; color: var(--muted); }
 
-/* Lecture header: the lecture number is the one large, colored element on the page. */
-.lecture-no {
-  display: block; font-size: 4.5rem; line-height: .9; font-weight: 300; letter-spacing: -.03em;
-  font-variant-numeric: tabular-nums; color: var(--accent); margin: 0 0 10px;
+/* Lecture header: a breadcrumb line that says where you are, then the title. */
+.lecture-crumb { margin: 0 0 6px; font-size: 15px; color: var(--muted); }
+.lecture-crumb a { color: inherit; text-decoration-color: var(--border); }
+.lecture-crumb a:hover { color: var(--accent); text-decoration-color: currentColor; }
+.lecture-crumb span { margin: 0 4px; color: var(--border); }
+
+/* First-visit loader (assets/js/loader.js): the page is laid out underneath but hidden until it lifts. */
+html { background: var(--bg); }
+html.booting body { visibility: hidden; }
+.boot-loader {
+  visibility: visible; position: fixed; inset: 0; z-index: 100; display: grid; place-content: center;
+  justify-items: center; gap: 4px; background: var(--bg); cursor: pointer; transition: opacity .45s ease;
 }
-.lecture-module { margin: 0 0 4px; font-size: 15px; color: var(--muted); }
-.lecture-module a { color: inherit; }
+.boot-loader.lifting { opacity: 0; pointer-events: none; }
+.boot-loader canvas { width: min(420px, 86vw); height: auto; aspect-ratio: 7 / 5; }
+.boot-loader p { margin: 0; font-weight: 700; font-size: 17px; color: var(--text); }
+.boot-loader small { color: var(--muted); font-size: 13px; }
 .meta { margin: 14px 0 0; font-size: 15px; color: var(--muted); }
 .meta code { font-size: .85em; }
 
@@ -263,7 +273,6 @@ ol.quiz { list-style: none; padding: 0; counter-reset: quiz; }
   .topbar .progress-bar { width: 70px; }
   h1 { font-size: 1.7rem; }
   .hero h1 { font-size: 1.9rem; }
-  .lecture-no { font-size: 3.4rem; }
 }
 @media (prefers-reduced-motion: reduce) {
   .sidebar, .progress-bar > i { transition: none; }
