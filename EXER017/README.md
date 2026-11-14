@@ -12,9 +12,9 @@ LangChain messages, then replace the loop with the prebuilt `create_agent`.
 Complete the TODOs in `starter/lc_tools.py`:
 
 1. `convert_currency` and `word_count` as `@tool` functions
-2. `run_tool_loop` — the EXER016 loop using `AIMessage.tool_calls` and `ToolMessage`,
+2. `run_tool_loop`: the EXER016 loop using `AIMessage.tool_calls` and `ToolMessage`,
    answering every call when the model requests several at once (parallel tool calls)
-3. `build_agent` — `create_agent(llm, TOOLS, system_prompt=...)`
+3. `build_agent`: `create_agent(llm, TOOLS, system_prompt=...)`
 
 ## Run it
 

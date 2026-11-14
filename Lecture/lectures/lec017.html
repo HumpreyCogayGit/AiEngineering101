@@ -36,7 +36,7 @@ def convert_currency(amount: float, from_currency: str, to_currency: str) -> str
 convert_currency.name         # 'convert_currency'
 convert_currency.description  # the docstring
 convert_currency.args         # {'amount': {'type': 'number'}, 'from_currency': {'type': 'string'}, ...}</code></pre>
-<p>Type hints become JSON types; the docstring becomes the description. Your Python code is now your tool specification.</p>
+<p>Type hints become JSON types and the docstring becomes the description, so the function signature and docstring are the tool specification.</p>
 
 <h3>Three levels of abstraction</h3>
 <table>
@@ -82,8 +82,9 @@ tool_msg = get_weather.invoke(ai_msg.tool_calls[0])   # invoking with a tool cal
 
 <h3>Error handling differs by layer</h3>
 <p>In your own loop you decide what happens when a tool raises. You'll catch the exception and return an error
-  <code>ToolMessage</code>. Prebuilt agents have their own policies: <code>create_agent</code> re-raises tool exceptions
-  by default, while LangGraph's <code>ToolNode(handle_tool_errors=True)</code> returns them to the model (Lecture 027).
+  <code>ToolMessage</code>. Prebuilt agents have their own policies: by default <code>create_agent</code> sends argument-validation errors back to
+  the model but re-raises any exception raised inside your tool, while LangGraph's
+  <code>ToolNode(handle_tool_errors=True)</code> returns every tool error to the model (Lecture 027).
   Know which one you're using.</p>
 <h3 id="worked">Worked example: the same round trip in LangChain objects</h3>
 <p>The question from the project, as the list of messages your loop builds. Compare it with the dicts of Lecture 016:
@@ -114,7 +115,7 @@ AIMessage("- **2,500 PHP ≈ €40.51**\n- **Tokyo weather:** 18°C",    # model
   that asks for tools usually says nothing else, which is why your loop tests <code>ai_msg.tool_calls</code> and not the text. And the
   last one has <code>tool_calls=[]</code>, an empty list rather than <code>None</code>, so <code>if not ai_msg.tool_calls</code> is the test
   that ends the loop on both.</p>
-<p>The model converted the amount itself in the final answer ("€40.51") but did not compute it: the number is copied from the
+<p>The model reformatted the amount in the final answer ("€40.51") but did not compute it: the number is copied from the
   <code>ToolMessage</code>. That is the division of labour you want. Two model calls, two tool calls, 393 input tokens in total.</p>
 <p class="file-label">Captured from a real run. Your ids, wording and numbers will differ; the shape will not.</p>
 </section>
