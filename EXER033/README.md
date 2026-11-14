@@ -5,7 +5,7 @@
 ## Goal
 
 Write an MCP server with the Python MCP SDK (`FastMCP`) that exposes tools, a
-resource template and a prompt — usable by any MCP host, not just your code.
+resource template and a prompt, usable by any MCP host and not just your code.
 
 ## The project
 
@@ -27,7 +27,7 @@ Complete the TODOs in `starter/notes_server.py`.
 uv run python EXER033/check.py        # starts your server and tests it as an MCP client
 ```
 
-Optional, with Node.js installed — click through your server in the MCP Inspector:
+Optional, with Node.js installed: click through your server in the MCP Inspector:
 
 ```bash
 npx @modelcontextprotocol/inspector uv run python EXER033/starter/notes_server.py
