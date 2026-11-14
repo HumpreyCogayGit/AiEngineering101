@@ -20,7 +20,7 @@ Complete the TODOs in `starter/evaluate.py`:
 
 1. `reciprocal_rank`
 2. the `Grade` model and `CORRECTNESS_PROMPT`
-3. `judge` — LLM-as-judge with structured output
+3. `judge`: LLM-as-judge with structured output
 4. `summarize`
 
 ## Run it

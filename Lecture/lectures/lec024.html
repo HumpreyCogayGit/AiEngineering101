@@ -23,7 +23,7 @@
 <section id="overview"><h2>Overview</h2>
 <p>Every change you make (chunk size, prompt, model, retriever) can improve some answers and break others. Without
   evaluation you can't tell which. This lecture builds a repeatable evaluation that produces a report you can compare
-  over time. It's the single habit that most separates AI engineering from AI demos.</p>
+  from one change to the next.</p>
 </section>
 
 <section id="concept"><h2>Concept</h2>
@@ -44,7 +44,7 @@
   <tr><th>Metric</th><th>Question it answers</th><th>How</th></tr>
   <tr><td>Hit rate</td><td>Did we retrieve the right document at all?</td><td>Code</td></tr>
   <tr><td>MRR</td><td>How high was it ranked? (1/position of the first hit)</td><td>Code</td></tr>
-  <tr><td>Faithfulness</td><td>Is every claim supported by the retrieved context?</td><td>LLM judge</td></tr>
+  <tr><td>Faithfulness</td><td>Is every claim supported by the retrieved context? (The definition used by <a href="https://arxiv.org/abs/2309.15217">RAGAS</a>: the share of the answer's claims that can be inferred from the context.)</td><td>LLM judge</td></tr>
   <tr><td>Correctness</td><td>Does it match the reference answer in meaning?</td><td>LLM judge</td></tr>
   <tr><td>Refusal rate</td><td>Does it say "I don't know" when it should?</td><td>Code</td></tr>
 </table>
@@ -64,7 +64,9 @@ judge_llm.with_structured_output(Grade).invoke(FAITHFULNESS_PROMPT.format(contex
   <li><strong>Calibrate</strong>: check the judge with known good and bad answers (the live check does exactly this).</li>
 </ul>
 <div class="callout warn"><span class="title">Judges have biases</span>
-  LLM judges can favour longer answers, their own style, or the first option shown. Spot-check judgments by hand,
+  LLM judges can favour longer answers, answers in their own style, or the first option shown (verbosity,
+  self-enhancement and position bias, measured by Zheng et al., <a href="https://arxiv.org/abs/2306.05685">"Judging
+  LLM-as-a-Judge"</a>, 2023). Spot-check judgments by hand,
   use a strong model as judge, and never use the judge as the only signal for high-stakes decisions.</div>
 <h3 id="worked">Worked example: one row of the report</h3>
 <p>One golden question through <code>evaluate_row</code>, the same question Lecture 023 followed:</p>
