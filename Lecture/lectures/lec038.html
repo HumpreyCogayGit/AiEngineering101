@@ -16,7 +16,8 @@
 <main>
 <header class="lecture-header">
   <h1>Evaluating Agents</h1>
-  <p class="lede">A right answer reached the wrong way is a wrong answer waiting to happen. Score what the agent did (its tool calls) as well as what it said.</p>
+  <p class="lede">An agent can print the right total without looking up a single price, and it will be wrong the day the
+    prices change. Score what the agent did (its tool calls) as well as what it said.</p>
 </header>
 
 <section id="overview"><h2>Overview</h2>
@@ -25,7 +26,9 @@
   or it may recall a price from an earlier conversation and add in its head. Both can print "₱2,210". Only one of them will
   still be right after the price list changes.</p>
 <p>The list of tool calls an agent made during one run is its <strong>trajectory</strong>. This lecture builds a scorer for
-  trajectories, in plain code, and uses it to evaluate an agent on a small set of cases.</p>
+  trajectories, in plain code, and uses it to evaluate an agent on a small set of cases. Libraries offer the same idea
+  ready-made: LangChain's <a href="https://github.com/langchain-ai/agentevals">agentevals</a> calls them trajectory match
+  evaluators, with strict, unordered, subset and superset modes.</p>
 </section>
 
 <section id="concept"><h2>Concept</h2>
@@ -55,7 +58,7 @@
 </table>
 
 <h3>Strict enough, not stricter</h3>
-<p>The art is in what you <em>do not</em> require. A scorer that demands an exact copy of your reference run fails good agents
+<p>Decide as carefully what you will <em>not</em> require. A scorer that demands an exact copy of your reference run fails good agents
   all day, and people stop trusting it.</p>
 <table>
   <tr><th>Tolerate</th><th>How</th></tr>
