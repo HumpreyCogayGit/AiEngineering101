@@ -15,9 +15,9 @@ A news pipeline: **summarize** an article, then **translate** the summary.
 
 Complete the TODOs in `starter/chains.py`:
 
-1. `summary_prompt`, `translate_prompt` — `ChatPromptTemplate.from_messages`
-2. `build_summary_chain`, `build_translate_chain` — `prompt | llm | StrOutputParser()`
-3. `build_pipeline` — chain both with `RunnablePassthrough.assign`
+1. `summary_prompt`, `translate_prompt`: `ChatPromptTemplate.from_messages`
+2. `build_summary_chain`, `build_translate_chain`: `prompt | llm | StrOutputParser()`
+3. `build_pipeline`: chain both with `RunnablePassthrough.assign`
 
 ## Run it
 
