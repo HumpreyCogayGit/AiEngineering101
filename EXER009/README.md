@@ -17,9 +17,9 @@ time, location and attendees.
 
 Complete the TODOs in `starter/formatting.py`:
 
-1. `extract_json_mode` — `response_format={"type": "json_object"}`
-2. `extract_structured` — `client.chat.completions.parse(response_format=Event)`
-3. `parse_with_repair` — validate with Pydantic and feed errors back to the model
+1. `extract_json_mode`: `response_format={"type": "json_object"}`
+2. `extract_structured`: `client.chat.completions.parse(response_format=Event)`
+3. `parse_with_repair`: validate with Pydantic and feed errors back to the model
 
 ## Run it
 
