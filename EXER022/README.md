@@ -31,3 +31,17 @@ The first run builds the Chroma index (a few seconds).
 - [ ] Sources are printed under each answer
 - [ ] "What is the capital of Peru?" gets the exact "I don't know" reply
 - [ ] All 7 checks pass
+
+## Stretch goals
+
+Optional. Neither goal is needed to complete the exercise, and `check.py` must still pass when you are done.
+
+1. **Extend.** Return the exact quoted sentence that supports each citation, and verify the quote in code. *Done when:* every citation prints its quote and `verified`, and the out-of-scope question has no citations.
+2. **Connect (EXER007).** Stream the answer token by token and print the sources at the end. *Done when:* the answer appears progressively, followed by its sources and the time to first token.
+
+Reference code, for after you have tried (it builds on `solution/` and changes nothing in it):
+
+```bash
+uv run python EXER022/stretch/goal1_quoted_citations.py
+uv run python EXER022/stretch/goal2_stream_with_sources.py
+```

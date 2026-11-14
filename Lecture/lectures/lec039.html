@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conversation Memory Strategies</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="39">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>Conversation Memory Strategies</h1>
+  <p class="lede">Every long conversation outgrows its budget. Trimming, summarizing and retrieving each forget something different, so measure what each one loses and what it costs.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>Lecture 005 showed that memory is the message list. Lecture 006 trimmed it, and Lecture 028 trimmed it inside a graph.
+  Trimming is the simplest strategy and the most forgetful one: whatever is outside the window is gone. This lecture puts the
+  three standard strategies side by side as functions of the same shape, and compares them on the two things that matter:
+  <strong>recall</strong> (can the bot still answer questions about the conversation?) and <strong>cost</strong> (input tokens
+  per question).</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>One shape, three strategies</h3>
+<pre><code class="language-python">strategy(history, question) -> the messages to send</code></pre>
+<p>Written this way, a strategy can be swapped without touching the rest of the application, and all of them can be measured by
+  the same loop.</p>
+<div class="mermaid">flowchart LR
+  H["History<br/>48 messages"] --> T["Trim<br/>newest that fit"]
+  H --> S["Summarize<br/>1 summary + last turns"]
+  H --> R["Retrieve<br/>relevant exchanges + last"]
+  T --> M[Model]
+  S --> M
+  R --> M
+  Q[Question] --> R
+  Q --> M</div>
+<table>
+  <tr><th>Strategy</th><th>Keeps</th><th>Loses</th><th>Extra cost</th></tr>
+  <tr><td><strong>Trim</strong></td><td>The newest turns, word for word</td><td>Everything older, completely</td><td>None</td></tr>
+  <tr><td><strong>Summarize</strong></td><td>The gist of everything, plus the newest turns</td><td>Details the summary left out, and you cannot tell which</td><td>One model call per summary</td></tr>
+  <tr><td><strong>Retrieve</strong></td><td>The old exchanges that look relevant, word for word</td><td>Anything the search did not find; the overall thread</td><td>One embedding per exchange, one per question</td></tr>
+</table>
+
+<h3>Trim</h3>
+<p>Walk the history from the end, keep messages while they fit the budget, and never start on an assistant message whose
+  question was cut. It costs nothing and needs no model. Its failure is total and silent: ask about the first turn and the
+  bot honestly does not know.</p>
+
+<h3>Summarize</h3>
+<p>Replace the old turns with one message written by the model, and keep the last few turns as they are:</p>
+<pre><code class="language-python">[{"role": "system", "content": "Summary of the earlier conversation: Rina Castillo, office manager at Lumen Studio; order #4471 …"},
+ *history[-4:]]</code></pre>
+<p>The summary prompt decides what survives. "Summarize this conversation" keeps the coffee advice and drops the order number.
+  "Keep every fact about the customer: names, numbers, addresses, dates, preferences, allergies and promises" keeps what a support
+  agent needs. A summary is written once and reused for every later question, until the conversation has grown enough to need a new one.</p>
+
+<h3>Retrieve</h3>
+<p>Treat the conversation as a small knowledge base (Lecture 019). Embed each exchange once, and for every question fetch the
+  most similar ones:</p>
+<ul>
+  <li><strong>Index exchanges, not messages.</strong> "It's on the 12th floor" means nothing without the question before it. A question and its answer are one unit.</li>
+  <li><strong>Always add the latest exchange.</strong> The user is probably still talking about it, and a search might not rank it.</li>
+  <li><strong>Return them in their original order.</strong> A model reads a conversation top to bottom; an answer placed before its question confuses it.</li>
+</ul>
+
+<h3>Measure both axes</h3>
+<p>The probe questions each have keywords a correct answer must contain. Recall is the share of probes answered; cost is the
+  mean size of the context that was sent. One table shows both, and a strategy has to earn its place on it:</p>
+<pre><code class="language-text">strategy              recall  tokens/question
+full history            100%             1563     ← the baseline: perfect recall, and the bill grows every turn
+trim (400 tok)           33%              386
+summary + last 4        100%              275
+retrieve 3 + last       100%              234</code></pre>
+<p>Tokens per question is not the whole price. The summary cost one model call that read the entire history, and the index
+  cost one embedding call, before the first question was asked. Both pay off quickly in a long conversation and never in a
+  short one.</p>
+<div class="callout warn"><span class="title">A summary is lossy in a way you cannot see</span>
+  A trimmed-away fact gives "I don't know". A fact the summary got slightly wrong gives a confident wrong answer. Summaries of
+  summaries drift further each time. For facts that must stay exact (an order number, an allergy), store them as structured
+  data, as the long-term memory of Lecture 028 does.</div>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p><code>conversation.json</code> (given) is a 48-message support conversation with a customer called Rina. Facts are planted
+  early (order number, allergy, delivery floor), in the middle (a wholesale order), late (a promised replacement) and at the very
+  end (an invoice address), with general coffee talk in between. Six probe questions ask for them. You implement the strategies
+  and the measurement in <code>memory_strategies.py</code>.</p>
+<h3>Sample run</h3>
+<pre><code class="language-text">uv run python EXER039/solution/memory_strategies.py
+
+The conversation: 48 messages, 1563 tokens. 6 probe questions.
+
+strategy              recall  tokens/question   missed
+full history            100%             1563   -
+trim (400 tok)           33%              386   What is the customer's order number?; Which allergy does the customer have?; …
+summary + last 4        100%              275   -
+retrieve 3 + last       100%              234   -
+
+Setup costs once per conversation: one summary call (reads the whole history), one embedding call (24 exchanges).</code></pre>
+<p class="file-label">Captured from a real run. Your wording, numbers and timings will differ; the shape should match.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Implement trimming, summarizing and retrieval over past turns as interchangeable functions.</li>
+  <li>Say what each strategy loses, and how you would notice.</li>
+  <li>Measure recall and tokens per question for each strategy on the same conversation.</li>
+  <li>Choose a strategy for a given kind of conversation, including the setup cost.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>The script prints one row per strategy: recall, tokens per question, and what was missed</li>
+  <li>Trimming to 400 tokens forgets the early facts (order number, allergy, floor)</li>
+  <li>Summarizing and retrieving both recall more than trimming, for less than half the tokens of the full history</li>
+  <li>You can say, for each strategy, what kind of fact it loses</li>
+  <li>All 7 checks pass (6 offline, 1 calls your models)</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li>Read <code>conversation.json</code> and mark where each probe's answer sits. Predict which strategy will miss which probe.</li>
+  <li><code>count_tokens</code> and <code>trim_recent</code> first: both are plain Python and checked offline.</li>
+  <li><code>summary_and_recent</code>: the summary text is passed in. Writing it is <code>summarize()</code>'s job, once per conversation.</li>
+  <li><code>pair_turns</code>, then <code>retrieve_turns</code>: collect positions in a set, sort them, flatten. The offline check uses a toy word-count "embedding", so you can reason about which exchange wins.</li>
+  <li><code>evaluate</code>: the loop that produces a row of the table.</li>
+  <li>Run it, then change one number: trim to 800 tokens, or retrieve 1 exchange. Does the table move the way you expected?</li>
+</ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Add a hybrid strategy (a short summary plus retrieved exchanges) and compare it with its two halves. <em>Done when:</em> the table has a row for the hybrid, and you can say whether its extra tokens bought any recall.</li>
+  <li><strong>Connect (EXER035).</strong> Count the setup cost of each strategy and find the break-even point against the full history. <em>Done when:</em> the script prints setup tokens, tokens per question, and after how many questions each strategy is cheaper.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER039/stretch/</p>
+</div>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Summarizing on every turn</summary><div>
+  <p>That adds a model call that reads the whole history to every question, which costs more than sending the history. Summarize when the thread crosses a threshold, and reuse the summary until it does again.</p></div></details>
+<details class="pitfall"><summary>Retrieving single messages</summary><div>
+  <p>"Yes, that works." is the most similar message to nothing and the answer to something. Index the question together with its answer.</p></div></details>
+<details class="pitfall"><summary>Retrieved turns in ranking order</summary><div>
+  <p>The best match first reads like a shuffled conversation. Sort what you retrieved back into its original order.</p></div></details>
+<details class="pitfall"><summary>Comparing strategies on recent questions only</summary><div>
+  <p>Every strategy answers a question about the last turn. Probes must reach back to the start of the conversation, or the table shows a four-way tie.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>Which strategy would you ship for a support chat?</p>
+  <p>Usually a combination: a short running summary for the gist, the last few turns word for word, and exact facts (order number, allergies) in structured memory. Retrieval over turns earns its place when conversations run to hundreds of turns or span several sessions.</p></div>
+<div class="qa"><p>The context window is a million tokens. Does any of this still matter?</p>
+  <p>The table answers it: 1,563 tokens against 234, on every question, for the same recall. At scale that is the difference between two bills. Long contexts are also slower, and details in the middle of them are overlooked more often (Lecture 006).</p></div>
+<div class="qa"><p>How is this different from the long-term memory of Lecture 028?</p>
+  <p>That stored facts about a <em>user</em>, across conversations. This manages the text of <em>one</em> conversation. They combine: the summary and the retrieved turns serve the conversation, the store serves the person.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://docs.langchain.com/oss/python/langgraph/add-memory">LangGraph: add and manage memory</a></li>
+  <li><a href="https://python.langchain.com/docs/how_to/trim_messages/">LangChain: how to trim messages</a></li>
+  <li><a href="https://docs.langchain.com/oss/python/langgraph/persistence">LangGraph: persistence</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

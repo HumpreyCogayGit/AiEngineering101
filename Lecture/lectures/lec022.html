@@ -6,6 +6,7 @@
 <title>The RAG Chain</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -71,6 +72,39 @@ rag_chain.invoke("How long do I have to return unopened beans?")
   <tr><td>Answer mixes in outside facts</td><td>Prompt allows world knowledge</td><td>"ONLY the context"; evaluate faithfulness (Lecture 024)</td></tr>
   <tr><td>Citations to the wrong passage</td><td>Model sloppiness</td><td>Check citations in code; evaluate</td></tr>
 </table>
+<h3 id="worked">Worked example: one question through the chain</h3>
+<p>Question: <em>"How long does a refund take to reach my card?"</em></p>
+<p><strong>1. Retrieve.</strong> The retriever returns four chunks (<code>k=4</code>):</p>
+<pre><code class="language-text">[1] refund_policy.md       598 chars   # Refund and Return Policy … ## Online orders …
+[2] refund_policy.md       552 chars   ## Damaged or wrong items …
+[3] loyalty_program.md     302 chars   ## Tiers …
+[4] employee_handbook.pdf  343 chars   Training — New baristas complete the 3-week Barista Academy …</code></pre>
+<p>Only the first holds the answer. The third and fourth are there because <code>k</code> is 4 and something had to fill the places.</p>
+<p><strong>2. Format.</strong> <code>format_docs</code> turns them into 1,932 characters of numbered context:</p>
+<pre><code class="language-text">[1] (source: refund_policy.md)
+# Refund and Return Policy
+…
+Refunds are issued to the original payment method within **5–7 business days** after we receive the item.
+
+[2] (source: refund_policy.md)
+## Damaged or wrong items
+…</code></pre>
+<p><strong>3. Prompt.</strong> The context goes into <code>{context}</code> of the system message, under the three rules; the
+  question goes into the human message, unchanged.</p>
+<p><strong>4. Generate.</strong></p>
+<pre><code class="language-text">Refunds are issued to your original payment method within **5–7 business days after Nimbus receives the returned item**. [1]</code></pre>
+<p><strong>5. Map the citation back.</strong> <code>cited_sources</code> finds <code>[1]</code>, looks up passage 1 and prints
+  <code>sources: refund_policy.md</code>. Passages 2, 3 and 4 were in the prompt and are not cited: the model ignored the three
+  irrelevant chunks, as the "ONLY" rule asks. The chain returns the question, all four documents and the answer, so a UI can
+  show the sources and an evaluation can score retrieval on its own.</p>
+<p><strong>The same chain on an out-of-scope question</strong>, <em>"What is the capital of Peru?"</em>:</p>
+<pre><code class="language-text">[1] employee_handbook.pdf   [2] products.md   [3] company_faq.md   [4] careers.html      (1,410 characters of context)
+A: I don't know based on the available documents.
+   sources: none</code></pre>
+<p>Retrieval did not fail here. A vector store always returns its <code>k</code> nearest chunks, however far away they are, so the
+  prompt was full of coffee facts. The model knows the capital of Peru and still refused, with the exact sentence, because the
+  prompt told it what to do when the context does not contain the answer. Take that rule out and it answers "Lima".</p>
+<p class="file-label">Captured from a real run. Your ids, wording and numbers will differ; the shape will not.</p>
 </section>
 
 <section id="project"><h2>The Project</h2>
@@ -102,6 +136,15 @@ rag_chain.invoke("How long do I have to return unopened beans?")
   <li>Write the prompt with <code>{context}</code> in the system message and <code>{question}</code> in the human message.</li>
   <li>When an answer is wrong, print <code>result["docs"]</code> <em>first</em>. Was the right chunk retrieved?</li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Return the exact quoted sentence that supports each citation, and verify the quote in code. <em>Done when:</em> every citation prints its quote and <code>verified</code>, and the out-of-scope question has no citations.</li>
+  <li><strong>Connect (EXER007).</strong> Stream the answer token by token and print the sources at the end. <em>Done when:</em> the answer appears progressively, followed by its sources and the time to first token.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER022/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -119,6 +162,11 @@ rag_chain.invoke("How long do I have to return unopened beans?")
   reliably teach facts and can't be updated daily.</p></div>
 <div class="qa"><p>Should a customer bot ever say "I don't know"?</p>
   <p>Yes, preferably with a next step ("contact support at …"). A wrong policy stated confidently costs more than an honest handoff.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

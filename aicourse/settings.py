@@ -254,6 +254,10 @@ def _problems(exc: ValidationError) -> list[str]:
     return lines
 
 
+def _config_error(exc: ValidationError, hint: str) -> ConfigError:
+    return ConfigError("Course configuration problem:\n" + "\n".join(_problems(exc)) + f"\n{hint}")
+
+
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     """Load and validate settings once, with a readable error if something is wrong."""
@@ -265,6 +269,17 @@ def get_settings() -> Settings:
             if not ENV_FILE.exists()
             else f"Check the values in {ENV_FILE}."
         )
-        raise ConfigError(
-            "Course configuration problem:\n" + "\n".join(_problems(exc)) + f"\n{hint}"
-        ) from None
+        raise _config_error(exc, hint) from None
+
+
+def settings_from_environment() -> Settings:
+    """Settings from real environment variables ONLY: any `.env` file is ignored.
+
+    This is how a deployed service is configured (EXER040): the platform injects
+    the variables, and no file with secrets is shipped inside the image. Not
+    cached, so a health check always sees the current environment.
+    """
+    try:
+        return Settings(_env_file=None)  # type: ignore[call-arg]
+    except ValidationError as exc:
+        raise _config_error(exc, "Set these as environment variables of the running service.") from None

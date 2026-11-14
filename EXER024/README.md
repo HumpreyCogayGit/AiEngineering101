@@ -38,3 +38,17 @@ The report is written to `EXER024/starter/output/eval_report.md`.
 - [ ] Hit rate ≥ 0.85, faithfulness ≥ 4.0, refusal rate = 1.0
 - [ ] You looked at the lowest-scoring rows and can say *why* they failed
 - [ ] All 6 checks pass
+
+## Stretch goals
+
+Optional. Neither goal is needed to complete the exercise, and `check.py` must still pass when you are done.
+
+1. **Extend.** Grade each answer twice and report how often the judge disagrees with itself. *Done when:* the script prints, per metric, on how many answers the two grades differ and by how much.
+2. **Connect (EXER023).** Evaluate the RAG chain with the best EXER023 retriever and compare both reports. *Done when:* two reports are written and one table shows every metric for both retrievers.
+
+Reference code, for after you have tried (it builds on `solution/` and changes nothing in it):
+
+```bash
+uv run python EXER024/stretch/goal1_judge_consistency.py
+uv run python EXER024/stretch/goal2_compare_retrievers.py
+```

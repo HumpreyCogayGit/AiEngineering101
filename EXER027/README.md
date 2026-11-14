@@ -28,3 +28,17 @@ uv run python EXER027/check.py
 - [ ] The order total (₱2,210) is computed by tools, not by the model's mental math
 - [ ] A model that never stops calling tools is halted by the recursion limit
 - [ ] All 6 checks pass
+
+## Stretch goals
+
+Optional. Neither goal is needed to complete the exercise, and `check.py` must still pass when you are done.
+
+1. **Extend.** Add a per-run tool budget: after N tool calls the agent must answer with what it has. *Done when:* with a budget of 2, a question that needs four lookups ends with two results and a clear statement of what is missing.
+2. **Connect (EXER007).** Stream the agent's tokens as well as its steps. *Done when:* tool steps appear as they finish, and the final answer is written token by token.
+
+Reference code, for after you have tried (it builds on `solution/` and changes nothing in it):
+
+```bash
+uv run python EXER027/stretch/goal1_tool_budget.py
+uv run python EXER027/stretch/goal2_stream_tokens.py
+```

@@ -6,6 +6,7 @@
 <title>Multi-Agent Systems</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -102,6 +103,32 @@ builder.add_node("researcher", research, destinations=("writer", END))   # no co
   Every hop is another LLM call: supervisor, worker, supervisor, worker, supervisor. Latency and cost often triple,
   and failures become harder to debug. Try first: a better prompt, fewer tools, a fixed workflow (Lecture 026), or one agent with good tools.
   Choose multi-agent when tasks need truly separate tools, permissions, or context.</div>
+<h3 id="worked">Worked example: the shared state after every step</h3>
+<p>The supervisor team on the two-part email (broken grinder, and "can I bring my dog?"). Each row is the shared state after one
+  node. <code>messages</code> shows who wrote each message.</p>
+<table>
+  <tr><th>After</th><th><code>next</code></th><th><code>instruction</code> (shortened)</th><th><code>steps</code></th><th><code>messages</code></th></tr>
+  <tr><td>(input)</td><td>–</td><td>–</td><td><code>[]</code></td><td>human</td></tr>
+  <tr><td><code>supervisor</code></td><td>researcher</td><td>Find the relevant company policies for a grinder that arrived broken, including replacement/return steps …</td><td><code>[]</code></td><td>human</td></tr>
+  <tr><td><code>researcher</code></td><td>researcher</td><td>(unchanged)</td><td><code>[researcher]</code></td><td>human, researcher</td></tr>
+  <tr><td><code>supervisor</code></td><td>writer</td><td>Draft a warm, concise customer reply. Explain that because the grinder arrived broken, they should email …</td><td><code>[researcher]</code></td><td>human, researcher</td></tr>
+  <tr><td><code>writer</code></td><td>writer</td><td>(unchanged)</td><td><code>[researcher, writer]</code></td><td>human, researcher, writer</td></tr>
+  <tr><td><code>supervisor</code></td><td>FINISH</td><td>The writer has produced the final customer reply.</td><td><code>[researcher, writer]</code></td><td>human, researcher, writer</td></tr>
+</table>
+<p>Six rows, and the last column tells the story of the pattern:</p>
+<ul>
+  <li><strong>The supervisor adds no messages.</strong> Its three rows change only <code>next</code> and <code>instruction</code>. It reads the conversation and writes a decision.</li>
+  <li><strong>Each worker adds exactly one message.</strong> The researcher called its search tool to get there. None of those calls or results are in the shared list: the wrapper node returned only the final text, named <code>researcher</code>. The writer saw the researcher's bullet points, not the raw search results.</li>
+  <li><strong>The instruction is not in the shared list either.</strong> It was given to the worker as an extra message for that one call and then dropped. The shared conversation stays the customer's email plus the two results.</li>
+  <li><strong><code>steps</code> is what the code checks.</strong> In the last row the supervisor said FINISH, and the guard looked at <code>steps</code>: <code>writer</code> is there, so the run may end. Had the model said FINISH in the fourth row, the same guard would have replaced it with <code>writer</code>.</li>
+</ul>
+<p>Count the model calls behind the six rows: three for the supervisor, one or more for the writer, and several for the
+  researcher (one per search round, plus its summary). In another run of the same request, measured with the tracker of Lecture 035, the supervisor sent the
+  researcher out twice: that team made 11 model calls and read about 13,000 input tokens, while the handoff team made 3 calls
+  and read about 1,700. The supervisor's rows are the difference: every routing decision re-reads the whole conversation, and a
+  second research round is only one decision away.</p>
+<p>The handoff version of the same request has two rows: <code>researcher</code>, then <code>writer</code>. Nobody decides in between.</p>
+<p class="file-label">Captured from a real run. Your ids, wording and numbers will differ; the shape will not.</p>
 </section>
 
 <section id="project"><h2>The Project</h2>
@@ -157,6 +184,15 @@ Nimbus Support</code></pre>
   <li><code>build_handoff_team</code>: the same two agents, each node returning <code>Command(goto=..., update=...)</code>.</li>
   <li>Count the LLM calls in both versions, then estimate the cost compared with a single agent.</li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Add a reviewer agent that can send the draft back to the writer once. <em>Done when:</em> with a reviewer that never approves, the steps end at <code>writer -&gt; reviewer -&gt; writer -&gt; reviewer</code>.</li>
+  <li><strong>Connect (EXER035).</strong> Count model calls and tokens for the supervisor team and the handoff team. <em>Done when:</em> one table compares calls, tokens, seconds and cost of the two teams on the same request.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER031/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -174,6 +210,11 @@ Nimbus Support</code></pre>
   permissions (a writer that can't touch the database), different models, or very different instructions.</p></div>
 <div class="qa"><p>How would you evaluate a multi-agent system?</p>
   <p>End to end (is the final reply correct?) and per worker (is the research complete? is the writer faithful to it?). Traces (Lecture 035) are essential.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

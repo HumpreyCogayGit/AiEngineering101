@@ -32,3 +32,17 @@ uv run python EXER006/check.py
 
 > Your chat model must support image input (gpt-4.1-mini, gpt-4o-mini, gpt-4o … do; on Ollama,
 > `ollama show <model>` must list the `vision` capability, as it does for gemma4:e4b).
+
+## Stretch goals
+
+Optional. Neither goal is needed to complete the exercise, and `check.py` must still pass when you are done.
+
+1. **Extend.** Send two images in one message and ask for the differences (`images/shapes_changed.png` is the second image). *Done when:* the answer names the colour change, the missing triangle and the changed label.
+2. **Connect (EXER005).** Trim by summarizing the dropped turns into one message instead of deleting them. *Done when:* after trimming, the bot still knows an order number from the first turn, which plain trimming forgets.
+
+Reference code, for after you have tried (it builds on `solution/` and changes nothing in it):
+
+```bash
+uv run python EXER006/stretch/goal1_two_images.py
+uv run python EXER006/stretch/goal2_summarize_dropped.py
+```

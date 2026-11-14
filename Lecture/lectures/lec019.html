@@ -6,6 +6,7 @@
 <title>Embeddings and Similarity</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -65,6 +66,32 @@ def cosine_similarity(a, b):
   <tr><td>Cost</td><td>Very cheap</td><td>Much more</td></tr>
   <tr><td>Used for</td><td>Search, clustering, deduplication, recommendation</td><td>Generating answers</td></tr>
 </table>
+<h3 id="worked">Worked example: one query, from text to ranking</h3>
+<p>Follow the query <em>"How do I get my money back?"</em> through the three steps, with the numbers of a real run
+  (<code>text-embedding-3-small</code>).</p>
+<p><strong>1. The query becomes a vector.</strong> 1,536 numbers; here are the first six:</p>
+<pre><code class="language-text">[-0.0046, -0.0173, -0.0127, 0.0413, -0.0556, -0.0176, ...]      length (norm) = 1.0002</code></pre>
+<p>No single number means anything. The eight sentences were embedded the same way, once, into eight more vectors.</p>
+<p><strong>2. Cosine similarity against every stored vector.</strong> Eight dot products, one score per sentence:</p>
+<pre><code class="language-text">0.285  You can return unopened beans within 30 days for a full refund.     ← no word in common with the query
+0.199  Earn one reward star for every 50 pesos you spend.
+0.076  Standard shipping is free for orders over 1,500 pesos.
+0.064  Keep coffee beans in an airtight container away from light.
+0.060  Cold brew should steep in the fridge for 16 to 18 hours.
+0.058  Employees get 15 days of paid vacation per year.
+0.018  Barako Bold is a strong, smoky dark roast from Batangas.
+0.014  Our Makati café opens at 6:30 in the morning.</code></pre>
+<p><strong>3. Sort and keep the top k.</strong> With <code>k=2</code> the search returns the refund sentence and the rewards sentence.</p>
+<p>Read the scores carefully, because they are not what most people expect:</p>
+<ul>
+  <li><strong>The winner scores 0.285, not 0.9.</strong> A short question and a statement that answers it are related, not identical. What matters is that it is clearly ahead of the rest.</li>
+  <li><strong>The gaps carry the information.</strong> From first to second the score drops by 0.09; from third to sixth by 0.02. The top two stand out, and everything from the third down is noise of about the same size.</li>
+  <li><strong>The runner-up is wrong but understandable.</strong> "Money back" and "reward for every 50 pesos you spend" are both about money returning to a customer. Similar is not the same as relevant.</li>
+  <li><strong>A threshold would have failed.</strong> "Keep everything above 0.5" returns nothing here; "above 0.05" returns six sentences. Rank, then let a later step judge.</li>
+</ul>
+<p>On another embedding model the same query gives different numbers (often much higher ones) and usually the same order. That is
+  why scores from two models cannot be compared, and why the ranking is the result you rely on.</p>
+<p class="file-label">Captured from a real run. Your ids, wording and numbers will differ; the shape will not.</p>
 </section>
 
 <section id="project"><h2>The Project</h2>
@@ -96,6 +123,15 @@ def cosine_similarity(a, b):
   <li>Test <code>cosine_similarity</code> on tiny vectors first: <code>[1, 0]</code> vs <code>[0, 1]</code> should be 0.</li>
   <li>Add your own queries and sentences. Try a query in Filipino or Spanish: multilingual embedding models match across languages.</li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Embed in batches and cache the vectors on disk, keyed by a hash of model name and text. <em>Done when:</em> the second run makes 0 embedding requests.</li>
+  <li><strong>Connect (EXER021).</strong> Draw the similarity matrix of the eight sentences as a heat map. <em>Done when:</em> the terminal shows the matrix in shades, and <code>stretch/output/similarity.html</code> opens in a browser.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER019/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -115,6 +151,11 @@ def cosine_similarity(a, b):
   Similarity is a proxy for relevance, which is why retrieval needs evaluation (Lectures 023 and 024).</p></div>
 <div class="qa"><p>Where else are embeddings useful?</p>
   <p>Duplicate ticket detection, clustering feedback by topic, recommendations ("customers who liked this…"), and routing questions to the right team.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

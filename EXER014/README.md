@@ -34,3 +34,17 @@ uv run python EXER014/check.py
 - [ ] Dates in three different formats all come out as `YYYY-MM-DD`
 - [ ] Every invoice prints `[OK]` — the line items add up
 - [ ] All 5 checks pass
+
+## Stretch goals
+
+Optional. Neither goal is needed to complete the exercise, and `check.py` must still pass when you are done.
+
+1. **Extend.** Make the parser return a list of problems (parse errors and broken business rules) instead of raising. *Done when:* the three invoices print `ACCEPT`, and an invoice with a wrong total prints `REVIEW` with the reason.
+2. **Connect (EXER012).** Parse the invoices concurrently with `batch`. *Done when:* the results come back in input order, and the script prints the speed-up over one at a time.
+
+Reference code, for after you have tried (it builds on `solution/` and changes nothing in it):
+
+```bash
+uv run python EXER014/stretch/goal1_validation_problems.py
+uv run python EXER014/stretch/goal2_batch_invoices.py
+```

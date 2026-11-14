@@ -6,6 +6,7 @@
 <title>MCP Concepts and Using a Server</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -123,6 +124,15 @@ A: For chocolatey coffee, try:
   <li>Optional: with Node.js installed, run the MCP Inspector and click through the server:
     <code>npx @modelcontextprotocol/inspector uv run python EXER032/servers/coffee_server.py</code></li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Read the server's prompt and use it as the agent's system prompt. <em>Done when:</em> the prompt text comes from <code>get_prompt</code>, and the agent follows it by calling the tools it names.</li>
+  <li><strong>Connect (EXER033).</strong> Connect to a second MCP server and list its capabilities with the same client code. <em>Done when:</em> the same function describes a different server: its name, tools, resources and prompts.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER032/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -141,6 +151,11 @@ A: For chocolatey coffee, try:
 <div class="qa"><p>Is connecting to an MCP server safe?</p>
   <p>Only if you trust it. A server's tool descriptions go into your model's prompt, and its tools run with whatever
   access the server has. Lecture 034 covers trust and least privilege.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

@@ -55,5 +55,10 @@ window.COURSE = {
       { n: 36, title: "Safety and Guardrails", minutes: 75 },
       { n: 37, title: "Capstone: Nimbus Helpdesk", minutes: 240 },
     ]},
+    { title: "Module 8 · Beyond the Capstone", lectures: [
+      { n: 38, title: "Evaluating Agents", minutes: 60 },
+      { n: 39, title: "Conversation Memory Strategies", minutes: 60 },
+      { n: 40, title: "Deploying the Capstone", minutes: 90 },
+    ]},
   ],
 };

@@ -1,0 +1,6 @@
+[
+  {"question": "What is the shipping fee for a ₱900 order sent to Cebu with standard shipping?",
+   "expect_keywords": ["180"], "expect_tools": ["shipping_fee"]},
+  {"question": "I'm ordering ₱1,600 of beans to Makati, standard shipping. What do I pay in total, shipping included?",
+   "expect_keywords": ["1600"], "expect_tools": ["shipping_fee"]}
+]

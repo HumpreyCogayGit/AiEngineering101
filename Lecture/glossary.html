@@ -31,9 +31,11 @@
     <dt>Chunk / chunking</dt><dd>Splitting documents into smaller passages before embedding them. Chunk size and overlap are key RAG settings. <span class="see">[020]</span></dd>
     <dt>Command (LangGraph)</dt><dd>A value a node returns to update the state and name the next node in one step. It is how one agent hands control to another. <span class="see">[031]</span></dd>
     <dt>Completion</dt><dd>The model's generated output for a request. "Chat completion" is the message the model returns. <span class="see">[003]</span></dd>
+    <dt>Container image</dt><dd>A packaged, runnable copy of an application with its dependencies. Built from a Dockerfile; anything copied into it is published with it, so it must hold no secrets. <span class="see">[040]</span></dd>
     <dt>Content block</dt><dd>One typed part of a message's content (text, image …). Lets a single message mix modalities. <span class="see">[006]</span></dd>
     <dt>Content filter</dt><dd>A hosted provider's safety system (Azure has one) that can block harmful prompts or outputs, returned as an HTTP 400 with code <code>content_filter</code>. A local model has none. <span class="see">[036]</span></dd>
     <dt>Context window</dt><dd>The maximum number of tokens (input + output) a model can handle in one request. <span class="see">[006]</span></dd>
+    <dt>Conversation summary</dt><dd>A model-written condensation of old turns that replaces them in the context. Keeps the gist, can lose or distort a detail. <span class="see">[006, 039]</span></dd>
     <dt>Cosine similarity</dt><dd>A measure of how closely two vectors point in the same direction (1 = same, 0 = unrelated). <span class="see">[019]</span></dd>
     <dt>Deployment (Azure)</dt><dd>A named instance of a model in your Azure resource. On Azure, the request's <code>model</code> field is the deployment name. <span class="see">[001]</span></dd>
     <dt>Embedding</dt><dd>A vector of numbers representing the meaning of a text. Similar meanings give nearby vectors. <span class="see">[019]</span></dd>
@@ -52,6 +54,7 @@
     <dt>JSON Schema</dt><dd>A standard way to describe the shape of JSON data. Used for tool parameters and structured outputs. <span class="see">[009, 016]</span></dd>
     <dt>LCEL</dt><dd>LangChain Expression Language: composing runnables with the pipe operator <code>|</code>. <span class="see">[013]</span></dd>
     <dt>Least privilege</dt><dd>Giving an agent only the tools and permissions its task needs. <span class="see">[034, 036]</span></dd>
+    <dt>Liveness check</dt><dd>An endpoint that answers "is the process able to respond at all?". The platform restarts a container that fails it, so it must depend on nothing else. <span class="see">[040]</span></dd>
     <dt>LLM-as-judge</dt><dd>Using a model with a scoring rubric to grade outputs that simple string matching can't evaluate. <span class="see">[024]</span></dd>
     <dt>MCP (Model Context Protocol)</dt><dd>An open standard connecting AI applications (hosts/clients) to servers that expose tools, resources and prompts. <span class="see">[032]</span></dd>
     <dt>MMR (Maximal Marginal Relevance)</dt><dd>A retrieval method that balances relevance with diversity, avoiding near-duplicate results. <span class="see">[023]</span></dd>
@@ -64,6 +67,7 @@
     <dt>RAG (Retrieval-Augmented Generation)</dt><dd>Retrieving relevant passages and putting them in the prompt so the model answers from your data. <span class="see">[022]</span></dd>
     <dt>Rate limit</dt><dd>A cap on requests or tokens per minute. Exceeding it returns HTTP 429. <span class="see">[011]</span></dd>
     <dt>ReAct</dt><dd>The "reason + act" agent pattern: think, call a tool, observe, repeat. <span class="see">[027]</span></dd>
+    <dt>Readiness check</dt><dd>An endpoint that answers "can this instance serve a request right now?". The platform sends no traffic while it fails. <span class="see">[040]</span></dd>
     <dt>Reasoning model</dt><dd>A model family (gpt-5, o-series) that thinks before answering. It only accepts the default temperature and is steered by the prompt and a reasoning-effort setting. <span class="see">[004]</span></dd>
     <dt>Reducer</dt><dd>In LangGraph, a function that defines how a state key is updated, e.g. append instead of replace. <span class="see">[026]</span></dd>
     <dt>Reranking</dt><dd>Reordering retrieved candidates with a stronger (slower) relevance model. <span class="see">[023]</span></dd>
@@ -84,6 +88,7 @@
     <dt>Token</dt><dd>A chunk of text (about ¾ of an English word) that models read and write. Pricing and limits are in tokens. <span class="see">[004]</span></dd>
     <dt>Tool calling</dt><dd>The model requests a function call with JSON arguments; your code runs it and returns the result. <span class="see">[016]</span></dd>
     <dt>Trace / span</dt><dd>A record of one run (trace) made of timed steps (spans), such as model calls and tool calls. <span class="see">[035]</span></dd>
+    <dt>Trajectory</dt><dd>The ordered list of tool calls an agent made during one run. Scored for the right tools, order and arguments, beside the final answer. <span class="see">[038]</span></dd>
     <dt>Vector store</dt><dd>A database that stores embeddings and finds the nearest ones to a query vector. <span class="see">[021]</span></dd>
   </dl>
 </main>

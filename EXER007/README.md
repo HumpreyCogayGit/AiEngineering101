@@ -28,3 +28,17 @@ uv run python EXER007/check.py
 - [ ] On exit the script prints time-to-first-token and total time; the first is much smaller
 - [ ] Chunks without `choices` (the usage chunk, or Azure's content-filter chunk) don't crash your code
 - [ ] All 5 checks pass
+
+## Stretch goals
+
+Optional. Neither goal is needed to complete the exercise, and `check.py` must still pass when you are done.
+
+1. **Extend.** Stop a streamed answer cleanly with Ctrl-C and keep the partial reply in the history. *Done when:* after an interruption the next turn can say what the bot had written so far.
+2. **Connect (EXER016).** Stream a tool call: collect the `delta.tool_calls` fragments and assemble the arguments. *Done when:* the fragments are printed as they arrive and end up as complete, parsed arguments per call.
+
+Reference code, for after you have tried (it builds on `solution/` and changes nothing in it):
+
+```bash
+uv run python EXER007/stretch/goal1_interruptible_stream.py --demo
+uv run python EXER007/stretch/goal2_tool_call_deltas.py
+```

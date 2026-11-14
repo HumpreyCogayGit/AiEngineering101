@@ -1,0 +1,240 @@
+{
+ "turns": [
+  {
+   "role": "user",
+   "content": "Hi, this is Rina Castillo, I'm the office manager at Lumen Studio. I'd like help with a few things today."
+  },
+  {
+   "role": "assistant",
+   "content": "Hello Rina! Happy to help Lumen Studio. What would you like to start with?"
+  },
+  {
+   "role": "user",
+   "content": "First, my order number is 4471. It was two bags of Benguet Highlands and a Hand Grinder Pro. Can you confirm you have it?"
+  },
+  {
+   "role": "assistant",
+   "content": "Yes, I have order #4471: two 250 g bags of Benguet Highlands and one Hand Grinder Pro. It was paid by card and is being prepared."
+  },
+  {
+   "role": "user",
+   "content": "Good. How long do beans stay fresh once the bag is open? We go through them slowly in the studio."
+  },
+  {
+   "role": "assistant",
+   "content": "Beans taste best within four weeks of the roast date printed on the bag. Keep them in an airtight container away from light and heat, and never in the fridge, because moisture ruins the flavour."
+  },
+  {
+   "role": "user",
+   "content": "One important thing for when we visit the café: I have a nut allergy, so please no hazelnut syrup or almond milk in anything I order."
+  },
+  {
+   "role": "assistant",
+   "content": "Noted, and thank you for telling me. Nut allergy: no hazelnut syrup and no almond milk. I recommend telling the barista each time as well, since drinks are prepared on shared equipment."
+  },
+  {
+   "role": "user",
+   "content": "Thanks. What is the difference between a pour-over and a French press? A colleague keeps asking me."
+  },
+  {
+   "role": "assistant",
+   "content": "A pour-over uses a paper filter and a medium-fine grind, about 15 g of coffee to 250 ml of water, and gives a clean, light cup in about three minutes. A French press uses a coarse grind, steeps for four minutes and has no paper filter, so the cup is heavier and more full-bodied."
+  },
+  {
+   "role": "user",
+   "content": "And cold brew? Is that just iced coffee?"
+  },
+  {
+   "role": "assistant",
+   "content": "Not quite. Cold brew is steeped in cold water in the fridge for 16 to 18 hours with a very coarse grind, then filtered and diluted one to one. It is smoother and less acidic than hot coffee poured over ice."
+  },
+  {
+   "role": "user",
+   "content": "OK. For the delivery: please send everything to the 12th floor, Ayala Tower, Makati. The reception desk signs for parcels."
+  },
+  {
+   "role": "assistant",
+   "content": "Got it. Delivery address: 12th floor, Ayala Tower, Makati, and the reception desk will sign. Standard delivery inside Metro Manila takes one to two business days."
+  },
+  {
+   "role": "user",
+   "content": "Is shipping free for us?"
+  },
+  {
+   "role": "assistant",
+   "content": "Standard shipping is free for orders over ₱1,500, and your order is above that, so yes. Express delivery would cost ₱250 and arrives the same day if you order before 11:00."
+  },
+  {
+   "role": "user",
+   "content": "Do you have a loyalty programme? Some of the designers buy drinks every morning."
+  },
+  {
+   "role": "assistant",
+   "content": "Yes, Nimbus Rewards is free in our mobile app. You earn one star for every ₱50 spent, 100 stars give a free drink of any size, and 250 stars give a free 250 g bag of beans. Stars expire twelve months after they are earned."
+  },
+  {
+   "role": "user",
+   "content": "Nice. Do the cafés have Wi-Fi? We sometimes hold short meetings outside the office."
+  },
+  {
+   "role": "assistant",
+   "content": "All our cafés have free Wi-Fi and power outlets. The Makati café in Legazpi Village is open from 6:30 to 21:00 every day, which is probably the closest one to you."
+  },
+  {
+   "role": "user",
+   "content": "Now something bigger: we want to set up a wholesale order for the studio, 8 kilos per month, starting in March."
+  },
+  {
+   "role": "assistant",
+   "content": "That works: wholesale needs a minimum of 5 kg per month, and 8 kg per month starting in March is well above it. I will note the request, and our wholesale team will send you the price list."
+  },
+  {
+   "role": "user",
+   "content": "Which beans would you suggest for an office with a simple drip machine?"
+  },
+  {
+   "role": "assistant",
+   "content": "For a drip machine I would suggest a medium roast that is forgiving, such as Benguet Highlands with its chocolate and caramel notes, or the Nimbus House Blend if most people add milk."
+  },
+  {
+   "role": "user",
+   "content": "How much coffee per litre should we use in that machine?"
+  },
+  {
+   "role": "assistant",
+   "content": "A good starting point is 60 g of coffee per litre of water, ground medium. Taste it and adjust: if it is bitter, grind a little coarser; if it is sour or thin, grind a little finer."
+  },
+  {
+   "role": "user",
+   "content": "Can we visit the roastery with the team some time?"
+  },
+  {
+   "role": "assistant",
+   "content": "We do not run public tours at the moment, but the Quezon City café on Maginhawa is next to the roastery and you can see the roaster through the window. It is closed on Mondays."
+  },
+  {
+   "role": "user",
+   "content": "By the way, about my own taste: I prefer a light roast, I really do not enjoy dark, smoky coffees."
+  },
+  {
+   "role": "assistant",
+   "content": "Good to know. A light roast suits you, so Mount Apo Sunrise with its citrus and honey notes would be my pick for you, and I would steer you away from Barako Bold."
+  },
+  {
+   "role": "user",
+   "content": "What is decaf actually? Is it completely free of caffeine?"
+  },
+  {
+   "role": "assistant",
+   "content": "Decaf is not completely caffeine-free, but it has very little. Our Decaf Cloud is made with the Swiss Water Process, which removes caffeine with water instead of chemical solvents."
+  },
+  {
+   "role": "user",
+   "content": "Do you sell gift cards? The studio owner has a birthday coming up."
+  },
+  {
+   "role": "assistant",
+   "content": "We do not have gift cards in the documents I can see, so I cannot promise that. Members of Nimbus Rewards do get a free pastry during their birthday month, though."
+  },
+  {
+   "role": "user",
+   "content": "Fine. What if someone in the team wants to return a bag they did not like?"
+  },
+  {
+   "role": "assistant",
+   "content": "Unopened beans can be returned within 30 days for a full refund. An opened bag can be returned within 14 days if you are not happy with the taste, and we refund 50% as store credit."
+  },
+  {
+   "role": "user",
+   "content": "And how long does such a refund take?"
+  },
+  {
+   "role": "assistant",
+   "content": "Refunds go back to the original payment method within five to seven business days after we receive the returned item."
+  },
+  {
+   "role": "user",
+   "content": "Bad news: the Hand Grinder Pro arrived this morning and the hopper is cracked. I can send a photo."
+  },
+  {
+   "role": "assistant",
+   "content": "I am sorry about that. Because it arrived damaged, we will ship a replacement for free and you do not need to send the cracked grinder back. Once I have the photo, the replacement will reach you by Friday."
+  },
+  {
+   "role": "user",
+   "content": "Thank you. Is the grinder covered by a warranty after that?"
+  },
+  {
+   "role": "assistant",
+   "content": "The documents I have describe the damaged-item replacement but do not state a warranty period, so I do not want to guess. I can ask the support team to confirm it by email."
+  },
+  {
+   "role": "user",
+   "content": "How many grind settings does it have, for when it arrives?"
+  },
+  {
+   "role": "assistant",
+   "content": "The Hand Grinder Pro has stainless-steel conical burrs and 40 grind settings. For your drip machine, start around the middle of the range."
+  },
+  {
+   "role": "user",
+   "content": "Last thing: please send the invoice for everything to accounts@lumenstudio.example, not to my own address."
+  },
+  {
+   "role": "assistant",
+   "content": "Understood. The invoice will go to accounts@lumenstudio.example. Is there anything else I can help you with today?"
+  },
+  {
+   "role": "user",
+   "content": "No, that is all for now. Thanks for your patience."
+  },
+  {
+   "role": "assistant",
+   "content": "You are welcome, Rina. Have a lovely day at the studio!"
+  }
+ ],
+ "probes": [
+  {
+   "question": "What is the customer's order number?",
+   "expect_keywords": [
+    "4471"
+   ],
+   "where": "early"
+  },
+  {
+   "question": "Which allergy does the customer have?",
+   "expect_keywords": [
+    "nut"
+   ],
+   "where": "early"
+  },
+  {
+   "question": "On which floor is the delivery address?",
+   "expect_keywords": [
+    "12"
+   ],
+   "where": "early"
+  },
+  {
+   "question": "How many kilos per month is the wholesale order?",
+   "expect_keywords": [
+    "8"
+   ],
+   "where": "middle"
+  },
+  {
+   "question": "By which day was the replacement grinder promised?",
+   "expect_keywords": [
+    "friday"
+   ],
+   "where": "late"
+  },
+  {
+   "question": "Which email address should the invoice be sent to?",
+   "expect_keywords": [
+    "accounts@lumenstudio.example"
+   ],
+   "where": "recent"
+  }
+ ]
+}

@@ -1,0 +1,17 @@
+[
+  {"question": "Am I allowed to hand my points to a friend?", "expected_source": "loyalty_program.md",
+   "reference_answer": "No. Stars cannot be transferred to another member.",
+   "why_hard": "Paraphrase: says 'points' and 'hand to a friend', the document says 'stars' and 'transferred'. No shared keywords."},
+  {"question": "Which of your coffees has no caffeine?", "expected_source": "products.md",
+   "reference_answer": "Decaf Cloud, a Swiss Water Process decaf from Sagada.",
+   "why_hard": "The document says 'decaf', never 'caffeine'. The common word 'coffee' pulls keyword search elsewhere."},
+  {"question": "Will my parcel reach Sydney?", "expected_source": "shipping.md",
+   "reference_answer": "Yes. International shipping is available to Australia.",
+   "why_hard": "Needs world knowledge (Sydney is in Australia). Neither 'parcel' nor 'Sydney' appears in any document."},
+  {"question": "What discount do staff get?", "expected_source": "careers.html",
+   "reference_answer": "A 40% staff discount on beans and equipment.",
+   "why_hard": "'Discount' and 'staff' are close in meaning to many chunks (subscriptions, the handbook), so vector search drifts; the exact phrase 'staff discount' is in one place."},
+  {"question": "Do new hires get medical cover?", "expected_source": "careers.html",
+   "reference_answer": "Yes. All employees get health insurance from day one.",
+   "why_hard": "Paraphrase of 'health insurance from day one', and the handbook is a strong distractor."}
+]

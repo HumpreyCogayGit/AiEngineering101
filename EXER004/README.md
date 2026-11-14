@@ -44,3 +44,17 @@ uv run python EXER004/check.py
 > **Note:** reasoning models (o-series, gpt-5 family) only accept the default `temperature`
 > and answer anything else with a 400 error. `temperature_experiment()` must survive that:
 > catch `BadRequestError` and store an empty list for a temperature the model rejects.
+
+## Stretch goals
+
+Optional. Neither goal is needed to complete the exercise, and `check.py` must still pass when you are done.
+
+1. **Extend.** Add `reasoning_tokens` to the result when the model reports them. *Done when:* the script prints the hidden reasoning tokens and the visible ones, or says the model did not report any.
+2. **Connect (EXER035).** Price one prompt for two models from a small price table. *Done when:* one call is made and its usage is priced once per row of the table, per call and per 100,000 calls.
+
+Reference code, for after you have tried (it builds on `solution/` and changes nothing in it):
+
+```bash
+uv run python EXER004/stretch/goal1_reasoning_tokens.py
+uv run python EXER004/stretch/goal2_price_table.py
+```

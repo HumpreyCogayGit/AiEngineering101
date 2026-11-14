@@ -6,6 +6,7 @@
 <title>Building a CLI App</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -112,6 +113,15 @@ exit code: 1</code></pre>
   <li><code>raise typer.Exit(1)</code> ends the program with exit code 1.</li>
   <li>Try it for real: <code>uv run python EXER010/starter/ask.py summarize README.md --words 30</code>.</li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Add a <code>--json</code> flag to <code>ask</code> that prints one machine-readable object instead of streaming text. <em>Done when:</em> the output pipes cleanly into <code>python -m json.tool</code>.</li>
+  <li><strong>Connect (EXER008).</strong> Add a <code>classify</code> command that reuses the EXER008 prompt. <em>Done when:</em> the command prints one label and nothing else, for an argument and for piped input.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER010/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -129,6 +139,11 @@ exit code: 1</code></pre>
   production AI features start as internal CLI tools.</p></div>
 <div class="qa"><p>What would you add next?</p>
   <p>A <code>--json</code> output flag for scripts, a config file for defaults, and caching of identical requests.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

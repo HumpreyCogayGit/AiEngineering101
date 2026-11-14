@@ -6,6 +6,7 @@
 <title>LangGraph Basics</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -70,6 +71,34 @@ graph.invoke({"ticket": "I was charged twice!"})</code></pre>
 <h3>Why graphs instead of plain Python?</h3>
 <p>For a ticket router, plain <code>if</code> statements would do. Graphs earn their keep with what's coming next:
   loops with tools (027), persistence and resuming (028), pausing for humans (029), and streaming every step. All of these come from the framework.</p>
+<h3 id="worked">Worked example: the state after every node</h3>
+<p>One ticket through the graph: <em>"I was charged twice for my order, please refund ASAP!"</em> The table shows the whole
+  state after each node. <code>ticket</code> never changes, so it is left out.</p>
+<table>
+  <tr><th>After</th><th><code>category</code></th><th><code>priority</code></th><th><code>response</code></th><th><code>steps</code></th></tr>
+  <tr><td>(input)</td><td>–</td><td>–</td><td>–</td><td><code>[]</code></td></tr>
+  <tr><td><code>classify</code></td><td>billing</td><td>–</td><td>–</td><td><code>[classify]</code></td></tr>
+  <tr><td><code>prioritize</code></td><td>billing</td><td>high</td><td>–</td><td><code>[classify, prioritize]</code></td></tr>
+  <tr><td><code>billing</code></td><td>billing</td><td>high</td><td>Our billing team will review your account within 24 hours.</td><td><code>[classify, prioritize, billing]</code></td></tr>
+  <tr><td><code>escalate</code></td><td>billing</td><td>high</td><td>Our billing team will review your account within 24 hours. A supervisor has been notified.</td><td><code>[classify, prioritize, billing, escalate]</code></td></tr>
+</table>
+<p>And these are the four updates the nodes actually returned (<code>stream_mode="updates"</code>):</p>
+<pre><code class="language-python">{"classify":   {"category": "billing", "steps": ["classify"]}}
+{"prioritize": {"priority": "high",    "steps": ["prioritize"]}}
+{"billing":    {"response": "Our billing team will review your account within 24 hours.", "steps": ["billing"]}}
+{"escalate":   {"response": "Our billing team will review … A supervisor has been notified.", "steps": ["escalate"]}}</code></pre>
+<p>Put the two side by side and the two merge rules are visible:</p>
+<ul>
+  <li><strong><code>steps</code> has a reducer.</strong> Every node returned a list with one name, and the state holds all four. Each update was <em>added</em> to what was there.</li>
+  <li><strong><code>response</code> has none.</strong> <code>escalate</code> returned a full sentence and the state holds only that sentence: the update <em>replaced</em> the value. To keep the billing text, the node had to read <code>state["response"]</code> and build the longer string itself.</li>
+  <li><strong>A node returns only what it changes.</strong> <code>prioritize</code> never mentions <code>category</code>, and <code>category</code> is still there afterwards. Keys a node leaves out are left alone.</li>
+</ul>
+<p>The two routers ran between the rows. After <code>prioritize</code>, <code>route_by_category</code> read
+  <code>"billing"</code> from the state and returned it as the name of the next node. After <code>billing</code>,
+  <code>route_by_priority</code> read <code>"high"</code> and returned <code>"escalate"</code>. Routers appear in neither list:
+  they read the state and write nothing. For a normal-priority ticket the same router returns <code>END</code> and the last
+  row never happens.</p>
+<p class="file-label">Captured from a real run. Your ids, wording and numbers will differ; the shape will not.</p>
 </section>
 
 <section id="project"><h2>The Project</h2>
@@ -122,6 +151,15 @@ Streaming the updates of each node:
   <li>Wire edges exactly as in the diagram, then paste your printed Mermaid into <a href="https://mermaid.live">mermaid.live</a> and compare.</li>
   <li>Extension: replace keyword <code>classify</code> with an LLM using structured output. The graph doesn't change at all.</li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Add a node that asks the user for missing information and loops back, at most twice. <em>Done when:</em> a ticket such as <code>Help!</code> passes through <code>ask_details</code>, and a ticket that never becomes clear still ends.</li>
+  <li><strong>Connect (EXER027).</strong> Draw the graph to a PNG and add it to this README. <em>Done when:</em> the picture shows the same nodes and edges as the diagram in the lecture.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER026/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -140,6 +178,11 @@ Streaming the updates of each node:
 <div class="qa"><p>"Workflow" or "agent"?</p>
   <p>A workflow has paths you designed; an agent's path is chosen by the model at runtime. Prefer workflows when you
   can: they're predictable, cheaper and easier to test. Use agent loops where flexibility is genuinely needed.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

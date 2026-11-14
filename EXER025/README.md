@@ -28,3 +28,19 @@ uv run python EXER025/check.py
 - [ ] Every answer has a Sources expander with file names (and PDF page numbers)
 - [ ] Two browser tabs do not see each other's documents
 - [ ] All 7 checks pass
+
+## Stretch goals
+
+Optional. Neither goal is needed to complete the exercise, and `check.py` must still pass when you are done.
+
+1. **Extend.** Let the user remove one uploaded file from the index. *Done when:* after Remove, the file is gone from the list and no answer cites it; the other files are not re-embedded.
+2. **Connect (EXER024).** Add thumbs up/down under each answer and write the feedback to a file. *Done when:* each rating adds one line to `stretch/output/feedback.jsonl` with the question, the sources and the answer.
+
+Reference code, for after you have tried (it builds on `solution/` and changes nothing in it):
+
+```bash
+uv run streamlit run EXER025/stretch/goal1_remove_file_app.py
+uv run streamlit run EXER025/stretch/goal2_feedback_app.py
+```
+
+Also in [stretch/](stretch/): `remove_file.py`.

@@ -6,6 +6,7 @@
 <title>Vector Store with Chroma</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -65,6 +66,33 @@ retriever = store.as_retriever(search_kwargs={"k": 4})            # a Runnable f
   <tr><td>Qdrant, Weaviate, Pinecone, Milvus</td><td>Dedicated vector databases at scale</td></tr>
 </table>
 <p>Because you code against LangChain's <code>VectorStore</code> interface, switching later is mostly configuration.</p>
+<h3 id="worked">Worked example: what is stored, and what a search returns</h3>
+<p><strong>Ingest.</strong> The knowledge base becomes 19 chunks. One stored record looks like this:</p>
+<pre><code class="language-text">id        58dafe0e4c007383e1b2ea89204cde0c            sha256("brewing_guide.md::# Brewing Guide …")[:32]
+embedding 1536 floats
+document  "# Brewing Guide\n\n## Pour-over\n\nUse **15 g of coffee to 250 ml of water** …"
+metadata  {"source": "brewing_guide.md", "chunk_id": 0}</code></pre>
+<pre><code class="language-text">first run : Added 19 new chunks; collection now has 19 chunks
+second run: Added  0 new chunks; collection now has 19 chunks</code></pre>
+<p>The second run computed the same 19 ids, asked the store which of them exist (<code>store.get(ids=ids)</code>), got all 19
+  back, and added nothing. It also embedded nothing: no API call was made for chunks that were already there.</p>
+<p><strong>Search.</strong> <em>"How much is express delivery?"</em> is embedded and compared with the stored vectors:</p>
+<pre><code class="language-text">distance  similarity  source              chunk  starts with
+0.600     0.400       shipping.md         18     ## Shipping fees — Standard shipping is **free for orders over ₱1,500** …
+0.634     0.366       shipping.md         17     # Shipping Information — ## Where we ship …
+0.749     0.251       loyalty_program.md  10     ## Tiers — … **Gold** … free express shipping …</code></pre>
+<p>Chroma returns the first column. The second is <code>1 − distance</code>, the cosine similarity of Lecture 019. The best
+  result has the <em>smallest</em> distance: sort the wrong way round and you would put the loyalty tiers first.</p>
+<p>The third result is a good example of similar-but-not-relevant: the Gold tier mentions "free express shipping", which is
+  close in meaning to the question and does not answer it. With <code>k=2</code> it would not have been returned. That is the
+  argument for a small <code>k</code>, and for the evaluation in Lecture 024.</p>
+<p><strong>The same search with a filter</strong>, <code>filter={"source": "loyalty_program.md"}</code>:</p>
+<pre><code class="language-text">0.749     loyalty_program.md  10     ## Tiers …
+0.818     loyalty_program.md   9     # Nimbus Rewards (Loyalty Program) …</code></pre>
+<p>The distances did not change: chunk 10 is still at 0.749. A filter does not make anything more similar, it only removes
+  candidates before the ranking. Used well ("only this customer's documents"), that is exactly what you want. Used on the wrong
+  file, as here, it guarantees a confident-looking list of the wrong passages, with nothing to warn you.</p>
+<p class="file-label">Captured from a real run. Your ids, wording and numbers will differ; the shape will not.</p>
 </section>
 
 <section id="project"><h2>The Project</h2>
@@ -112,6 +140,15 @@ Filtered to shipping.md only:
   <li>Run the script twice and compare the counts.</li>
   <li>From Lecture 022 on, <code>aicourse.rag.get_vector_store()</code> wraps all of this.</li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Delete and re-ingest one changed document without touching the others. <em>Done when:</em> after an edit to one file, only its stale chunks are deleted and only its new chunks are added.</li>
+  <li><strong>Connect (EXER019).</strong> Store the same chunks in a cosine collection and an L2 collection, and compare the results of the same queries. <em>Done when:</em> the script prints both rankings and says whether your embedding vectors have unit length.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER021/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -128,6 +165,11 @@ Filtered to shipping.md only:
   <p>Its chunks get new content-based ids. Delete the old chunks by <code>source</code> metadata, then add the new ones. Unchanged chunks keep their ids and aren't re-embedded.</p></div>
 <div class="qa"><p>When is a vector store overkill?</p>
   <p>A few hundred chunks fit in memory with NumPy, as in Lecture 019. Persistence, filters and scale are what justify a database.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

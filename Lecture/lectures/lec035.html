@@ -6,6 +6,7 @@
 <title>Observability and Cost</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -98,6 +99,15 @@ agent.invoke(inputs, {"callbacks": [tracker]})    # propagates to every nested m
   <li>The checks use fake models that report token usage, so you can verify the arithmetic exactly.</li>
   <li>Optional: enable LangSmith and compare its trace with your timeline.</li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Add latency percentiles (p50, p95) per tool to the report. <em>Done when:</em> the report shows a tool whose p50 is better and whose p95 is worse than another's.</li>
+  <li><strong>Connect (EXER015).</strong> Export the spans as JSON and draw the timeline in Streamlit. <em>Done when:</em> <code>stretch/output/trace.json</code> is written, and the app shows one bar per span from its start to its end.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER035/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -115,6 +125,11 @@ agent.invoke(inputs, {"callbacks": [tracker]})    # propagates to every nested m
   free consumer feature with 10 million queries a day, it's $200,000 a day. Cost per question needs a business context.</p></div>
 <div class="qa"><p>Which step would you optimise first?</p>
   <p>The one the trace shows is biggest. Usually it's input tokens from long tool results or history, not the model's output.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

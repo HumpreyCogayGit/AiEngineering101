@@ -30,3 +30,17 @@ uv run python EXER017/check.py
       shows one `ToolMessage` per tool call
 - [ ] Your loop and `create_agent` give equivalent answers
 - [ ] All 7 checks pass
+
+## Stretch goals
+
+Optional. Neither goal is needed to complete the exercise, and `check.py` must still pass when you are done.
+
+1. **Extend.** Bind the tools with `parallel_tool_calls=False` and compare the message trace with the default. *Done when:* the second trace has one more model call and one tool per turn.
+2. **Connect (EXER009).** Give `convert_currency` a Pydantic `args_schema` with the allowed currency codes. *Done when:* the tool's schema shows an `enum`, and an unknown currency is rejected before the function runs.
+
+Reference code, for after you have tried (it builds on `solution/` and changes nothing in it):
+
+```bash
+uv run python EXER017/stretch/goal1_no_parallel_calls.py
+uv run python EXER017/stretch/goal2_args_schema.py
+```

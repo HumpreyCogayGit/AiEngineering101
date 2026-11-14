@@ -46,3 +46,17 @@ uv run python EXER001/check.py --solution   # checks the reference solution
 - [ ] `.env` exists at the repository root and is ignored by git
 - [ ] `check_setup.py` prints your provider, endpoint and model names, with the key masked
 - [ ] All checks in `check.py` pass
+
+## Stretch goals
+
+Optional. Neither goal is needed to complete the exercise, and `check.py` must still pass when you are done.
+
+1. **Extend.** Make `check_setup.py` report whether the embedding model is reachable, not only configured. *Done when:* the script prints `Reachable : yes (N dimensions)`, or `NO` with the reason, and never crashes. It needs one HTTP request, so come back to it after EXER003 if that is new.
+2. **Connect.** Print where each setting came from: a real environment variable, `.env`, or the default in `aicourse/settings.py`. *Done when:* running with `AICOURSE_REQUEST_TIMEOUT=5` in front of the command changes that one line from `default` to `environment`.
+
+Reference code, for after you have tried (it builds on `solution/` and changes nothing in it):
+
+```bash
+uv run python EXER001/stretch/goal1_embedding_reachable.py
+uv run python EXER001/stretch/goal2_setting_sources.py
+```

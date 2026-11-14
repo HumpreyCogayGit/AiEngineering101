@@ -4,7 +4,7 @@ A hands-on course that takes you from your first LLM API call to production-styl
 agents: messages, streaming, structured output, tool calling, CLI tools, RAG,
 LangGraph agents, MCP, observability, guardrails and evaluation.
 
-37 lectures and 37 exercises in 8 modules, built on **LangChain**, **LangGraph**,
+40 lectures and 40 exercises in 9 modules, built on **LangChain**, **LangGraph**,
 **Chroma** and **Streamlit**. The models run on the inference provider you choose:
 **Azure Foundry** in the cloud or **Ollama** on your own machine.
 
@@ -37,9 +37,12 @@ AiEngineerCourse/
 │   ├── llm.py                 get_llm_client(), get_chat_model(), get_embeddings(), model_params()
 │   ├── rag.py                 knowledge-base loading, chunking, Chroma store, RAG chain
 │   ├── check.py               the runner used by every EXERxxx/check.py
-│   └── fakes.py               fake models so checks can run offline
+│   ├── fakes.py               fake models so checks can run offline
+│   └── stretch.py             lets stretch-goal code build on a reference solution
 ├── data/                      Nimbus Coffee Co. knowledge base + RAG eval questions
-├── EXER001/ … EXER037/        one folder per exercise
+├── EXER001/ … EXER040/        one folder per exercise
+├── check_all.py               checks every exercise, and the lecture quizzes
+├── check_quizzes.py           validates the self-check quizzes of the lecture site
 └── Lecture/                   the lecture site (plain HTML/CSS/JS, works offline)
 ```
 
@@ -47,11 +50,20 @@ Each exercise folder:
 
 ```
 EXER005/
-├── README.md     brief: goal, tasks, how to run, success criteria
+├── README.md     brief: goal, tasks, how to run, success criteria, stretch goals
 ├── starter/      your code: complete the TODOs
 ├── solution/     reference solution
+├── stretch/      reference code for the two optional stretch goals
 └── check.py      automated checks for the success criteria
 ```
+
+Every exercise ends with two optional **stretch goals**: one extends the exercise, one connects it to
+another exercise. They are never needed for "complete". Each has runnable reference code in `stretch/`
+that builds on `solution/` without changing it, so the checks are unaffected.
+
+Every lecture page has a **Check Yourself** quiz (four or five multiple-choice questions, with an
+explanation for every option). It runs offline in the browser; the score is shown on the course home
+page and never blocks "Mark as complete". The questions are data in `Lecture/assets/js/quizzes.js`.
 
 Always run commands from the repository root:
 
@@ -70,7 +82,7 @@ need neither a network connection nor a `.env`, so you can start before your pro
 Check the whole course at once:
 
 ```bash
-uv run python check_all.py              # every solution must pass, every starter must fail
+uv run python check_all.py              # every solution must pass, every starter must fail; quizzes are validated
 uv run python check_all.py --offline    # the same without live API calls (free; use this in CI)
 uv run python check_all.py 16 17        # only these exercises
 uv run python check_all.py --mine       # progress report for YOUR code in every starter/
@@ -130,6 +142,7 @@ Things that differ between providers, and how the course handles them:
 | 5 · Agents with LangGraph | 026–031 | Graph basics, ReAct agent, memory and persistence, human in the loop, agentic RAG, multi-agent |
 | 6 · MCP | 032–034 | MCP concepts and clients, building a server, multi-server agents |
 | 7 · Toward Production | 035–037 | Observability and cost, safety and guardrails, capstone |
+| 8 · Beyond the Capstone | 038–040 | Evaluating agents (tool-call trajectories), conversation memory strategies, deploying the capstone in a container |
 
 ## Requirements
 
@@ -142,6 +155,6 @@ Things that differ between providers, and how the course handles them:
 - Any chat model with tool calling, structured output and image input works. The course is tested on a
   classic model (`gpt-4.1-mini`), on a reasoning model (gpt-5 family) and on a local model (`gemma4:e4b`). Reasoning models only accept
   the default `temperature`; the course detects that and leaves the parameter out (Lecture 004)
-- Optional: Node.js (MCP Inspector), a LangSmith account (tracing in EXER035)
+- Optional: Node.js (MCP Inspector), a LangSmith account (tracing in EXER035), Docker (building the image in EXER040)
 
 See [Plan.MD](Plan.MD) for the course design.

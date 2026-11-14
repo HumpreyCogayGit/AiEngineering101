@@ -80,3 +80,19 @@ Create `EXER037/REVIEW.md` answering:
 - Swap `InMemorySaver` for SQLite (EXER028) so conversations survive restarts
 - Add agentic retrieval (EXER030) or hybrid search (EXER023) inside `search_knowledge_base`
 - Deploy the Streamlit app to Azure App Service or Azure Container Apps
+
+## Stretch goals
+
+Optional. Neither goal is needed to complete the exercise, and `check.py` must still pass when you are done.
+
+1. **Extend.** Add one new tool and two evaluation cases that need it. *Done when:* the two new cases pass only when the tool is used, and the original eight still pass.
+2. **Connect (EXER035).** Attach the EXER035 tracker to the evaluation run and report its cost. *Done when:* the script prints model calls, tokens and cost for the run and per question.
+
+Reference code, for after you have tried (it builds on `solution/` and changes nothing in it):
+
+```bash
+uv run python EXER037/stretch/goal1_new_tool.py
+uv run python EXER037/stretch/goal2_eval_cost.py
+```
+
+Also in [stretch/](stretch/): `extra_eval_cases.json`.

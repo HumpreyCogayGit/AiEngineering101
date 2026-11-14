@@ -30,3 +30,17 @@ uv run python EXER011/check.py
       another, with results in input order
 - [ ] A `ValueError` is not retried; a `RateLimitError` is
 - [ ] All 5 checks pass (they run offline and instantly)
+
+## Stretch goals
+
+Optional. Neither goal is needed to complete the exercise, and `check.py` must still pass when you are done.
+
+1. **Extend.** Add a circuit breaker: after N consecutive failures, stop calling for a while and fail at once. *Done when:* during a simulated outage the later requests send nothing, and the first request after the cool-down closes the circuit again.
+2. **Connect (EXER008).** Run the EXER008 evaluation concurrently, with a limit, and report the speed-up. *Done when:* both runs give the same accuracy and the script prints the speed-up factor.
+
+Reference code, for after you have tried (it builds on `solution/` and changes nothing in it):
+
+```bash
+uv run python EXER011/stretch/goal1_circuit_breaker.py
+uv run python EXER011/stretch/goal2_concurrent_eval.py
+```

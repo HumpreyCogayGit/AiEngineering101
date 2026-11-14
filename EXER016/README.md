@@ -33,3 +33,17 @@ uv run python EXER016/check.py
 - [ ] "Is it warmer in Manila or London?" triggers **two** tool calls in one turn
 - [ ] The otter question is answered without any tool
 - [ ] All 6 checks pass
+
+## Stretch goals
+
+Optional. Neither goal is needed to complete the exercise, and `check.py` must still pass when you are done.
+
+1. **Extend.** Add a `get_time(timezone)` tool, and ask a question that needs two different tools. *Done when:* the verbose trace shows `get_time` and another tool being called for one question.
+2. **Connect (EXER011).** Run the tool calls of one round concurrently. *Done when:* four slow tool calls take about as long as one, and the tool messages are still in request order.
+
+Reference code, for after you have tried (it builds on `solution/` and changes nothing in it):
+
+```bash
+uv run python EXER016/stretch/goal1_time_tool.py
+uv run python EXER016/stretch/goal2_concurrent_tools.py
+```

@@ -6,6 +6,7 @@
 <title>Reliability</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -115,6 +116,15 @@ Bonjour !
   <li>Only <code>retry_on</code> errors are caught, so anything else propagates immediately.</li>
   <li><code>complete_many</code>: three lines, as shown above.</li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Add a circuit breaker: after N consecutive failures, stop calling for a while and fail at once. <em>Done when:</em> during a simulated outage the later requests send nothing, and the first request after the cool-down closes the circuit again.</li>
+  <li><strong>Connect (EXER008).</strong> Run the EXER008 evaluation concurrently, with a limit, and report the speed-up. <em>Done when:</em> both runs give the same accuracy and the script prints the speed-up factor.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER011/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -132,6 +142,11 @@ Bonjour !
   region or deployment, a smaller model, or a cached answer.</p></div>
 <div class="qa"><p>Should you honour the <code>Retry-After</code> header?</p>
   <p>Yes, when present. The server is telling you exactly how long to wait. The SDK does this automatically.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

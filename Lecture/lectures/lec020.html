@@ -6,6 +6,7 @@
 <title>Loading and Chunking</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -67,6 +68,35 @@
 <pre><code class="language-python">separators=["\n## ", "\n# ", "\n\n", "\n", ". ", " ", ""]
 #            sections, titles, paragraphs, lines, sentences, words, characters</code></pre>
 <p>Splitting on Markdown headings first keeps "## Damaged or wrong items" and its paragraph together.</p>
+<h3 id="worked">Worked example: one document, three chunk sizes</h3>
+<p><code>refund_policy.md</code> is 1,153 characters long, with four <code>##</code> sections. Here is what the splitter
+  makes of it at the three sizes the project compares.</p>
+<pre><code class="language-text">chunk_size=200,  overlap=0    -> 10 chunks: 99, 16, 165, 73, 158, 79, 25, 184, 171, 166 characters
+chunk_size=600,  overlap=100  ->  2 chunks: 598, 552
+chunk_size=1500, overlap=200  ->  1 chunk : 1152</code></pre>
+<p><strong>At 600</strong> the two chunks are:</p>
+<pre><code class="language-text">chunk 0 (598)  # Refund and Return Policy … ## Online orders … 30 days … 14 days … 5–7 business days
+chunk 1 (552)  ## Damaged or wrong items … 7 days with a photo … ## In-store purchases … ## Subscriptions …</code></pre>
+<p>The cut fell exactly before <code>## Damaged or wrong items</code>. That is the recursive splitter at work: the document is too
+  big for one chunk, so it tries the first separator, <code>"\n## "</code>, and packs as many whole sections as fit. No sentence
+  was cut, so the 100-character overlap had nothing to repair and the chunks share no text. Overlap only appears when the splitter
+  has to cut <em>inside</em> a paragraph.</p>
+<p><strong>At 200</strong> the first six chunks are:</p>
+<pre><code class="language-text">'# Refund and Return Policy … wants every customer to be happy with their purchase.'
+'## Online orders'                                                              ← 16 characters: a heading alone
+'You can return unopened coffee beans and equipment within **30 days** of delivery\nfor a fu…'
+'not satisfied with the taste; we refund 50% of the price as store credit.'     ← who? of what?
+'To start a return, email returns@nimbuscoffee.example with your order number.\nWe send a pr…'
+'original payment method within **5–7 business days** after we receive the item.'</code></pre>
+<p>Now ask: <em>"How long does a refund take to reach my card?"</em> At size 200 the sentence with the answer is the last chunk above. It
+  contains "5–7 business days" and has lost the words "Refunds are issued to the", which went to the chunk before it. The model
+  would receive a fragment that never says what takes 5–7 days. At size 600 the same sentence arrives with its whole section.</p>
+<p><strong>At 1,500</strong> the whole policy is one chunk, and one vector has to stand for returns, damaged items, café purchases
+  and subscriptions together. A question about cancelling a subscription now competes with every other topic in that vector, and
+  the prompt receives all four sections to answer about one.</p>
+<p>So for this document, 600 is not a magic number. It is simply the size at which a chunk is about as long as one or two of its
+  sections. Look at your own documents' sections before you pick a size.</p>
+<p class="file-label">Captured from a real run. Your ids, wording and numbers will differ; the shape will not.</p>
 </section>
 
 <section id="project"><h2>The Project</h2>
@@ -114,6 +144,15 @@ chunk_size=1500, overlap=200: {'count': 9, 'min': 343, 'max': 1152, 'mean': 785.
   <li><code>splitter.split_documents(docs)</code> copies each document's metadata onto its chunks. Then add <code>chunk_id</code>.</li>
   <li>Print a few chunks at size 200 and read them. Would you understand them without context?</li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Add a Markdown-header-aware splitter and compare its chunks with the recursive splitter's. <em>Done when:</em> every Markdown chunk holds exactly one section, and the statistics of both splitters are printed.</li>
+  <li><strong>Connect (EXER022).</strong> Record the heading path of each chunk (<code>Brewing Guide &gt; French press</code>) in its metadata. <em>Done when:</em> every Markdown chunk has a <code>heading_path</code>, and it appears next to the source in a formatted prompt.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER020/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -131,6 +170,11 @@ chunk_size=1500, overlap=200: {'count': 9, 'min': 343, 'max': 1152, 'mean': 785.
   measure retrieval quality (Lecture 024) for a few sizes.</p></div>
 <div class="qa"><p>What about documents that change?</p>
   <p>Re-ingest only what changed. Content-based ids (Lecture 021) make re-ingestion safe; deleting chunks of removed documents needs the source in metadata.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

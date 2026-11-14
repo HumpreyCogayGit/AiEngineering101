@@ -6,6 +6,7 @@
 <title>Streamlit Chat App</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -91,6 +92,15 @@ if prompt := st.chat_input("Ask me anything"):   # None unless the user just sen
   <li>Run the app, then edit <code>app.py</code> and save. Streamlit offers to rerun with your change.</li>
   <li>Wrap the model call in <code>try/except</code> and show <code>st.error</code>. A raw traceback in the UI is a poor experience.</li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Add a Regenerate button that replaces the last answer. <em>Done when:</em> clicking it removes the last assistant message and a new answer to the same question appears.</li>
+  <li><strong>Connect (EXER004).</strong> Show token usage per message in the sidebar. <em>Done when:</em> the sidebar lists input and output tokens per turn, and the input grows from turn to turn.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER015/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -108,6 +118,11 @@ if prompt := st.chat_input("Ask me anything"):   # None unless the user just sen
   (FastAPI backend plus a JavaScript frontend) makes sense. The logic module you wrote stays the same.</p></div>
 <div class="qa"><p>Is it safe to show the system prompt in the sidebar?</p>
   <p>For a learning tool, yes. In a product, letting users edit the system prompt lets them bypass your rules.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

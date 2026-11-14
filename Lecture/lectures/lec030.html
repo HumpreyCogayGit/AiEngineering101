@@ -6,6 +6,7 @@
 <title>Agentic RAG</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -60,6 +61,43 @@
 <h3>Cost</h3>
 <p>Grading is one LLM call per chunk. Use a small, fast model for grading and routing, batch the grading calls, or
   grade only when retrieval scores are borderline. Measure whether the quality gain justifies the latency.</p>
+<h3 id="worked">Worked example: the state after every node, for two questions</h3>
+<p>Chunks are written as <code>file#chunk_id</code>. <code>question</code> never changes, so it is left out.</p>
+<p><strong>"Can I bring my dog to the café?"</strong></p>
+<table>
+  <tr><th>After</th><th><code>query</code></th><th><code>docs</code></th><th><code>relevant</code></th><th><code>rewrites</code></th></tr>
+  <tr><td><code>route</code></td><td>Can I bring my dog to the café?</td><td>–</td><td>–</td><td>0</td></tr>
+  <tr><td><code>retrieve</code></td><td>(same)</td><td>company_faq#5, employee_handbook#7, refund_policy#16, company_faq#6</td><td>–</td><td>0</td></tr>
+  <tr><td><code>grade</code></td><td>(same)</td><td>(same 4)</td><td>company_faq#5</td><td>0</td></tr>
+  <tr><td><code>generate</code></td><td>(same)</td><td>(same 4)</td><td>company_faq#5</td><td>0</td></tr>
+</table>
+<p>The grader was called four times and accepted one chunk, the one with "Pets are welcome at the outdoor tables of the BGC
+  café". <code>generate</code> then received <em>one</em> passage, not four. The answer:
+  "Dogs are welcome at the outdoor tables of the BGC café. The policy for other locations isn't…". The plain chain of Lecture
+  022 would have put the handbook and the refund policy in the prompt as well.</p>
+<p><strong>"What is the GDP of France?"</strong></p>
+<table>
+  <tr><th>After</th><th><code>query</code></th><th><code>docs</code></th><th><code>relevant</code></th><th><code>rewrites</code></th></tr>
+  <tr><td><code>route</code></td><td>What is the GDP of France?</td><td>–</td><td>–</td><td>0</td></tr>
+  <tr><td><code>retrieve</code></td><td>(same)</td><td>brewing_guide#1, company_faq#6, loyalty_program#10, products#14</td><td>–</td><td>0</td></tr>
+  <tr><td><code>grade</code></td><td>(same)</td><td>(same 4)</td><td>none</td><td>0</td></tr>
+  <tr><td><code>rewrite</code></td><td>France gross domestic product GDP statistics</td><td>(old 4)</td><td>none</td><td>1</td></tr>
+  <tr><td><code>retrieve</code></td><td>(same)</td><td>products#11, brewing_guide#1, brewing_guide#0, loyalty_program#10</td><td>none</td><td>1</td></tr>
+  <tr><td><code>grade</code></td><td>(same)</td><td>(same 4)</td><td>none</td><td>1</td></tr>
+  <tr><td><code>rewrite</code></td><td>France GDP</td><td>(old 4)</td><td>none</td><td>2</td></tr>
+  <tr><td><code>retrieve</code></td><td>(same)</td><td>brewing_guide#1, loyalty_program#10, company_faq#6, products#11</td><td>none</td><td>2</td></tr>
+  <tr><td><code>grade</code></td><td>(same)</td><td>(same 4)</td><td>none</td><td>2</td></tr>
+  <tr><td><code>fallback</code></td><td>(same)</td><td>(same 4)</td><td>none</td><td>2</td></tr>
+</table>
+<p>Answer: "I don't know based on the available documents." Read this table for three things.</p>
+<ul>
+  <li><strong>Retrieval always returns something.</strong> Three searches, twelve chunks, all about coffee. Without the grader, one of those lists would have gone into a prompt.</li>
+  <li><strong>The rewrites were reasonable and could not help.</strong> No query finds a document that does not exist. The loop has no way to know that, which is why <code>after_grade</code> counts: at <code>rewrites == 2</code> it returns <code>"fallback"</code> whatever the model thinks.</li>
+  <li><strong>Honesty was expensive.</strong> This question cost 1 routing call, 12 grading calls and 2 rewrites: 15 model calls to say "I don't know". The dog question cost 6. A cheaper model for grading, or grading only when the distances are poor, is where you would start optimising.</li>
+</ul>
+<p>In both tables <code>question</code> stayed what the user typed while <code>query</code> changed. Had the fallback been a
+  generated answer, it would have been about "What is the GDP of France?", not about "France GDP".</p>
+<p class="file-label">Captured from a real run. Your ids, wording and numbers will differ; the shape will not.</p>
 </section>
 
 <section id="project"><h2>The Project</h2>
@@ -103,6 +141,15 @@ A: I don't know based on the available documents.</code></pre>
   <li>Wire the edges from the diagram. The <code>rewrite → retrieve</code> edge creates the loop.</li>
   <li>The offline checks script the fake model's judgments, so you can verify every path deterministically.</li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Add a hallucination check on the generated answer before it is returned. <em>Done when:</em> an answer with an invented fact is replaced by the fallback, and the path ends in <code>verify -&gt; fallback</code>.</li>
+  <li><strong>Connect (EXER024).</strong> Score the graph on the EXER024 evaluation set against the plain chain. <em>Done when:</em> one table shows the five metrics and the model calls per question for both.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER030/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -119,6 +166,11 @@ A: I don't know based on the available documents.</code></pre>
   <p>Fix retrieval first (Lecture 023). It's cheaper per question. Agentic loops help with the remaining hard cases and with deciding when <em>not</em> to retrieve.</p></div>
 <div class="qa"><p>Could the agent choose between several knowledge sources?</p>
   <p>Yes: the router can pick a source (policies, product catalog, web search), or retrieval becomes a tool the agent calls with its own queries.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

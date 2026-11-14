@@ -33,3 +33,19 @@ uv run python EXER023/check.py
 - [ ] Hybrid retrieval scores at least as well as plain vector search, and at least 80%
 - [ ] You can explain the cost (latency, tokens) of multi-query and reranking
 - [ ] All 7 checks pass
+
+## Stretch goals
+
+Optional. Neither goal is needed to complete the exercise, and `check.py` must still pass when you are done.
+
+1. **Extend.** Add MRR as a second metric beside hit rate. *Done when:* the table has an MRR column, and two strategies with the same hit rate @4 differ in it.
+2. **Connect (EXER024).** Add five harder questions that separate the strategies at @4. Keep them in your own file: other checks rely on `data/eval_questions.json`. *Done when:* at least two strategies score differently at @4 on your questions, and you can say why each question is hard.
+
+Reference code, for after you have tried (it builds on `solution/` and changes nothing in it):
+
+```bash
+uv run python EXER023/stretch/goal1_mrr.py
+uv run python EXER023/stretch/goal2_harder_questions.py
+```
+
+Also in [stretch/](stretch/): `hard_questions.json`.

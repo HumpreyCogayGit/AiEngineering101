@@ -6,6 +6,7 @@
 <title>Human in the Loop</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -66,6 +67,35 @@ graph.invoke(Command(resume={"action": "approve"}), config)   # same thread_id</
 <h3>Only risky tools need a gate</h3>
 <p>Reading the inbox happens freely; <code>send_email</code> and <code>refund_order</code> wait for a person. Gate by
   consequence: if a mistake would be expensive, embarrassing or irreversible, ask first.</p>
+<h3 id="worked">Worked example: the saved state at every pause</h3>
+<p>One run of the inbox agent, with one rejection and one approval. Each row is what
+  <code>graph.get_state(config)</code> shows when control is back in your app (H = human, A = AI, T = tool message).</p>
+<table>
+  <tr><th>Moment</th><th><code>next</code></th><th><code>messages</code></th><th>Waiting for a decision on</th><th>Emails sent</th></tr>
+  <tr><td>After <code>start()</code></td><td><code>review</code></td><td>H A T A</td><td>two <code>send_email</code> calls (to Carla and to Dan)</td><td>0</td></tr>
+  <tr><td>After <code>resume(reject, "tone too formal, try again shorter")</code></td><td><code>review</code></td><td>H A T A T T A</td><td>two new <code>send_email</code> calls</td><td>0</td></tr>
+  <tr><td>After <code>resume(approve)</code></td><td>(nothing)</td><td>H A T A T T A T T A</td><td>–</td><td>2</td></tr>
+</table>
+<p><strong>Row 1.</strong> The first four messages are: your request, the model asking for <code>read_inbox</code>, the inbox as
+  a tool message, and the model asking for two emails. <code>read_inbox</code> ran without a question because it is not in
+  <code>RISKY</code>: <code>review</code> returned <code>Command(goto="tools")</code> straight away. The second time,
+  <code>review</code> reached <code>interrupt()</code>. The state was saved with <code>next = review</code>, and
+  <code>start()</code> returned with the two proposed emails in <code>__interrupt__</code>. Nothing has been sent, and the
+  process could exit here.</p>
+<p><strong>Row 2.</strong> The reject decision made the <code>review</code> node run again from its first line. This time
+  <code>interrupt()</code> returned the decision instead of pausing. The node added two tool messages, one per rejected call:</p>
+<pre><code class="language-text">ToolMessage  Not executed: a human rejected this action (tone too formal, try again shorter).   ×2</code></pre>
+<p>and routed back to <code>agent</code>. The model read the reason and proposed two new, shorter emails. Carla's draft changed
+  from "I'm sorry your Hand Grinder Pro arrived…" to "Sorry about the cracked handle! We'll r…". That put the graph in
+  <code>review</code> again, at a second interrupt. Three messages were added (T T A), and still nothing was sent.</p>
+<p><strong>Row 3.</strong> Approve: <code>review</code> re-ran, <code>interrupt()</code> returned <code>{"action": "approve"}</code>,
+  and the node routed to <code>tools</code>. Two emails were sent (T T), the model wrote its summary (A), and <code>next</code> is
+  empty: the run is over.</p>
+<p>Two things in this table are easy to miss. The reason you typed is not a log entry: it is a message the model reads, which
+  makes a rejection a way to steer the agent, not only to stop it. And every tool call in the list has an answer: the two
+  rejected calls got "Not executed" messages. Leave those out and the next model call fails, because the history would contain
+  calls nobody answered.</p>
+<p class="file-label">Captured from a real run. Your ids, wording and numbers will differ; the shape will not.</p>
 </section>
 
 <section id="project"><h2>The Project</h2>
@@ -113,6 +143,15 @@ Refunds: []</code></pre>
   <li>For edit, build new tool calls with <code>{**call, "args": new_args}</code> and keep <code>id=last.id</code> on the new <code>AIMessage</code>.</li>
   <li>Run it and reject the refund with a reason. Read how the agent responds.</li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Require approval only for refunds above a threshold. <em>Done when:</em> a ₱200 refund runs without a pause, and a ₱3,450 refund waits for a decision.</li>
+  <li><strong>Connect (EXER028).</strong> Persist the pending approval so that the script can be closed and resumed. <em>Done when:</em> <code>start</code> exits while waiting, and <code>approve</code> in a new process finishes the same run.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER029/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -130,6 +169,11 @@ Refunds: []</code></pre>
   As trust grows from logged approvals, you can auto-approve low-risk cases.</p></div>
 <div class="qa"><p>What should the approval screen show?</p>
   <p>The exact action, its arguments in readable form, and why the agent wants to do it. "Approve tool call?" with raw JSON invites rubber-stamping.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

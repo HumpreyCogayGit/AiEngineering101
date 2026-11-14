@@ -47,7 +47,9 @@ class Span:
         return (self.end or time.perf_counter()) - self.start
 
 
-@dataclass
+# eq=False keeps the handler hashable: LangChain puts handlers in a set when it merges the
+# callbacks of nested runs (a graph inside a graph), and a plain dataclass is not hashable.
+@dataclass(eq=False)
 class UsageTracker(BaseCallbackHandler):
     spans: dict[UUID, Span] = field(default_factory=dict)
 

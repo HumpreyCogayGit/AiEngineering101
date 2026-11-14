@@ -6,6 +6,7 @@
 <title>Prompt Engineering Basics</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -100,6 +101,15 @@ v3 few-shot      accuracy = highest, usually ≥ 80%</code></pre>
   <li>Write 4 examples of your own (one per label) for v3.</li>
   <li>If accuracy is low, print the misclassified tickets and refine the definitions.</li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Add a fourth prompt version that gives a one-sentence reason before its label, and measure it. <em>Done when:</em> the script prints the accuracy of v4 next to v3, with the reason for every miss.</li>
+  <li><strong>Connect (EXER024).</strong> Print a confusion matrix (expected label against predicted label), not only accuracy. <em>Done when:</em> you can read from the table which label is mistaken for which.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER008/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -118,6 +128,11 @@ v3 few-shot      accuracy = highest, usually ≥ 80%</code></pre>
 <div class="qa"><p>When should you stop prompting and try something else?</p>
   <p>When accuracy plateaus. Next steps are structured outputs, retrieval of better context (RAG), a bigger model,
   or splitting the task into steps.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

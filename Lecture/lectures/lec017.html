@@ -6,6 +6,7 @@
 <title>Tools in LangChain</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -84,6 +85,38 @@ tool_msg = get_weather.invoke(ai_msg.tool_calls[0])   # invoking with a tool cal
   <code>ToolMessage</code>. Prebuilt agents have their own policies: <code>create_agent</code> re-raises tool exceptions
   by default, while LangGraph's <code>ToolNode(handle_tool_errors=True)</code> returns them to the model (Lecture 027).
   Know which one you're using.</p>
+<h3 id="worked">Worked example: the same round trip in LangChain objects</h3>
+<p>The question from the project, as the list of messages your loop builds. Compare it with the dicts of Lecture 016:
+  the content is the same, the bookkeeping is done for you.</p>
+<pre><code class="language-python">SystemMessage("You are a helpful assistant. Use tools when they help.")
+HumanMessage("How much is 2500 PHP in EUR, and what's the weather in Tokyo?")
+
+AIMessage(content="",                                   # model call 1: 149 tokens in, 59 out
+    tool_calls=[
+      {"name": "convert_currency", "id": "call_FPTc…", "type": "tool_call",
+       "args": {"amount": 2500, "from_currency": "PHP", "to_currency": "EUR"}},   # a dict, already parsed
+      {"name": "get_weather", "id": "call_2vEz…", "type": "tool_call",
+       "args": {"city": "Tokyo"}}])
+
+ToolMessage("2500.0 PHP = 40.51 EUR", tool_call_id="call_FPTc…", name="convert_currency")
+ToolMessage("Tokyo: 18°C",            tool_call_id="call_2vEz…", name="get_weather")
+
+AIMessage("- **2,500 PHP ≈ €40.51**\n- **Tokyo weather:** 18°C",    # model call 2: 244 in, 25 out
+    tool_calls=[])</code></pre>
+<table>
+  <tr><th>Lecture 016, by hand</th><th>Here</th></tr>
+  <tr><td><code>"arguments": "{\"city\": \"Tokyo\"}"</code>, a string you parse</td><td><code>"args": {"city": "Tokyo"}</code>, a dict</td></tr>
+  <tr><td>You build <code>{"role": "tool", "tool_call_id": …}</code></td><td><code>get_weather.invoke(call)</code> returns the <code>ToolMessage</code>, id filled in</td></tr>
+  <tr><td><code>message.model_dump(exclude_none=True)</code> to keep the request</td><td><code>messages.append(ai_msg)</code></td></tr>
+  <tr><td><code>response.usage.prompt_tokens</code></td><td><code>ai_msg.usage_metadata["input_tokens"]</code>, the same name on every provider</td></tr>
+</table>
+<p>Two details are worth a second look. The first <code>AIMessage</code> has <strong>empty text and two tool calls</strong>: a reply
+  that asks for tools usually says nothing else, which is why your loop tests <code>ai_msg.tool_calls</code> and not the text. And the
+  last one has <code>tool_calls=[]</code>, an empty list rather than <code>None</code>, so <code>if not ai_msg.tool_calls</code> is the test
+  that ends the loop on both.</p>
+<p>The model converted the amount itself in the final answer ("€40.51") but did not compute it: the number is copied from the
+  <code>ToolMessage</code>. That is the division of labour you want. Two model calls, two tool calls, 393 input tokens in total.</p>
+<p class="file-label">Captured from a real run. Your ids, wording and numbers will differ; the shape will not.</p>
 </section>
 
 <section id="project"><h2>The Project</h2>
@@ -136,6 +169,15 @@ Message trace:
     Make the inner loop handle every entry of <code>ai_msg.tool_calls</code>.</li>
   <li><code>build_agent</code> is a single line.</li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Bind the tools with <code>parallel_tool_calls=False</code> and compare the message trace with the default. <em>Done when:</em> the second trace has one more model call and one tool per turn.</li>
+  <li><strong>Connect (EXER009).</strong> Give <code>convert_currency</code> a Pydantic <code>args_schema</code> with the allowed currency codes. <em>Done when:</em> the tool's schema shows an <code>enum</code>, and an unknown currency is rejected before the function runs.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER017/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -157,6 +199,11 @@ Message trace:
 <div class="qa"><p>How many tools can one agent handle?</p>
   <p>Tool selection gets less accurate as the list grows, and every schema costs tokens on every call. Keep toolsets
   focused, or split them across agents (Lecture 031).</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

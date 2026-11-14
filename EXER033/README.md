@@ -40,4 +40,16 @@ npx @modelcontextprotocol/inspector uv run python EXER033/starter/notes_server.p
 - [ ] `summarize_notes` builds a prompt that contains the notes
 - [ ] All 6 checks pass
 
-**Bonus:** add the server to an MCP host you use (e.g. Claude Desktop or VS Code) and let it take notes for you.
+## Stretch goals
+
+Optional. Neither goal is needed to complete the exercise, and `check.py` must still pass when you are done.
+
+1. **Extend.** Add an `update_note` tool with partial updates: only the fields that are passed change. *Done when:* updating the content leaves title and tags alone, and a call with no fields returns an error result.
+2. **Connect (EXER032).** Add a resource that lists all notes, and read it from a client. *Done when:* `notes://index` returns id, title and tags of every note, and `notes://<id>` still returns one note.
+
+Reference code, for after you have tried (it builds on `solution/` and changes nothing in it):
+
+```bash
+uv run python EXER033/stretch/goal1_update_note_server.py --demo
+uv run python EXER033/stretch/goal2_notes_index_server.py --demo
+```

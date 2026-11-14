@@ -33,3 +33,17 @@ The database is stored in `.chroma/` at the repository root (git-ignored).
 - [ ] All 6 checks pass
 
 From EXER022 on, `aicourse.rag.get_vector_store()` does all of this for you.
+
+## Stretch goals
+
+Optional. Neither goal is needed to complete the exercise, and `check.py` must still pass when you are done.
+
+1. **Extend.** Delete and re-ingest one changed document without touching the others. *Done when:* after an edit to one file, only its stale chunks are deleted and only its new chunks are added.
+2. **Connect (EXER019).** Store the same chunks in a cosine collection and an L2 collection, and compare the results of the same queries. *Done when:* the script prints both rankings and says whether your embedding vectors have unit length.
+
+Reference code, for after you have tried (it builds on `solution/` and changes nothing in it):
+
+```bash
+uv run python EXER021/stretch/goal1_reingest_one.py
+uv run python EXER021/stretch/goal2_cosine_vs_l2.py
+```

@@ -6,6 +6,7 @@
 <title>Python Primer for AI Engineers</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -118,6 +119,15 @@ Validation caught a bad role: Input should be 'system', 'user' or 'assistant'</c
   <li>Experiment in a REPL: <code>uv run python</code>, then <code>import json; d = json.load(open("EXER002/sample_response.json"))</code>, and explore with <code>d.keys()</code>.</li>
   <li>For <code>Message</code>, add the two annotated fields. Pydantic does the rest.</li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Support the <code>tool</code> role, whose message must carry a <code>tool_call_id</code>. <em>Done when:</em> a tool message with an id parses, and one without it raises a <code>ValidationError</code> that names <code>tool_call_id</code>.</li>
+  <li><strong>Connect (EXER003).</strong> Describe the whole response in <code>sample_response.json</code> with nested Pydantic models, and validate the file with them. <em>Done when:</em> <code>response.choices[0].message.content</code> and <code>response.usage.total_tokens</code> work as attributes, and a malformed response lists every missing field.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER002/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -136,6 +146,11 @@ Validation caught a bad role: Input should be 'system', 'user' or 'assistant'</c
 <div class="qa"><p>Why does AI engineering lean so heavily on Pydantic?</p>
   <p>Models produce text, and programs need typed data. Pydantic is the bridge: describe the shape once, and get
   validation, error messages and a JSON Schema the model can be constrained to.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

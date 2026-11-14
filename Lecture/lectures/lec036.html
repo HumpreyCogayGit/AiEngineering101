@@ -6,6 +6,7 @@
 <title>Safety and Guardrails</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -183,6 +184,15 @@ PII redaction: Call [PHONE] or mail [EMAIL], card [CARD]</code></pre>
   <li>Assemble <code>safe_summarize</code> from the pieces, exactly in the order of the docstring.</li>
   <li>Write a new attack of your own and add it to <code>attacks.json</code>. Does it get through?</li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Write two new stealthy attacks and say which layer stops each. <em>Done when:</em> neither email is caught by the input heuristics, the guarded summarizer exposes nothing, and you can name the layer that did it.</li>
+  <li><strong>Connect (EXER018).</strong> Add an output check that catches the secret spelled backwards or spaced out. <em>Done when:</em> spaced, reversed and letter-swapped spellings are caught, and the benign emails are not.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER036/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -201,6 +211,11 @@ PII redaction: Call [PHONE] or mail [EMAIL], card [CARD]</code></pre>
 <div class="qa"><p>Should you use a second LLM to detect injections?</p>
   <p>It catches more than regex, and it costs a call. It can also be attacked. It's a useful layer (Azure Prompt Shields
   is one), never the only one.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

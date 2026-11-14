@@ -6,6 +6,7 @@
 <title>The SDK and Model Parameters</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -171,6 +172,15 @@ temperature=1.0: ['Ember &amp; Oak', 'Ember &amp; Oak', 'Ember &amp; Oak']</code
   <li><code>temperature_experiment()</code>: wrap each temperature in <code>try / except BadRequestError</code>. Store an empty list when the message mentions <code>temperature</code>; re-raise anything else.</li>
   <li>Run the experiment several times. Notice how temperature affects variety, not quality.</li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Add <code>reasoning_tokens</code> to the result when the model reports them. <em>Done when:</em> the script prints the hidden reasoning tokens and the visible ones, or says the model did not report any.</li>
+  <li><strong>Connect (EXER035).</strong> Price one prompt for two models from a small price table. <em>Done when:</em> one call is made and its usage is priced once per row of the table, per call and per 100,000 calls.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER004/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -193,6 +203,11 @@ temperature=1.0: ['Ember &amp; Oak', 'Ember &amp; Oak', 'Ember &amp; Oak']</code
 <div class="qa"><p>How would you cut the cost of a chatbot by half?</p>
   <p>Shorter system prompts, trimming history (Lecture 006), a smaller model for easy turns, capping output
   length, and caching. Measure tokens per request first (Lecture 035).</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

@@ -6,6 +6,7 @@
 <title>Memory and Persistence</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -63,6 +64,33 @@ runtime.store.put(("memories", user_id), str(uuid4()), {"fact": "Allergic to dai
 <p>The checkpoint keeps everything; the model sees only the recent window plus remembered facts. With
   <code>token_counter=len</code>, the budget counts messages. Pass a real token counter for token budgets.
   <code>start_on="human"</code> avoids starting the window on an orphaned AI or tool message.</p>
+<h3 id="worked">Worked example: what each kind of memory holds after every turn</h3>
+<p>Four turns of the demo. The middle columns count the messages saved by the checkpointer per thread; the last column is the
+  store, per user.</p>
+<table>
+  <tr><th>Turn (thread, user)</th><th>Reply</th><th>thread-a</th><th>thread-b</th><th>thread-c</th><th>Store</th></tr>
+  <tr><td>"Hi! I'm Bea and I'm allergic to dairy."<br>(thread-a, user-1)</td><td>"Hi Bea! … I'll keep your dairy allergy in mind …"</td><td>2</td><td>0</td><td>0</td>
+      <td>user-1: "The user's name is Bea.", "Bea is allergic to dairy."</td></tr>
+  <tr><td>"What's my name?"<br>(thread-a, user-1)</td><td>"Your name is Bea."</td><td>4</td><td>0</td><td>0</td><td>unchanged</td></tr>
+  <tr><td>"Suggest a drink for me."<br>(thread-b, user-1)</td><td>"Bea, try an iced oat-milk vanilla latte … dairy-free."</td><td>4</td><td>2</td><td>0</td><td>unchanged</td></tr>
+  <tr><td>"What's my name?"<br>(thread-c, user-2)</td><td>"I don't know your name yet …"</td><td>4</td><td>2</td><td>2</td><td>user-2: nothing</td></tr>
+</table>
+<p>Go through it row by row.</p>
+<p><strong>Row 1.</strong> Two things were saved in two places. The checkpointer stored the turn (2 messages) under
+  <code>thread-a</code>. The <code>save_memories</code> node asked the model for durable facts in the user's message and put two
+  into the store under <code>("memories", "user-1")</code>. "Hi!" was not stored: it is not a fact.</p>
+<p><strong>Row 2.</strong> You sent one message; the model received three. The checkpointer loaded the two saved messages of
+  <code>thread-a</code> and appended yours. The name could have come from either memory here. The store did not change, because
+  "What's my name?" contains no new fact, and an already known fact is skipped.</p>
+<p><strong>Row 3 is the one that proves long-term memory.</strong> <code>thread-b</code> was empty: the model received a single
+  message, "Suggest a drink for me." It still answered "Bea" and "dairy-free", because the <code>chat</code> node read the two
+  facts from the store and put them in the system prompt. Nothing from <code>thread-a</code>'s conversation was sent.</p>
+<p><strong>Row 4.</strong> Same question as row 2, opposite answer. A new thread means no saved messages, and a different
+  <code>user_id</code> means a different store namespace, which is empty. Both memories were looked up and both came back with nothing.</p>
+<p>So the config decides everything: <code>thread_id</code> selects which conversation is continued, and <code>user_id</code>
+  selects whose facts are recalled. Swap the two ids between users by mistake and the table above turns into a privacy incident,
+  with no error anywhere. That is why, in a real application, both come from the authenticated session and never from the request body.</p>
+<p class="file-label">Captured from a real run. Your ids, wording and numbers will differ; the shape will not.</p>
 </section>
 
 <section id="project"><h2>The Project</h2>
@@ -106,6 +134,15 @@ Run again: thread A's conversation is restored from SQLite.</code></pre>
   <li>Implement <code>save_memories</code>: skip facts that are already stored.</li>
   <li>Open <code>output/memory.sqlite</code> with any SQLite viewer to see what a checkpoint looks like.</li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Summarize old turns into one message when the thread grows long, and remove them from the state. <em>Done when:</em> the thread never holds more than a few messages, and the bot still knows a fact from the first turn.</li>
+  <li><strong>Connect (EXER010).</strong> Write a small CLI that lists and deletes a user's long-term memories. <em>Done when:</em> <code>list</code> shows the stored facts with ids, and after <code>delete</code> or <code>forget</code> they are gone in a new process too.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER028/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -123,6 +160,11 @@ Run again: thread A's conversation is restored from SQLite.</code></pre>
   <code>save_memory</code> tool when it decides something matters.</p></div>
 <div class="qa"><p>What should <em>never</em> go into long-term memory?</p>
   <p>Secrets, payment data, and sensitive personal data you have no need for. Memory is data storage, and the usual data-protection rules apply.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

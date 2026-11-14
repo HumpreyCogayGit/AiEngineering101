@@ -35,3 +35,17 @@ uv run python EXER020/check.py
 - [ ] PDF chunks keep their page number
 - [ ] You can explain the trade-off between chunk sizes 200, 600 and 1500
 - [ ] All 7 checks pass (offline, no API key needed)
+
+## Stretch goals
+
+Optional. Neither goal is needed to complete the exercise, and `check.py` must still pass when you are done.
+
+1. **Extend.** Add a Markdown-header-aware splitter and compare its chunks with the recursive splitter's. *Done when:* every Markdown chunk holds exactly one section, and the statistics of both splitters are printed.
+2. **Connect (EXER022).** Record the heading path of each chunk (`Brewing Guide > French press`) in its metadata. *Done when:* every Markdown chunk has a `heading_path`, and it appears next to the source in a formatted prompt.
+
+Reference code, for after you have tried (it builds on `solution/` and changes nothing in it):
+
+```bash
+uv run python EXER020/stretch/goal1_markdown_splitter.py
+uv run python EXER020/stretch/goal2_heading_path.py
+```

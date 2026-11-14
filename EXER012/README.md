@@ -32,3 +32,17 @@ uv run python EXER012/check.py
 - [ ] All 8 checks pass
 
 From now on exercises use `aicourse.llm.get_chat_model()`, which is your `make_llm()`.
+
+## Stretch goals
+
+Optional. Neither goal is needed to complete the exercise, and `check.py` must still pass when you are done.
+
+1. **Extend.** Use `astream` to run two questions at once and print their chunks as they arrive. *Done when:* lines tagged `[A]` and `[B]` are interleaved in the output.
+2. **Connect (EXER005).** Swap in the fake chat model (`aicourse.fakes.fake_chat_model`) and run your chatbot offline. *Done when:* the conversation runs with no network, and you can assert what the model was sent on turn two.
+
+Reference code, for after you have tried (it builds on `solution/` and changes nothing in it):
+
+```bash
+uv run python EXER012/stretch/goal1_astream_interleaved.py
+uv run python EXER012/stretch/goal2_offline_chatbot.py
+```

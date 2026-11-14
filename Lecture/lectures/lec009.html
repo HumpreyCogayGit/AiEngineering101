@@ -6,6 +6,7 @@
 <title>Response Formatting</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -125,6 +126,15 @@ if completion.choices[0].message.refusal: ...    # the model may refuse unsafe r
   <li><code>parse()</code> works like <code>create()</code>, but returns <code>.parsed</code>.</li>
   <li>Repair loop: copy the messages first (<code>list(messages)</code>) so you don't modify the caller's list. The check verifies this.</li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Add a nested model: an <code>Address</code> (building, floor, room, city) inside the event. <em>Done when:</em> <code>event.address.city</code> and <code>event.address.floor</code> are attributes of a real object.</li>
+  <li><strong>Connect (EXER008).</strong> Count how often the repair loop is needed over 20 runs, for a precise prompt and for a vague one. <em>Done when:</em> the script prints, per prompt, how many runs needed more than one model call.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER009/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -145,6 +155,11 @@ if completion.choices[0].message.refusal: ...    # the model may refuse unsafe r
 <div class="qa"><p>How do you represent "unknown"?</p>
   <p>Make the field nullable and say so in its description ("or null if unknown"). Otherwise the model will invent
   a plausible value to satisfy the schema.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

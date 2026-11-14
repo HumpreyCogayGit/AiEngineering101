@@ -6,6 +6,7 @@
 <title>An Agent from Scratch</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -66,6 +67,31 @@ builder.add_edge("tools", "agent")                  # ← the loop</code></pre>
 [agent] calculator({'expression': '3*390 + 2*520'})
 [tools] 2210
 [agent] The total is ₱2,210.</code></pre>
+<h3 id="worked">Worked example: the state after every node</h3>
+<p>The state of this graph is one key, <code>messages</code>. Here it is after each node for the order question
+  (H = human, A = AI, T = tool message).</p>
+<table>
+  <tr><th>After node</th><th><code>messages</code></th><th>The message(s) the node added</th><th>Model tokens in / out</th></tr>
+  <tr><td>(input)</td><td>H</td><td>"I want 3 bags of Barako Bold and 2 of Mount Apo Sunrise. What's the total in pesos?"</td><td></td></tr>
+  <tr><td><code>agent</code></td><td>H A</td><td>no text; <code>lookup_product("Barako Bold")</code>, <code>lookup_product("Mount Apo Sunrise")</code></td><td>191 / 71</td></tr>
+  <tr><td><code>tools</code></td><td>H A T T</td><td>"Barako Bold: ₱390 per 250 g …", "Mount Apo Sunrise: ₱520 per 250 g …"</td><td></td></tr>
+  <tr><td><code>agent</code></td><td>H A T T A</td><td>no text; <code>calculator("3 * 390 + 2 * 520")</code></td><td>318 / 27</td></tr>
+  <tr><td><code>tools</code></td><td>H A T T A T</td><td>"2210"</td><td></td></tr>
+  <tr><td><code>agent</code></td><td>H A T T A T A</td><td>"The total is ₱2,210 …"</td><td>358 / 50</td></tr>
+</table>
+<p>Five node executions, seven messages. What the table shows:</p>
+<ul>
+  <li><strong>The list only grows.</strong> Each node returned <code>{"messages": [...]}</code> with its new messages, and the reducer of <code>MessagesState</code> appended them. No node ever rebuilt the list.</li>
+  <li><strong>One <code>tools</code> step can add several messages.</strong> The first one added two, because the model asked for two lookups in one reply and <code>ToolNode</code> ran both.</li>
+  <li><strong><code>should_continue</code> ran after every <code>agent</code> row.</strong> Twice the last message had tool calls, so it returned <code>"tools"</code>. The third time it had none, so it returned <code>END</code>. Nothing else ends the loop.</li>
+  <li><strong>The second lookup could not have been the calculation.</strong> The model needed the prices before it could write <code>3 * 390 + 2 * 520</code>. That dependency is why this takes three model calls, not two, and why a fixed pipeline could not have been drawn in advance for every question.</li>
+  <li><strong>The system prompt is in no row.</strong> It is added inside the <code>agent</code> node at call time and is not part of the state.</li>
+  <li><strong>Input tokens climb: 191, 318, 358.</strong> Every call resends the whole list plus the three tool schemas.</li>
+</ul>
+<p>Now the recursion limit is easy to read. This run used five steps. With <code>recursion_limit=12</code> there is room for
+  about five tool rounds; a model that asks for a tool every time reaches step 12 and is stopped with
+  <code>GraphRecursionError</code>, which <code>run()</code> turns into a polite sentence.</p>
+<p class="file-label">Captured from a real run. Your ids, wording and numbers will differ; the shape will not.</p>
 </section>
 
 <section id="project"><h2>The Project</h2>
@@ -98,6 +124,15 @@ builder.add_edge("tools", "agent")                  # ← the loop</code></pre>
   <li><code>run</code>: catch <code>GraphRecursionError</code> and return a polite message.</li>
   <li>Compare your graph's Mermaid output with <code>create_agent(...).get_graph().draw_mermaid()</code>.</li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Add a per-run tool budget: after N tool calls the agent must answer with what it has. <em>Done when:</em> with a budget of 2, a question that needs four lookups ends with two results and a clear statement of what is missing.</li>
+  <li><strong>Connect (EXER007).</strong> Stream the agent's tokens as well as its steps. <em>Done when:</em> tool steps appear as they finish, and the final answer is written token by token.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER027/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -115,6 +150,11 @@ builder.add_edge("tools", "agent")                  # ← the loop</code></pre>
 <div class="qa"><p>When would you replace the free loop with a fixed workflow?</p>
   <p>When the steps are always the same (look up, then compute, then answer). Fixed graphs are faster, cheaper and
   more predictable. Agents shine when the path genuinely depends on intermediate results.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

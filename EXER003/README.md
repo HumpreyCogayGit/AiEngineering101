@@ -32,7 +32,16 @@ uv run python EXER003/check.py
 - [ ] A model name that does not exist produces a readable `HTTP 4xx` message instead of a crash
 - [ ] All 6 checks pass (2 of them call the live API)
 
-## Stretch
+## Stretch goals
 
-- Send a wrong API key. A cloud provider answers `401 Unauthorized`; a local Ollama does not check the key at all. Why is that reasonable?
-- Add `"temperature": 0` to the body and run it a few times.
+Optional. Neither goal is needed to complete the exercise, and `check.py` must still pass when you are done.
+
+1. **Extend.** Send the same question twice, with and without a system message, and compare `usage.prompt_tokens`. *Done when:* the script prints how many extra input tokens the system message costs.
+2. **Connect (EXER011).** Print the rate-limit headers of the response. *Done when:* a hosted provider shows its `x-ratelimit-*` headers, and a local one prints that there are none.
+
+Reference code, for after you have tried (it builds on `solution/` and changes nothing in it):
+
+```bash
+uv run python EXER003/stretch/goal1_system_message.py
+uv run python EXER003/stretch/goal2_rate_limit_headers.py
+```

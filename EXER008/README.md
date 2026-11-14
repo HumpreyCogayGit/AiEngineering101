@@ -35,3 +35,17 @@ uv run python EXER008/check.py
 - [ ] v3 reaches at least 80% accuracy
 - [ ] Your few-shot examples do not appear in the test set
 - [ ] All 7 checks pass
+
+## Stretch goals
+
+Optional. Neither goal is needed to complete the exercise, and `check.py` must still pass when you are done.
+
+1. **Extend.** Add a fourth prompt version that gives a one-sentence reason before its label, and measure it. *Done when:* the script prints the accuracy of v4 next to v3, with the reason for every miss.
+2. **Connect (EXER024).** Print a confusion matrix (expected label against predicted label), not only accuracy. *Done when:* you can read from the table which label is mistaken for which.
+
+Reference code, for after you have tried (it builds on `solution/` and changes nothing in it):
+
+```bash
+uv run python EXER008/stretch/goal1_explain_label.py
+uv run python EXER008/stretch/goal2_confusion_matrix.py
+```

@@ -36,3 +36,17 @@ uv run python EXER030/check.py
       knowledge, and ends in the honest fallback after 2 rewrites
 - [ ] The printed `path` explains every decision
 - [ ] All 5 checks pass
+
+## Stretch goals
+
+Optional. Neither goal is needed to complete the exercise, and `check.py` must still pass when you are done.
+
+1. **Extend.** Add a hallucination check on the generated answer before it is returned. *Done when:* an answer with an invented fact is replaced by the fallback, and the path ends in `verify -> fallback`.
+2. **Connect (EXER024).** Score the graph on the EXER024 evaluation set against the plain chain. *Done when:* one table shows the five metrics and the model calls per question for both.
+
+Reference code, for after you have tried (it builds on `solution/` and changes nothing in it):
+
+```bash
+uv run python EXER030/stretch/goal1_hallucination_check.py
+uv run python EXER030/stretch/goal2_score_against_chain.py
+```

@@ -34,11 +34,13 @@ AiEngineerCourse/
 ├── .env.example              # Template of required settings (committed)
 ├── .env                      # Real keys (git-ignored)
 ├── .gitignore
-├── check_all.py              # Runs every exercise check: solutions pass, starters fail
+├── check_all.py              # Runs every exercise check: solutions pass, starters fail; validates the quizzes
+├── check_quizzes.py          # Validates Lecture/assets/js/quizzes.js
 ├── aicourse/                 # Small shared package, installed in editable mode
 │   ├── settings.py           # Loads and validates .env (pydantic-settings)
 │   ├── llm.py                # get_chat_model(), get_embeddings() helpers
-│   └── check.py              # Helpers used by exercise checks
+│   ├── check.py              # Helpers used by exercise checks
+│   └── stretch.py            # Lets stretch-goal code import a reference solution
 ├── data/                     # Shared sample documents for the RAG exercises
 ├── EXER001/
 ├── EXER002/
@@ -57,9 +59,10 @@ AiEngineerCourse/
 
 ```
 EXER00N/
-├── README.md        # Short brief: goal, tasks, how to run, success criteria, link to lecture
+├── README.md        # Short brief: goal, tasks, how to run, success criteria, stretch goals, link to lecture
 ├── starter/         # Code with TODOs for the learner to complete
 ├── solution/        # Reference solution
+├── stretch/         # Reference code for the two optional stretch goals (imports solution/, never changes it)
 └── check.py         # Verifies the success criteria (uv run python EXER00N/check.py)
 ```
 
@@ -81,7 +84,8 @@ Lecture/
 └── assets/
     ├── css/style.css
     ├── js/course.js      # Course manifest: modules, lecture titles, order
-    ├── js/app.js         # Sidebar, previous/next, progress, theme, copy buttons
+    ├── js/quizzes.js     # Self-check quiz questions, as data
+    ├── js/app.js         # Sidebar, previous/next, progress, quizzes, theme, copy buttons
     ├── vendor/           # Local copies of highlight.js and Mermaid
     └── img/
 ```
@@ -96,7 +100,10 @@ Lecture/
 6. **Walkthrough** — key steps and hints, without giving the solution away
 7. **Common Pitfalls** — typical errors and how to recognize them
 8. **Discussion** — questions and trade-offs worth thinking about
-9. **Further Reading** — official documentation links
+9. **Check Yourself** — a self-check quiz: 4 questions (5 for the longer lectures), multiple choice, with a one-sentence explanation for every option
+10. **Further Reading** — official documentation links
+
+The Walkthrough ends with the exercise's two **stretch goals**. Lectures 016–031 end their Concept section with a **worked example** built from captured output of a real run.
 
 **Site features**
 
@@ -104,11 +111,12 @@ Lecture/
 - Syntax highlighting, copy button on code blocks, Mermaid diagrams for flows (message loop, RAG pipeline, agent graph).
 - Light and dark theme, readable on mobile.
 - "Mark as complete" per lecture, stored in the browser, with a progress bar on the home page.
+- Quizzes are rendered by `app.js` from `quizzes.js`, so fixing a question never touches a lecture page. The score of the last attempt is stored in the browser and shown beside each lecture on the home page. It never blocks "Mark as complete".
 - Libraries are stored in `assets/vendor/` so the site works offline and from `file://`.
 
 ## 4. Curriculum
 
-37 exercises in 8 modules. Lecture `lecNNN.html` pairs with `EXERNNN`.
+40 exercises in 9 modules. Lecture `lecNNN.html` pairs with `EXERNNN`.
 
 ### Module 0 — Foundations
 
@@ -187,6 +195,14 @@ Lecture/
 | 036 | Safety and Guardrails | Attacks against, then defenses for, an earlier app | prompt injection, input and output validation, provider content filters, least privilege |
 | 037 | Capstone | A complete assistant: Streamlit UI, LangGraph agent, RAG, MCP tools, CLI entry point, evaluation | design, integration, a written review against a rubric |
 
+### Module 8 — Beyond the Capstone
+
+| # | Title | The learner builds | Key concepts |
+|---|---|---|---|
+| 038 | Evaluating Agents | A scorer for tool-call trajectories | trajectory, right tools / order / arguments, tolerant matching, reports that name the failure |
+| 039 | Conversation Memory Strategies | Trimming, summarizing and retrieval over past turns, compared | recall vs tokens per question, lossy summaries, indexing exchanges, setup cost |
+| 040 | Deploying the Capstone | The EXER037 assistant as an HTTP service in a container | configuration from the environment, liveness and readiness, Dockerfile layers, non-root user, no secrets in images |
+
 ## 5. Build Phases
 
 | Phase | Deliverable | Notes |
@@ -200,12 +216,14 @@ Lecture/
 | 7. Module 5 | EXER026–031 | |
 | 8. Modules 6–7 | EXER032–037 | |
 | 9. Polish | Glossary, cross-links, full run-through of every exercise from a clean clone | |
+| 10. Extensions | Quizzes, stretch goals with reference code, worked examples, Module 8 (EXER038–040) | See [extended_plan.md](extended_plan.md) |
 
 **Definition of done for each exercise**
 
 - The solution runs from a clean `uv sync` using only root configuration.
 - `check.py` passes against the solution and fails against the untouched starter (`uv run python check_all.py` verifies this for all exercises).
-- The lecture page has all nine sections and its success criteria match the exercise README.
+- The lecture page has all ten sections and its success criteria match the exercise README.
+- The lecture has a quiz that passes `check_quizzes.py`, and the README has two stretch goals whose reference code in `stretch/` runs.
 - The starter contains enough structure and hints that the learner writes the new concept, not boilerplate.
 - Library APIs used are verified against current documentation at build time.
 
@@ -217,7 +235,7 @@ Lecture/
 4. **Observability (EXER035):** learners build their own callback-based tracker; LangSmith is an optional, documented add-on (env vars only, no code changes).
 5. **Solutions ship in the same repository** as the starters, in `solution/`.
 6. **Language:** course content is in English.
-7. **Not included:** fine-tuning, model training, cloud deployment of the apps. Deployment (containers, Azure hosting) could be added as an extra module after the capstone.
+7. **Not included:** fine-tuning, model training, and hosting on a cloud platform. EXER040 covers the container image and the health checks a platform needs; pushing the image to a registry and running it on Azure is left to the learner.
 
 ## 7. Implementation Notes
 
@@ -229,7 +247,9 @@ Lecture/
 - **Checks:** starters raise `NotImplementedError` in TODOs, so `check.py` reports them as TODO and fails; `--solution` runs the same checks against the reference. Checks marked `[live API]` need a real model.
 - **Model compatibility:** the course runs on classic chat models (gpt-4.1 family) and on reasoning models (gpt-5 family, o-series). Reasoning models accept only the default `temperature` and LangChain reaches them through the Responses API, where `AIMessage.content` is a list of blocks. So: optional parameters go through `aicourse.llm.model_params()` (detects support once, caches it in `.aicourse_cache.json`; override with `AICOURSE_SUPPORTS_TEMPERATURE`), and every LangChain answer is read with `.text`, never `.content`. Lectures 004 and 012 teach both points.
 - **Offline checks need no `.env`:** the check runner substitutes placeholder settings for checks that are not marked `[live API]`; live checks are skipped with one clear message when the configuration is missing. `--offline` skips live checks on purpose.
-- **`check_all.py`** automates the definition of done: every solution passes, every untouched starter fails.
+- **`check_all.py`** automates the definition of done: every solution passes, every untouched starter fails, and the quizzes are valid.
+- **Stretch goals** have reference code in `EXERnnn/stretch/`. It imports the reference solution through `aicourse.stretch.solution_module()` and never modifies it, so `check.py` is unaffected. Stretch code is run by hand, not by `check_all.py`; most of it calls the live model.
+- **`aicourse.settings.settings_from_environment()`** loads settings from real environment variables only (EXER040): a deployed service must not depend on a `.env` file.
 - **Rules that must always hold are enforced in code, not only in prompts** (example: the EXER031 supervisor cannot finish before the writer has replied).
 - **`aicourse.rag.get_vector_store()`** returns one cached store per process, behind a lock: agents run parallel tool calls in threads, and opening the same Chroma folder twice at once fails.
 - **MCP exercises** ship their servers inside the exercise folder (`EXER032/servers`, `EXER034/servers`, `EXER037/servers`) so each exercise is self-contained.

@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evaluating Agents</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="38">
+<main>
+<header class="lecture-header">
+  <div class="kicker"></div>
+  <h1>Evaluating Agents</h1>
+  <p class="lede">A right answer reached the wrong way is a wrong answer waiting to happen. Score what the agent did (its tool calls) as well as what it said.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>Lecture 024 evaluated a RAG chain: one retrieval, one answer, both scored. An agent is harder to evaluate because
+  it <em>chooses its own steps</em>. Ask an order assistant for a total and it may look the prices up and use the calculator,
+  or it may recall a price from an earlier conversation and add in its head. Both can print "₱2,210". Only one of them will
+  still be right after the price list changes.</p>
+<p>The list of tool calls an agent made during one run is its <strong>trajectory</strong>. This lecture builds a scorer for
+  trajectories, in plain code, and uses it to evaluate an agent on a small set of cases.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>Final answer or trajectory?</h3>
+<table>
+  <tr><th>You score</th><th>You learn</th><th>You miss</th></tr>
+  <tr><td>The final answer only</td><td>Whether the user got the right text</td><td>Lucky guesses, skipped lookups, wasted calls, a dangerous tool used on the way</td></tr>
+  <tr><td>The trajectory only</td><td>Whether the agent worked the way you designed</td><td>A correct process that ends in a badly worded or wrong answer</td></tr>
+  <tr><td>Both</td><td>Whether it is right <em>for the right reason</em></td><td></td></tr>
+</table>
+<p>The capstone already took one step in this direction: its cases list <code>expect_tools</code>. That checks which tools
+  were used at all. A trajectory score also looks at order and arguments.</p>
+
+<h3>Three questions about a trajectory</h3>
+<div class="mermaid">flowchart LR
+  R[Run: messages] --> T["extract_trajectory<br/>[Call(name, args), ...]"]
+  E["Expected calls<br/>(from the case)"] --> S
+  T --> S{score_trajectory}
+  S --> A["tools<br/>none missing, none extra"]
+  S --> B["order<br/>expected is a subsequence"]
+  S --> C["arguments<br/>every expected call matched"]</div>
+<table>
+  <tr><th>Check</th><th>Question</th><th>Typical failure it catches</th></tr>
+  <tr><td><strong>Tools</strong></td><td>Did it call the right tools, as often as needed?</td><td>Answered from memory (missing call); looked up a product nobody asked about (extra call)</td></tr>
+  <tr><td><strong>Order</strong></td><td>Did the calls happen in a workable order?</td><td>Calculated before looking up the price, so the number was invented</td></tr>
+  <tr><td><strong>Arguments</strong></td><td>Was each call given the right input?</td><td>Looked up the wrong product; multiplied by the wrong quantity</td></tr>
+</table>
+
+<h3>Strict enough, not stricter</h3>
+<p>The art is in what you <em>do not</em> require. A scorer that demands an exact copy of your reference run fails good agents
+  all day, and people stop trusting it.</p>
+<table>
+  <tr><th>Tolerate</th><th>How</th></tr>
+  <tr><td>Two lookups in either order</td><td>Order is a <em>subsequence</em> test on tool names: <code>lookup, lookup, calculator</code> matches whichever product came first</td></tr>
+  <tr><td>Calls in between</td><td>A subsequence allows extras between the expected calls. Whether an extra call is a failure is the <em>tools</em> check's decision, not the order check's</td></tr>
+  <tr><td>Spelling of arguments</td><td><code>" barako bold "</code> equals <code>"Barako Bold"</code>: compare text without case and outer spaces</td></tr>
+  <tr><td>Different arithmetic, same result</td><td><code>{"evaluates_to": 2210}</code> accepts <code>3*390 + 2*520</code> and <code>1170 + 1040</code></td></tr>
+</table>
+<pre><code class="language-python">def in_order(actual: list[str], expected: list[str]) -> bool:
+    position = 0                                  # the next expected name we are waiting for
+    for name in actual:
+        if position &lt; len(expected) and name == expected[position]:
+            position += 1
+    return position == len(expected)
+
+in_order(["lookup", "hours", "calculator"], ["lookup", "calculator"])   # True
+in_order(["calculator", "lookup"],          ["lookup", "calculator"])   # False</code></pre>
+
+<h3>Where the trajectory comes from</h3>
+<p>You already have it. Every <code>AIMessage</code> in the result carries <code>tool_calls</code>, each with a
+  <code>name</code> and parsed <code>args</code> (Lecture 017). Walking the messages in order gives the trajectory, with no extra
+  instrumentation. A message can hold several calls: keep them all.</p>
+
+<h3>A report that helps</h3>
+<p>"FAIL" tells you nothing. Each failed case should say <em>what</em> was wrong, in words:
+  <code>missing call: calculator</code>, <code>extra call: store_hours</code>,
+  <code>wrong arguments for lookup_product: expected {'name': 'Barako Bold'}</code>. That line is what you paste into the bug report.</p>
+<div class="callout info"><span class="title">No judge needed</span>
+  Comparing tool calls is exact work, so it is done in code: free, instant and repeatable. Keep the LLM judge of Lecture 024 for
+  what code cannot read, such as whether the final wording is faithful.</div>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p><code>agent_under_test.py</code> (given) is an order assistant with <code>lookup_product</code>, <code>calculator</code> and
+  <code>store_hours</code>. <code>cases.json</code> (given) holds six questions with their expected calls, including one where the
+  right trajectory is <em>no tool at all</em>. You write the scorer in <code>trajectory_eval.py</code>.</p>
+<h3>Sample run</h3>
+<pre><code class="language-text">uv run python EXER038/solution/trajectory_eval.py
+
+PASS  How much is one bag of Barako Bold?                        lookup_product
+PASS  I want 3 bags of Barako Bold and 2 of Mount Apo Sunrise. W lookup_product -> lookup_product -> calculator
+PASS  When is the BGC branch open?                               store_hours
+PASS  Thanks, that's all for today!                              (no tools)
+PASS  How many pesos more does a bag of Decaf Cloud cost than a  lookup_product -> lookup_product -> calculator
+PASS  What do four bags of Mount Apo Sunrise cost?               lookup_product -> calculator
+
+{"cases": 6, "tools": 1.0, "order": 1.0, "arguments": 1.0, "answer": 1.0, "pass_rate": 1.0}
+Report written to EXER038/solution/output/agent_eval.md</code></pre>
+<p class="file-label">Captured from a real run. Your wording, numbers and timings will differ; the shape should match.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Explain why an agent's final answer is not enough to evaluate it.</li>
+  <li>Extract a trajectory from a run's messages.</li>
+  <li>Score tools, order and arguments in code, tolerating harmless variation.</li>
+  <li>Report failures in words someone can act on.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>The script prints PASS or FAIL per case with the trajectory, and writes <code>output/agent_eval.md</code></li>
+  <li>An agent that gives the right answer without calling its tools fails</li>
+  <li><code>3*390 + 2*520</code> and <code>1170 + 1040</code> both count as the right calculator argument</li>
+  <li>Every failed case says what was wrong: a missing call, an extra call, a wrong order or wrong arguments</li>
+  <li>All 8 checks pass (7 offline, 1 calls your model)</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li>Read <code>cases.json</code> and <code>agent_under_test.py</code>. For each case, say out loud which calls you expect before you look.</li>
+  <li><code>extract_trajectory</code>: a nested loop over messages and their <code>tool_calls</code>. Test it on the scripted messages in <code>check.py</code>.</li>
+  <li><code>missing_and_extra</code>: copy <code>actual</code>, remove one entry per expected name. Counts matter: one lookup when two were expected leaves one missing.</li>
+  <li><code>in_order</code>: the six lines above. Check the empty cases by hand: an empty <code>expected</code> is always in order.</li>
+  <li><code>score_trajectory</code>: combine the three, and write one problem line per thing that is wrong.</li>
+  <li>Break the agent on purpose: remove "calculator for every calculation" from <code>SYSTEM</code> and run the script again. Which check notices?</li>
+</ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Add an efficiency score: flag redundant calls (same tool, same arguments) and runs that used more calls than expected. <em>Done when:</em> three hand-written runs that all reach the right answer get efficiency 1.0, 0.5 and 0.5, with each redundant call named.</li>
+  <li><strong>Connect (EXER037).</strong> Score the trajectories of the capstone assistant with your scorer. <em>Done when:</em> for three capstone questions the script prints the trajectory, what is missing or extra, and whether it is in order.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER038/stretch/</p>
+</div>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Demanding an exact match</summary><div>
+  <p>Requiring the same calls in the same order with the same strings fails an agent that looked the two products up the other way round. The team learns to ignore the red rows, and then misses the real one.</p></div></details>
+<details class="pitfall"><summary>Scoring only the answer</summary><div>
+  <p>An agent that guesses ₱390 passes today. The scripted "guesser" in <code>check.py</code> shows it: right text, no lookup, and it must fail.</p></div></details>
+<details class="pitfall"><summary>Forgetting the "no tool" case</summary><div>
+  <p>An agent that calls a tool for "thanks, bye" wastes a round trip on every greeting. Include cases whose expected trajectory is empty.</p></div></details>
+<details class="pitfall"><summary>One number for everything</summary><div>
+  <p>A pass rate of 67% does not say whether to fix the prompt, a tool description or the arguments. Report tools, order and arguments separately.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>Is an extra tool call always a failure?</p>
+  <p>No. A second search in a RAG assistant is cheap and often right; a second <code>send_email</code> is a disaster. Decide per tool: for read-only tools you may tolerate extras and track them as a cost, for tools that act you should not.</p></div>
+<div class="qa"><p>What if there are several correct trajectories?</p>
+  <p>Then say so in the case: list the alternatives, or loosen the check that is too strict (drop order, accept any argument). When "correct" becomes hard to write down, a judge model can compare the trajectory with a description of acceptable behaviour, at the cost of exactness.</p></div>
+<div class="qa"><p>Where do the cases come from?</p>
+  <p>From the same place as the golden set of Lecture 024: real questions, and every failure you find. A production trace (Lecture 035) of a bad run is a test case with the expected calls still to be filled in.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://docs.smith.langchain.com/">LangSmith: evaluation and tracing</a></li>
+  <li><a href="https://github.com/langchain-ai/agentevals">agentevals: ready-made trajectory evaluators</a></li>
+  <li><a href="https://www.anthropic.com/engineering/building-effective-agents">Building effective agents</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

@@ -43,3 +43,19 @@ with your own timeline.
 - [ ] The failing inventory tool appears with ❌ and its error
 - [ ] The report gives the total cost of the run in USD
 - [ ] All 5 checks pass (offline)
+
+## Stretch goals
+
+Optional. Neither goal is needed to complete the exercise, and `check.py` must still pass when you are done.
+
+1. **Extend.** Add latency percentiles (p50, p95) per tool to the report. *Done when:* the report shows a tool whose p50 is better and whose p95 is worse than another's.
+2. **Connect (EXER015).** Export the spans as JSON and draw the timeline in Streamlit. *Done when:* `stretch/output/trace.json` is written, and the app shows one bar per span from its start to its end.
+
+Reference code, for after you have tried (it builds on `solution/` and changes nothing in it):
+
+```bash
+uv run python EXER035/stretch/goal1_latency_percentiles.py
+uv run python EXER035/stretch/goal2_export_spans.py
+```
+
+Also in [stretch/](stretch/): `goal2_timeline_app.py`.

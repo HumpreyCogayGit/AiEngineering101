@@ -1,16 +1,65 @@
 # AI Engineer Course — Extended Plan
 
-Work that is planned but not built. [Plan.MD](Plan.MD) describes the course as it exists;
-this file describes what comes next. Nothing here has been started.
+**Status: all four phases are built** (2026-11-14). This file is kept as the record of what was
+planned, what was decided, and where the result differs from the plan. [Plan.MD](Plan.MD) describes
+the course as it now exists.
 
-| Phase | Deliverable | Size |
+| Phase | Deliverable | Built |
 |---|---|---|
-| A | Self-check quiz on every lecture page | 37 quizzes, about 150 questions |
-| B | Stretch goals in every exercise README | 37 exercises, 2 goals each |
-| C | Deeper Concept sections | Modules 4 and 5 first |
-| D | New topics | 3 new exercises (038–040) |
+| A | Self-check quiz on every lecture page | 40 quizzes, 166 questions, `check_quizzes.py` |
+| B | Stretch goals in every exercise README | 40 exercises, 2 goals each, with reference code in `EXERnnn/stretch/` |
+| C | Deeper Concept sections | A worked example from captured output in lectures 016–031 |
+| D | New topics | EXER038–040 and their lectures, as Module 8 |
 
-Phases A and B are independent and can be built in either order. C and D are optional.
+## Decisions made
+
+The four open questions at the end of this file were answered before the work started:
+
+1. **Quiz format:** multiple choice only.
+2. **Quiz score:** shown on the home page, beside each lecture.
+3. **Stretch goal solutions:** reference code for every goal, in a `stretch/` folder per exercise.
+   This replaces the "no reference solutions" rule in Phase B below.
+4. **Phase D:** in scope, all three exercises.
+
+## Where the result differs from the plan
+
+- **Stretch goals have reference code** (decision 3). It imports the reference solution through
+  `aicourse.stretch.solution_module()` and never changes it, so every `check.py` is unaffected by
+  construction. The reference code of every goal was run once; it is not part of `check_all.py`, because most
+  call the live model.
+- **A few goals were adjusted while building them:**
+  - 001 goal 1 needs one HTTP request, which is taught in EXER003. The README says so.
+  - 023 goal 2 keeps its five questions in `EXER023/stretch/hard_questions.json`, not in
+    `data/eval_questions.json`, because other exercises' checks depend on that file.
+  - 026 goal 2: LangGraph renders PNGs through the public mermaid.ink service. The reference script
+    writes the Mermaid text by default and only calls the service with `--png`. The PNG in the README
+    was rendered locally.
+  - 032 goal 2 connects to the EXER033 notes server by default (already on disk); a public server is
+    an optional command-line argument.
+  - Names follow the provider-neutral rule: "embedding model", not "embedding deployment".
+- **Phase C** added one `Worked example` subsection at the end of each Concept section (300–450 words),
+  for all three groups in the plan: RAG (019–025), agents (026–031) and tools (016–018).
+- **Phase D exercises follow the full layout**, including a quiz and two stretch goals each, so the
+  totals are 40 quizzes and 80 stretch goals rather than 37 and 74.
+- **One bug in existing code was fixed on the way:** `UsageTracker` in EXER035 was an unhashable
+  dataclass and crashed when passed into nested graphs (found by 031 goal 2). It is now `@dataclass(eq=False)`.
+- **One addition to the shared package:** `aicourse.settings.settings_from_environment()`, used by EXER040.
+
+## How it was verified
+
+- `uv run python check_all.py` on the hosted provider: 40/40 exercises (every solution passes, every
+  untouched starter fails) and 166 quiz questions valid. EXER038–040 also pass on Ollama (`gemma4:e4b`).
+- Every stretch goal's reference code was run once on the hosted provider. The five Streamlit stretch
+  apps were run headless (`streamlit.testing`) against the live model.
+- EXER040: the image was built and the container run; it reported `healthy`, ran as a non-root user,
+  held no `.env`, and answered a question.
+- The Further Reading links of lectures 038–040 were checked and answer.
+- **Not run:** two paths that reach outside the machine: `EXER026/stretch/goal2_graph_png.py --png`
+  (sends the diagram text to mermaid.ink) and `EXER032/stretch/goal2_second_server.py npx …` (downloads
+  and starts a public MCP server). Both are optional arguments; the default paths of both scripts were run.
+- **Not done:** a full live run of exercises 001–037 and of the stretch code on Ollama.
+
+The original plan follows, unchanged except for this status section.
 
 ## Phase A — Self-check quizzes
 
@@ -174,7 +223,7 @@ lectures has one worked example built from captured output, not invented values.
 
 These would form a Module 8. Each follows the existing exercise layout and definition of done.
 
-## Decisions to make before starting
+## Decisions to make before starting (answered above)
 
 1. **Quiz format:** multiple choice only (planned above), or also short "predict the output"
    questions with a reveal button?

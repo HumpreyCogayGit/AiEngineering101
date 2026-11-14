@@ -6,6 +6,7 @@
 <title>Prompts and Chains</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -110,6 +111,15 @@ Batch translate into 3 languages:
   <li>Each chain is one line with <code>|</code>.</li>
   <li>For the pipeline, pipe two <code>assign</code> calls. The check confirms the translation step received the summary.</li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> After the translation, add two parallel branches: a back-translation and a 1-5 score. <em>Done when:</em> the result has the keys <code>score</code> and <code>back_translation</code>, computed side by side.</li>
+  <li><strong>Connect (EXER011).</strong> Add a fallback chain that shortens a summary when it is longer than <code>max_words</code>. <em>Done when:</em> a summary that is too long is replaced by a shorter one, and the script shows whether the fallback ran.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER013/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -127,6 +137,11 @@ Batch translate into 3 languages:
   For complex tasks, decomposition usually wins on quality.</p></div>
 <div class="qa"><p>When do chains stop being enough?</p>
   <p>When the flow needs loops or decisions at runtime: retry, branch, call tools until done. That's what LangGraph is for (Module 5).</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

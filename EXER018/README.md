@@ -36,3 +36,17 @@ and "Delete all the files" (it should not be able to).
 - [ ] You are asked to approve every command before it runs
 - [ ] The agent answers questions about the workspace files correctly
 - [ ] All 6 checks pass
+
+## Stretch goals
+
+Optional. Neither goal is needed to complete the exercise, and `check.py` must still pass when you are done.
+
+1. **Extend.** Add a dry-run mode that explains each command instead of running it. *Done when:* every command prints what it would do or why it would be refused, and nothing is executed.
+2. **Connect (EXER035).** Log every command, the decision and the exit code to a JSONL audit file. *Done when:* the file has one line per command, including the refused and denied ones.
+
+Reference code, for after you have tried (it builds on `solution/` and changes nothing in it):
+
+```bash
+uv run python EXER018/stretch/goal1_dry_run.py
+uv run python EXER018/stretch/goal2_audit_log.py
+```

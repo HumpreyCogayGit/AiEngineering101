@@ -6,6 +6,7 @@
 <title>Setup and First Check</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -22,7 +23,7 @@
 <section id="overview"><h2>Overview</h2>
 <p>An AI application is ordinary software plus a remote model. Most early frustration comes not from the model
   but from the environment: the wrong Python, a missing package, a key pasted in the wrong place.
-  We fix that once, at the root of the repository, so all 37 exercises share one configuration.</p>
+  We fix that once, at the root of the repository, so all 40 exercises share one configuration.</p>
 <p>You will meet four ideas: <strong>virtual environments</strong>, <strong>dependency locking</strong>,
   <strong>configuration through environment variables</strong>, and <strong>inference providers</strong>.</p>
 </section>
@@ -45,7 +46,7 @@ uv.lock          exactly what we got  (langchain==1.5.0, ...)  ← reproducibili
 <div class="mermaid">flowchart LR
   E[".env (git-ignored)"] --> S["aicourse/settings.py<br/>validate + normalize"]
   V["real environment variables<br/>(win over .env)"] --> S
-  S --> X1[EXER001] & X2[EXER002] & X3["... EXER037"]</div>
+  S --> X1[EXER001] & X2[EXER002] & X3["... EXER040"]</div>
 <p><code>aicourse/settings.py</code> uses <strong>pydantic-settings</strong> to read and validate the
   values. It fails early with a readable message (for example "AZURE_OPENAI_API_KEY: is missing") instead of
   a confusing 401 deep inside a request.</p>
@@ -145,6 +146,15 @@ API key         : ****</code></pre>
   <code>check.py</code> imports <em>your</em> file from <code>starter/</code> and calls your functions.
   A <span style="color:var(--warn)">TODO</span> line means the function still raises <code>NotImplementedError</code>.
   Add <code>-v</code> to see full tracebacks.</div>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Make <code>check_setup.py</code> report whether the embedding model is reachable, not only configured. <em>Done when:</em> the script prints <code>Reachable : yes (N dimensions)</code>, or <code>NO</code> with the reason, and never crashes. It needs one HTTP request, so come back to it after EXER003 if that is new.</li>
+  <li><strong>Connect.</strong> Print where each setting came from: a real environment variable, <code>.env</code>, or the default in <code>aicourse/settings.py</code>. <em>Done when:</em> running with <code>AICOURSE_REQUEST_TIMEOUT=5</code> in front of the command changes that one line from <code>default</code> to <code>environment</code>.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER001/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -174,6 +184,11 @@ API key         : ****</code></pre>
 <div class="qa"><p>What would change in production?</p>
   <p>Keys would live in Azure Key Vault or be replaced by managed identity, and configuration would come from the
   hosting platform's environment variables rather than a file.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

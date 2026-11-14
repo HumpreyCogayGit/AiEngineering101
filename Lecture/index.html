@@ -21,8 +21,8 @@
   </section>
 
   <div class="stats">
-    <div class="stat"><b data-total-lectures>37</b><span>lectures &amp; exercises</span></div>
-    <div class="stat"><b>8</b><span>modules</span></div>
+    <div class="stat"><b data-total-lectures>40</b><span>lectures &amp; exercises</span></div>
+    <div class="stat"><b>9</b><span>modules</span></div>
     <div class="stat"><b>~<span data-total-hours>40</span> h</b><span>of focused work</span></div>
     <div class="stat"><b data-progress>0</b><span>completed</span></div>
   </div>
@@ -30,11 +30,14 @@
   <h2 id="how">How this course works</h2>
   <p>Every lecture pairs with an exercise folder of the same number: <code>lec005.html</code> ↔ <code>EXER005/</code>.
     Each lecture explains the <strong>concept</strong>, describes the <strong>project</strong>, lists the
-    <strong>goal</strong> and <strong>success criteria</strong>, and discusses the trade-offs and pitfalls.</p>
+    <strong>goal</strong> and <strong>success criteria</strong>, and discusses the trade-offs and pitfalls.
+    It ends with a short <strong>Check Yourself</strong> quiz: two minutes, for you and not a grade. Your score appears next to
+    the lecture in the list below.</p>
   <pre><code class="language-text">EXER005/
 ├── README.md     the brief: tasks, how to run, success criteria
 ├── starter/      YOUR code — complete the TODOs here
 ├── solution/     a reference solution (try first, peek later)
+├── stretch/      reference code for the two optional stretch goals
 └── check.py      automated checks for the success criteria</code></pre>
   <pre><code class="language-bash"># always run from the repository root
 uv run python EXER005/starter/chatbot.py      # run your code
@@ -57,6 +60,7 @@ uv run python EXER005/check.py --solution     # check the reference solution</co
     <tr><td>Vector store</td><td>Chroma (local)</td><td>Module 4</td></tr>
     <tr><td>Tool protocol</td><td>MCP (Python SDK + LangChain adapters)</td><td>Module 6</td></tr>
     <tr><td>Web UI / CLI</td><td>Streamlit / Typer</td><td>Modules 1–2</td></tr>
+    <tr><td>Deployment</td><td>Docker (optional)</td><td>Module 8</td></tr>
   </table>
 
   <h2 id="modules">Modules</h2>

@@ -6,6 +6,7 @@
 <title>Agent with Multiple MCP Servers</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -104,6 +105,15 @@ Audit log:
   <li><code>connections()</code>: two stdio entries; only the notes server needs <code>env</code>.</li>
   <li>The offline check scripts a fake model to call one tool from each server, then verifies the note really was written by the notes server process.</li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Connect (EXER029).</strong> Give the agent the delete tool, behind an approval step. <em>Done when:</em> a delete call pauses; <code>reject</code> leaves the note in place and <code>approve</code> removes it.</li>
+  <li><strong>Connect.</strong> Add a third server whose tool name collides with an existing one, and resolve the collision. <em>Done when:</em> without prefixes two tools share the name <code>list_products</code>; with prefixes the agent uses both servers in one answer.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER034/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -120,6 +130,11 @@ Audit log:
   <p>Expose delete, but put it behind human approval (Lecture 029), or give it to a separate, more restricted agent. Least privilege is about defaults, not never.</p></div>
 <div class="qa"><p>How would you vet a third-party MCP server?</p>
   <p>Read its code or use a reputable publisher, pin the version, run it with minimal OS permissions (container, no secrets), review its tool descriptions, and watch the audit log.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

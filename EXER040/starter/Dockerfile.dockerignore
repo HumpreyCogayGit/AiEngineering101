@@ -1,0 +1,7 @@
+# What `docker build` must never send to the builder. A file named
+# <Dockerfile>.dockerignore next to the Dockerfile applies to that Dockerfile only.
+
+# TODO: list the patterns to keep out of the image. At least:
+#   - the file with your secrets (.env)
+#   - the local virtual environment (.venv/): the image builds its own from uv.lock
+#   - the local vector index (.chroma/) and the git history (.git/)

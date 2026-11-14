@@ -6,6 +6,7 @@
 <title>Chat With Your Docs</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -54,6 +55,33 @@ User: How much is it?        ← search for "How much is it?" finds... anything 
 <h3>Showing sources</h3>
 <p>An expander under each answer shows the passages used, with file names and PDF page numbers. Users can verify
   answers, which builds justified trust, and you can debug retrieval at a glance.</p>
+<h3 id="worked">Worked example: a follow-up question, with and without condensing</h3>
+<p>Two turns against the sample documents. Chunks are written as <code>file#chunk_id</code>; the Cold Brew Bottle is in
+  <code>products.md#14</code>.</p>
+<p><strong>Turn 1.</strong> <em>"Tell me about the cold brew bottle."</em> The history is empty, so
+  <code>condense_question</code> returns the question unchanged, without a model call.</p>
+<pre><code class="language-text">searched for  Tell me about the cold brew bottle.
+retrieved     products.md#14, brewing_guide.md#1, brewing_guide.md#0, products.md#13
+answer        The **Cold Brew Bottle** is a 1-litre glass bottle with a fine mesh filter, priced at **₱980**. [1]</code></pre>
+<p><strong>Turn 2.</strong> <em>"How much is it?"</em> First, what a search for those four words finds:</p>
+<pre><code class="language-text">searched for  How much is it?
+retrieved     products.md#14, company_faq.md#6, shipping.md#18, loyalty_program.md#9</code></pre>
+<p>Three of the four chunks are whatever mentions a price: the ₱20 cup discount, the shipping fees, the loyalty stars. The
+  catalog chunk is first here only because this knowledge base is tiny and that chunk is full of prices. With a thousand
+  documents, "How much is it?" matches every price list you own.</p>
+<p>Now with condensing. The model receives the last turns and the follow-up, and writes:</p>
+<pre><code class="language-text">standalone    How much does the 1-litre Cold Brew Bottle cost?
+retrieved     products.md#14, brewing_guide.md#1, company_faq.md#6, products.md#13
+answer        The 1-litre Cold Brew Bottle costs ₱980. [1]</code></pre>
+<p>Compare the two retrieved lists. The shipping and loyalty chunks are gone; the cold brew section of the brewing guide and a
+  second catalog chunk took their places. The search is now about a product, not about prices in general.</p>
+<p>Three things to take from this run:</p>
+<ul>
+  <li><strong>The rewrite pulled a fact from the history.</strong> "1-litre" was in the bot's previous answer, not in anything the user typed. That is useful here, and it is also how condensing drifts: the model can just as easily carry over something wrong. The Sources expander shows the standalone question so you can see it.</li>
+  <li><strong>The answer step never saw the history.</strong> It received the standalone question and four chunks. Everything it needed was in the rewritten question.</li>
+  <li><strong>Turn 2 cost two model calls, turn 1 cost one.</strong> Condensing is paid on every follow-up, which is why the first question skips it.</li>
+</ul>
+<p class="file-label">Captured from a real run. Your ids, wording and numbers will differ; the shape will not.</p>
 </section>
 
 <section id="project"><h2>The Project</h2>
@@ -88,6 +116,15 @@ User: How much is it?        ← search for "How much is it?" finds... anything 
   <li>In <code>app.py</code>, build the index inside <code>st.spinner</code>, since embedding takes a few seconds.</li>
   <li>Upload one of your own documents and ask about it.</li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Let the user remove one uploaded file from the index. <em>Done when:</em> after Remove, the file is gone from the list and no answer cites it; the other files are not re-embedded.</li>
+  <li><strong>Connect (EXER024).</strong> Add thumbs up/down under each answer and write the feedback to a file. <em>Done when:</em> each rating adds one line to <code>stretch/output/feedback.jsonl</code> with the question, the sources and the answer.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER025/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -106,6 +143,11 @@ User: How much is it?        ← search for "How much is it?" finds... anything 
 <div class="qa"><p>Should the answer step see the chat history too?</p>
   <p>Sometimes. It helps with tone and references ("as I said…"), but grounding works best when the answer comes from
   retrieved context. Here, the history only shapes the search.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

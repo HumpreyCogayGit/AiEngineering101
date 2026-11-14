@@ -6,7 +6,8 @@
     uv run python check_all.py --mine       # check YOUR code in every starter/ (a progress report)
 
 This is the course's definition of done, automated: each reference solution
-passes its checks and each untouched starter does not.
+passes its checks and each untouched starter does not. A full run (no exercise
+numbers) also validates the lecture quizzes with check_quizzes.py.
 """
 
 from __future__ import annotations
@@ -64,7 +65,15 @@ def main() -> int:
             print("       the untouched starter passes every check: the checks prove nothing")
     if mine:
         return 0
-    print(f"\n{len(exercises) - len(set(bad))}/{len(exercises)} exercises OK "
+    if not wanted:
+        # The lecture site's self-check quizzes are data: validate them too.
+        quiz = subprocess.run([sys.executable, str(ROOT / "check_quizzes.py")],
+                              cwd=ROOT, capture_output=True, text=True, timeout=120)
+        print((quiz.stdout + quiz.stderr).strip())
+        if quiz.returncode != 0:
+            bad.append("quizzes")
+    failed = set(bad) - {"quizzes"}
+    print(f"\n{len(exercises) - len(failed)}/{len(exercises)} exercises OK "
           f"in {time.perf_counter() - started:.0f}s" + (" (offline)" if offline else ""))
     return 1 if bad else 0
 

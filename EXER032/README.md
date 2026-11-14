@@ -39,3 +39,17 @@ uv run python EXER032/check.py
 - [ ] A bad product name returns a readable error, not a crash
 - [ ] The agent answers a multi-part question by calling several MCP tools
 - [ ] All 7 checks pass
+
+## Stretch goals
+
+Optional. Neither goal is needed to complete the exercise, and `check.py` must still pass when you are done.
+
+1. **Extend.** Read the server's prompt and use it as the agent's system prompt. *Done when:* the prompt text comes from `get_prompt`, and the agent follows it by calling the tools it names.
+2. **Connect (EXER033).** Connect to a second MCP server and list its capabilities with the same client code. *Done when:* the same function describes a different server: its name, tools, resources and prompts.
+
+Reference code, for after you have tried (it builds on `solution/` and changes nothing in it):
+
+```bash
+uv run python EXER032/stretch/goal1_server_prompt.py
+uv run python EXER032/stretch/goal2_second_server.py
+```

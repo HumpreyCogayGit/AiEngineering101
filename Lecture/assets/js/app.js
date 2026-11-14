@@ -1,4 +1,4 @@
-/* AI Engineer Course — page chrome: top bar, sidebar, TOC, progress, checklists, code, diagrams. */
+/* AI Engineer Course — page chrome: top bar, sidebar, TOC, progress, quizzes, checklists, code, diagrams. */
 (function () {
   "use strict";
   const COURSE = window.COURSE;
@@ -23,6 +23,14 @@
     const s = completed();
     done ? s.add(n) : s.delete(n);
     store.set("completed", [...s]);
+    refreshProgress();
+  }
+  // Quiz scores live next to "completed": { "4": { score: 3, total: 4 }, ... }. They never gate completion.
+  const quizScores = () => store.get("quiz", {});
+  function setQuizScore(n, score, total) {
+    const all = quizScores();
+    all[n] = { score, total };
+    store.set("quiz", all);
     refreshProgress();
   }
 
@@ -90,6 +98,13 @@
     topbar.querySelector(".progress-bar > i").style.width = `${(100 * count) / ALL.length}%`;
     document.querySelectorAll("[data-n]").forEach((a) => a.classList.toggle("done", done.has(Number(a.dataset.n))));
     document.querySelectorAll("[data-progress]").forEach((el) => (el.textContent = `${count} of ${ALL.length}`));
+    const scores = quizScores();
+    document.querySelectorAll("[data-quiz]").forEach((el) => {
+      const s = scores[el.dataset.quiz];
+      el.textContent = s ? `quiz ${s.score}/${s.total}` : "";
+      el.title = s ? `Self-check quiz: ${s.score} of ${s.total} correct on your last attempt` : "";
+      el.classList.toggle("full", !!s && s.score === s.total);
+    });
     const btn = document.querySelector(".complete-btn");
     if (btn) {
       const isDone = done.has(CURRENT);
@@ -162,7 +177,7 @@
     moduleList.innerHTML = COURSE.modules.map((m) => {
       const mins = m.lectures.reduce((a, l) => a + l.minutes, 0);
       return `<div class="module-card"><h3>${m.title}<small>${m.lectures.length} lectures · ~${Math.round(mins / 60 * 10) / 10} h</small></h3><ol>` +
-        m.lectures.map((l) => `<li><a href="${lectureHref(l.n)}" data-n="${l.n}"><span class="num">EXER${pad(l.n)}</span>${l.title}</a></li>`).join("") +
+        m.lectures.map((l) => `<li><a href="${lectureHref(l.n)}" data-n="${l.n}"><span class="num">EXER${pad(l.n)}</span><span class="title">${l.title}</span><span class="quiz-score" data-quiz="${l.n}"></span></a></li>`).join("") +
         "</ol></div>";
     }).join("");
     const totalMin = ALL.reduce((a, l) => a + l.minutes, 0);
@@ -173,6 +188,74 @@
     const cont = document.getElementById("continue-link");
     if (cont) { cont.href = lectureHref(nextUp.n); cont.textContent = done.size ? `Continue: ${pad(nextUp.n)} · ${nextUp.title} →` : "Start with Lecture 001 →"; }
   }
+
+  // ------------------------------------------------------------ self-check quiz (data in quizzes.js)
+  // Text in quizzes.js is plain text; `backticks` become <code>.
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const rich = (t) => esc(t).replace(/`([^`]+)`/g, "<code>$1</code>");
+  const quizBox = document.getElementById("quiz-box");
+  const QUIZ = (window.QUIZZES || {})[CURRENT];
+  function renderQuiz() {
+    let answered = 0, score = 0;
+    const last = quizScores()[CURRENT];
+    quizBox.innerHTML = `
+      <p class="quiz-intro">${QUIZ.length} questions, about two minutes. It is for you, not a grade: your first
+        choice counts, the explanation appears straight away, and nothing here blocks "Mark as complete".</p>
+      <ol class="quiz"></ol>
+      <div class="quiz-result"><span class="quiz-status">${last ? `Last attempt: ${last.score}/${last.total}` : ""}</span>
+        <button class="btn secondary quiz-retry" type="button" hidden>Try again</button></div>`;
+    const list = quizBox.querySelector(".quiz");
+    const status = quizBox.querySelector(".quiz-status");
+    const retry = quizBox.querySelector(".quiz-retry");
+    retry.addEventListener("click", () => { renderQuiz(); quizBox.scrollIntoView({ block: "start" }); });
+
+    QUIZ.forEach((item) => {
+      const li = document.createElement("li");
+      li.className = "quiz-q";
+      // Shuffle the options so the position of the right answer says nothing.
+      const order = item.options.map((_, i) => i);
+      for (let i = order.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [order[i], order[j]] = [order[j], order[i]];
+      }
+      li.innerHTML = `<p class="quiz-text">${rich(item.q)}</p><div class="quiz-options"></div>
+        <div class="quiz-why" aria-live="polite" hidden></div>`;
+      const options = li.querySelector(".quiz-options");
+      const why = li.querySelector(".quiz-why");
+      order.forEach((i) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "quiz-opt";
+        btn.innerHTML = rich(item.options[i]);
+        btn.addEventListener("click", () => {
+          const right = i === item.answer;
+          [...options.children].forEach((b, pos) => {
+            b.disabled = true;
+            if (order[pos] === item.answer) b.classList.add("correct");
+          });
+          if (!right) btn.classList.add("wrong");
+          li.classList.add(right ? "is-right" : "is-wrong");
+          why.hidden = false;
+          why.innerHTML = right
+            ? `<strong>Correct.</strong> ${rich(item.why[i])}`
+            : `<strong>Not quite.</strong> ${rich(item.why[i])}<br><strong>The answer:</strong> ${rich(item.options[item.answer])}. ${rich(item.why[item.answer])}`;
+          answered += 1;
+          if (right) score += 1;
+          if (answered === QUIZ.length) {
+            setQuizScore(CURRENT, score, QUIZ.length);
+            status.textContent = `You got ${score} of ${QUIZ.length}.` +
+              (score === QUIZ.length ? " The concept landed: on to the exercise." : " Re-read the parts you missed, then try again.");
+            retry.hidden = false;
+          } else {
+            status.textContent = `${answered} of ${QUIZ.length} answered`;
+          }
+        });
+        options.append(btn);
+      });
+      list.append(li);
+    });
+  }
+  if (quizBox && QUIZ) renderQuiz();
 
   // ------------------------------------------------------------ success-criteria checklists (persisted)
   document.querySelectorAll("ul.checklist").forEach((ul, listIndex) => {

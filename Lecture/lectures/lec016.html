@@ -6,6 +6,7 @@
 <title>Tool Calling by Hand</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -71,6 +72,45 @@
 <h3>Never <code>eval()</code> model output</h3>
 <p><code>calculate</code> uses Python's <code>ast</code> module to walk the expression and allow only numbers and arithmetic
   operators. <code>eval("__import__('os').system('rm -rf ~')")</code> shows why <code>eval</code> is off-limits.</p>
+<h3 id="worked">Worked example: the full message list of one question</h3>
+<p>Here is everything that was sent and received for one question, in order. Three model calls were needed. Read the
+  list top to bottom: it is exactly what the third request carried.</p>
+<pre><code class="language-python">[
+ # 1. What you wrote. Sent on every call.
+ {"role": "system", "content": "You are a helpful assistant. Use tools when they help."},
+ {"role": "user", "content": "Is it warmer in Manila or London right now, and by how many degrees?"},
+
+ # 2. Model call 1 (206 tokens in, 67 out, finish_reason="tool_calls").
+ #    No content: the reply IS the request. Two calls at once, each with its own id.
+ {"role": "assistant", "tool_calls": [
+   {"id": "call_dlcH…", "type": "function",
+    "function": {"name": "get_weather", "arguments": "{\"city\": \"Manila\"}"}},
+   {"id": "call_hPlQ…", "type": "function",
+    "function": {"name": "get_weather", "arguments": "{\"city\": \"London\"}"}}]},
+
+ # 3. Your code ran both functions. One tool message per call, matched by id.
+ {"role": "tool", "tool_call_id": "call_dlcH…",
+  "content": "{\"city\": \"Manila\", \"temp_c\": 31, \"condition\": \"humid, scattered thunderstorms\"}"},
+ {"role": "tool", "tool_call_id": "call_hPlQ…",
+  "content": "{\"city\": \"London\", \"temp_c\": 11, \"condition\": \"light rain\"}"},
+
+ # 4. Model call 2 (312 in, 19 out). It has the temperatures and wants exact arithmetic.
+ {"role": "assistant", "tool_calls": [
+   {"id": "call_etNQ…", "type": "function",
+    "function": {"name": "calculate", "arguments": "{\"expression\":\"31 - 11\"}"}}]},
+ {"role": "tool", "tool_call_id": "call_etNQ…", "content": "20"},
+
+ # 5. Model call 3 (342 in, 29 out, finish_reason="stop"). Plain text: the loop ends.
+ {"role": "assistant", "content": "Manila is warmer right now by **20°C**—**31°C** in Manila versus **11°C** in London."},
+]</code></pre>
+<p>Four things to notice:</p>
+<ul>
+  <li><strong>The model wrote four of the eight messages and executed nothing.</strong> Every <code>tool</code> message was produced by your <code>run_tool</code>.</li>
+  <li><strong><code>arguments</code> is a string</strong>, with the quotes escaped, in both spellings the model happened to use (with and without a space after the colon). <code>json.loads</code> handles both.</li>
+  <li><strong>The ids do the bookkeeping.</strong> Swap the two weather results and the answer is still right, because each result names the call it answers. Leave one out and the next request is rejected.</li>
+  <li><strong>Input grows every round: 206, 312, 342 tokens.</strong> The tool schemas and the whole history are resent each time. A chatty tool result is paid for on every later call of the same question.</li>
+</ul>
+<p class="file-label">Captured from a real run. Your ids, wording and numbers will differ; the shape will not.</p>
 </section>
 
 <section id="project"><h2>The Project</h2>
@@ -107,6 +147,15 @@ A: Manila is warmer, by 20°C.</code></pre>
   <li><code>run_tool</code>: one <code>try</code> around parse + call, with an <code>except Exception</code> that returns the error as JSON. This is one of the few places a broad except is right: errors must go back to the model.</li>
   <li><code>message.model_dump(exclude_none=True)</code> turns the SDK's message object into a dict you can append to <code>messages</code>.</li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Add a <code>get_time(timezone)</code> tool, and ask a question that needs two different tools. <em>Done when:</em> the verbose trace shows <code>get_time</code> and another tool being called for one question.</li>
+  <li><strong>Connect (EXER011).</strong> Run the tool calls of one round concurrently. <em>Done when:</em> four slow tool calls take about as long as one, and the tool messages are still in request order.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER016/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -125,6 +174,11 @@ A: Manila is warmer, by 20°C.</code></pre>
   <p>It decides based on the description and the system prompt. "Use for <em>any</em> math" in the description, or a rule in the system prompt, makes calls more reliable. <code>tool_choice</code> can force a call.</p></div>
 <div class="qa"><p>What makes a tool <em>dangerous</em>?</p>
   <p>Side effects: sending, buying, deleting, running code. Read-only tools are low-risk; tools that act need confirmation and limits (Lectures 018 and 029).</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

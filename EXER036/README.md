@@ -45,3 +45,19 @@ uv run python EXER036/check.py
 > Guardrails reduce risk; they don't remove it. The strongest defence is design:
 > don't put secrets in prompts, and don't give a model that reads untrusted text
 > tools that can do damage.
+
+## Stretch goals
+
+Optional. Neither goal is needed to complete the exercise, and `check.py` must still pass when you are done.
+
+1. **Extend.** Write two new stealthy attacks and say which layer stops each. *Done when:* neither email is caught by the input heuristics, the guarded summarizer exposes nothing, and you can name the layer that did it.
+2. **Connect (EXER018).** Add an output check that catches the secret spelled backwards or spaced out. *Done when:* spaced, reversed and letter-swapped spellings are caught, and the benign emails are not.
+
+Reference code, for after you have tried (it builds on `solution/` and changes nothing in it):
+
+```bash
+uv run python EXER036/stretch/goal1_new_attacks.py
+uv run python EXER036/stretch/goal2_obfuscated_secret.py
+```
+
+Also in [stretch/](stretch/): `new_attacks.json`.

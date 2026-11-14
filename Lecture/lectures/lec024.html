@@ -6,6 +6,7 @@
 <title>Evaluating RAG</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -65,6 +66,35 @@ judge_llm.with_structured_output(Grade).invoke(FAITHFULNESS_PROMPT.format(contex
 <div class="callout warn"><span class="title">Judges have biases</span>
   LLM judges can favour longer answers, their own style, or the first option shown. Spot-check judgments by hand,
   use a strong model as judge, and never use the judge as the only signal for high-stakes decisions.</div>
+<h3 id="worked">Worked example: one row of the report</h3>
+<p>One golden question through <code>evaluate_row</code>, the same question Lecture 023 followed:</p>
+<pre><code class="language-python">{"question": "Which coffee is best for a strong espresso?",
+ "expected_source": "products.md",
+ "reference_answer": "Barako Bold, a dark-roast Liberica from Batangas (Nimbus House Blend also works)."}</code></pre>
+<p><strong>Retrieval, scored by code.</strong></p>
+<pre><code class="language-text">sources          ["brewing_guide.md", "products.md", "products.md", "brewing_guide.md"]
+hit              True      products.md is among the four
+reciprocal rank  0.5       its first appearance is at position 2, and 1/2 = 0.5</code></pre>
+<p>Hit rate alone would call this perfect. The reciprocal rank records that the right document was not first.</p>
+<p><strong>Generation.</strong></p>
+<pre><code class="language-text">**Barako Bold** is best for a strong espresso. It's a dark-roast Liberica with a strong, smoky flavor and long finish. [1][2]</code></pre>
+<p><strong>The judge, twice</strong>, each time returning a <code>Grade</code> with the reasoning first:</p>
+<pre><code class="language-text">faithfulness  5   "The answer is fully supported: the brewing guide names Barako Bold as one of the best options for
+                   espresso, and the product description confirms it is a dark-roast Liberica …"
+correctness   5   "… correctly describes it as a dark-roast Liberica. It omits the Batangas origin and the optional
+                   alternative, Nimbus House Blend, but fully answers the main question."</code></pre>
+<p>Read the second reasoning: the judge noticed two omissions and still gave 5. Whether that is right is your call, and you can
+  only make it because the reasoning is there. A bare "5" would have hidden the decision. So retrieval ranked the right chunk
+  second, and the answer was right anyway: the model read both chunks and cited both. On this question the weaker ranking cost nothing.</p>
+<p><strong>Calibrating the judge.</strong> The same two prompts, given an answer that was made wrong on purpose:
+  <em>"Barako Bold is best for espresso, and it is also our cheapest decaf at ₱290."</em></p>
+<pre><code class="language-text">faithfulness  2   "… the answer falsely calls it decaf and gives the wrong price (₱290 instead of ₱390);
+                   Decaf Cloud is the listed decaf at ₱550."
+correctness   3   "It correctly names Barako Bold as the best choice … It also adds an unsupported claim …"</code></pre>
+<p>The two metrics disagree, as they should. Correctness compares with the reference, and the main fact is right, so 3.
+  Faithfulness compares with the context, where the invented price and "decaf" are contradicted, so 2. An answer can be mostly
+  correct and still unfaithful. That is the kind of answer that reaches customers when you only measure one of the two.</p>
+<p class="file-label">Captured from a real run. Your ids, wording and numbers will differ; the shape will not.</p>
 </section>
 
 <section id="project"><h2>The Project</h2>
@@ -114,6 +144,15 @@ Report written to EXER024/solution/output/eval_report.md</code></pre>
   <li>Run the evaluation, open the report, sort by the worst scores, and read those answers in full.</li>
   <li>Change one thing (e.g. k=6 in <code>build_rag_chain</code>), re-run, and compare reports.</li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Grade each answer twice and report how often the judge disagrees with itself. <em>Done when:</em> the script prints, per metric, on how many answers the two grades differ and by how much.</li>
+  <li><strong>Connect (EXER023).</strong> Evaluate the RAG chain with the best EXER023 retriever and compare both reports. <em>Done when:</em> two reports are written and one table shows every metric for both retrievers.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER024/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -131,6 +170,11 @@ Report written to EXER024/solution/output/eval_report.md</code></pre>
 <div class="qa"><p>Can you evaluate without reference answers?</p>
   <p>Partly. Faithfulness and refusal behaviour need no reference. Correctness does. Production systems often combine
   reference-free metrics on live traffic with reference-based tests before release.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

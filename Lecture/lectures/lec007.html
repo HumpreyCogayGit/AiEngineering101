@@ -6,6 +6,7 @@
 <title>Streaming</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -89,6 +90,15 @@ Streaming      [.] first token (TTFT ≈ 0.5s)
   <li><code>collect</code> is the "consumer" side: call <code>on_token</code> for each piece and join everything at the end.</li>
   <li>For <code>stream_with_usage</code>, remember the usage arrives in a final chunk whose <code>choices</code> list is <em>empty</em>.</li>
 </ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Stop a streamed answer cleanly with Ctrl-C and keep the partial reply in the history. <em>Done when:</em> after an interruption the next turn can say what the bot had written so far.</li>
+  <li><strong>Connect (EXER016).</strong> Stream a tool call: collect the <code>delta.tool_calls</code> fragments and assemble the arguments. <em>Done when:</em> the fragments are printed as they arrive and end up as complete, parsed arguments per call.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER007/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -109,6 +119,11 @@ Streaming      [.] first token (TTFT ≈ 0.5s)
 <div class="qa"><p>How does streaming interact with guardrails?</p>
   <p>Output checks need the whole text, but you've already shown part of it. Options: check chunks incrementally,
   buffer a sentence before showing it, or accept the risk for low-stakes content.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>

@@ -6,6 +6,7 @@
 <title>HTTP and the Raw API Call</title>
 <link rel="stylesheet" href="../assets/css/style.css">
 <script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
 <script defer src="../assets/vendor/highlight.min.js"></script>
 <script defer src="../assets/vendor/mermaid.min.js"></script>
 <script defer src="../assets/js/app.js"></script>
@@ -128,9 +129,15 @@ HTTP 404: {"error":{"message":"model 'no-such-model' not found","type":"not_foun
   <li><code>send_chat</code>: <code>httpx.post(..., json=body)</code> serializes the dict for you. Don't call <code>json.dumps</code> yourself.</li>
   <li>Run it and read the full JSON. Look for fields beyond the standard ones: Azure adds <code>content_filter_results</code> (it screens every request and response), and a thinking model on Ollama adds <code>reasoning</code>.</li>
 </ol>
-<div class="callout tip"><span class="title">Try the stretch goals</span>
-  Send a wrong key: a cloud provider answers 401, a local Ollama doesn't check. Add <code>"temperature": 0</code> and run three times. Add
-  <code>"max_completion_tokens": 5</code> (on Ollama: <code>"max_tokens": 5</code>) and look at <code>finish_reason</code>.</div>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Send the same question twice, with and without a system message, and compare <code>usage.prompt_tokens</code>. <em>Done when:</em> the script prints how many extra input tokens the system message costs.</li>
+  <li><strong>Connect (EXER011).</strong> Print the rate-limit headers of the response. <em>Done when:</em> a hosted provider shows its <code>x-ratelimit-*</code> headers, and a local one prints that there are none.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER003/stretch/</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -149,6 +156,11 @@ HTTP 404: {"error":{"message":"model 'no-such-model' not found","type":"not_foun
 <div class="qa"><p>Why is the model call a POST and not a GET?</p>
   <p>The request carries a body (the conversation), it isn't cacheable, and it isn't idempotent: the same request
   can produce a different answer.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
 </section>
 
 <section id="reading"><h2>Further Reading</h2>
