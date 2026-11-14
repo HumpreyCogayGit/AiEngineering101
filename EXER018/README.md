@@ -4,8 +4,8 @@
 
 ## Goal
 
-Let an LLM run shell commands — safely. Learn why "a shell tool" is the
-highest-risk tool there is, and build several independent layers of defence.
+Let an LLM run shell commands safely. Learn why a shell tool is one of the
+riskiest tools you can give a model, and build several independent layers of defence.
 
 ## The project
 
@@ -16,9 +16,9 @@ A file-explorer agent that answers questions about the files in
 
 Complete the TODOs in `starter/shell_agent.py`:
 
-1. `is_allowed` — allowlist, forbidden shell operators, forbidden arguments, path escapes
-2. `truncate` — never flood the context window with output
-3. `run_command` — confirmation, `subprocess.run` with a list and **no** `shell=True`, timeout
+1. `is_allowed`: allowlist, forbidden shell operators, forbidden arguments, path escapes
+2. `truncate`: never flood the context window with output
+3. `run_command`: confirmation, `subprocess.run` with a list and **no** `shell=True`, timeout
 
 ## Run it
 

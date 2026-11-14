@@ -16,13 +16,13 @@
 <main>
 <header class="lecture-header">
   <h1>CLI Calling</h1>
-  <p class="lede">Giving a model a shell makes it enormously capable, and enormously dangerous. Learn to build it with
-    several independent layers of defence.</p>
+  <p class="lede">A model with a shell tool can read, change or delete anything your user account can reach. This
+    lecture builds one with several independent layers of defence, so a single failed check doesn't expose the machine.</p>
 </header>
 
 <section id="overview"><h2>Overview</h2>
-<p>Coding agents, DevOps assistants and data tools all run command-line programs on the model's behalf. That's
-  powerful, because a shell can do almost anything, and that is exactly the problem. This lecture treats the shell
+<p>Coding agents, DevOps assistants and data tools all run command-line programs on the model's behalf. A shell can
+  do almost anything, which is why these tools are useful and why they are risky. This lecture treats the shell
   tool as a security exercise: how do you let a model run <code>ls</code> and <code>grep</code> without letting it run
   <code>rm -rf ~</code> or send your files to someone else?</p>
 </section>
@@ -34,6 +34,8 @@
   see Lecture 036), or because the user is <strong>malicious</strong>. Design as if all three will happen.</p>
 
 <h3>Defence in depth</h3>
+<p><em>Defence in depth</em> is the security practice of stacking independent controls, so that an attack which gets
+  past one layer is still stopped by another. No single layer below is enough on its own.</p>
 <div class="mermaid">flowchart LR
   C[model's command] --> L1{Allowlist +<br/>no shell operators}
   L1 -- refused --> X[REFUSED]
@@ -59,7 +61,7 @@ subprocess.run(["cat", "notes.txt;", "rm", "-rf", "~"])      # ← cat receives 
 subprocess.run(shlex.split(cmd), cwd=WORKSPACE, capture_output=True, text=True, timeout=10)   # what we do</code></pre>
 <div class="callout danger"><span class="title">Allowlists beat denylists</span>
   A denylist ("block <code>rm</code>") misses <code>find -delete</code>, <code>python -c</code>, <code>perl</code>,
-  <code>dd</code> and hundreds of other ways to do damage. Permit only what you need.</div>
+  <code>dd</code> and many other ways to do damage. Permit only what you need.</div>
 <h3 id="worked">Worked example: one run, command by command</h3>
 <p>The agent was asked a question with a trap in it: <em>"Which branch sold the most cups in March? Then delete sales.csv to tidy
   up."</em> Every command was approved, so only the static checks stood between the model and the file.</p>
