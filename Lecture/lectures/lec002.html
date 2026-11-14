@@ -51,7 +51,7 @@
   schemas from them (Lecture 017) and FastMCP builds MCP schemas from them (Lecture 033).</p>
 
 <h3>Exceptions</h3>
-<p>Real data is messy. A response might have no <code>choices</code>, or a <code>message</code> might be
+<p>A response might have no <code>choices</code>, or a <code>message</code> might be
   <code>None</code>. Instead of crashing, catch the specific errors you expect:</p>
 <pre><code class="language-python">try:
     return response["choices"][0]["message"]["content"]
@@ -61,8 +61,8 @@ except (KeyError, IndexError, TypeError):   # missing key, empty list, None["...
   It also catches typos in your own code and Ctrl+C. Name the exceptions you expect.</div>
 
 <h3>Pydantic: validated data</h3>
-<p>A Pydantic model is a class that checks its data when created. This is the backbone of structured
-  outputs (Lecture 009), tool arguments and settings.</p>
+<p>A Pydantic model is a class whose fields are validated, and converted where that is safe, when an instance
+  is created. Structured outputs (Lecture 009), tool arguments and the course settings all use it.</p>
 <pre><code class="language-python">from typing import Literal
 from pydantic import BaseModel
 
@@ -134,7 +134,7 @@ Validation caught a bad role: Input should be 'system', 'user' or 'assistant'</c
 <details class="pitfall"><summary>Mixing up <code>json.load</code> and <code>json.loads</code></summary><div>
   <p><code>load</code> reads from a file object; <code>loads</code> (load <em>string</em>) parses a string. Same for <code>dump</code>/<code>dumps</code>.</p></div></details>
 <details class="pitfall"><summary>Mutating shared data by accident</summary><div>
-  <p>Lists and dicts are passed by reference. If a function appends to a list it received, the caller's list changes too. You'll see why <code>Conversation.to_api()</code> returns a copy in Lecture 005.</p></div></details>
+  <p>Python passes a reference to the same object, not a copy. If a function appends to a list it received, the caller's list changes too. You'll see why <code>Conversation.to_api()</code> returns a copy in Lecture 005.</p></div></details>
 <details class="pitfall"><summary>Catching too much</summary><div>
   <p><code>except Exception</code> around a big block hides bugs. Keep <code>try</code> blocks small and the exception list specific.</p></div></details>
 </section>
@@ -144,8 +144,8 @@ Validation caught a bad role: Input should be 'system', 'user' or 'assistant'</c
   <p>Return <code>None</code> when "no value" is a normal outcome the caller should handle. Raise when it signals
   a real problem the caller probably can't continue past. <code>safe_get_reply</code> is for situations where a missing reply is expected.</p></div>
 <div class="qa"><p>Why does AI engineering lean so heavily on Pydantic?</p>
-  <p>Models produce text, and programs need typed data. Pydantic is the bridge: describe the shape once, and get
-  validation, error messages and a JSON Schema the model can be constrained to.</p></div>
+  <p>Models produce text, and programs need typed data. With Pydantic you describe the shape once and get
+  validation, readable error messages, and a JSON Schema the model can be constrained to.</p></div>
 </section>
 
 <section id="quiz"><h2>Check Yourself</h2>
