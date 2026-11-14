@@ -16,14 +16,14 @@
 <main>
 <header class="lecture-header">
   <h1>Message Content Blocks</h1>
-  <p class="lede">A message's content doesn't have to be a single string. It can be a list of typed blocks
-    (text, images), which lets one message combine several kinds of input. And every block counts against the context window.</p>
+  <p class="lede">A message's content can be a list of typed blocks instead of a single string, so one message can
+    carry text and images together. Every block, text or image, uses up part of the context window.</p>
 </header>
 
 <section id="overview"><h2>Overview</h2>
-<p>So far <code>content</code> has been a string. Modern chat APIs also accept a <strong>list of content
-  blocks</strong>. You'll send an image to the model, then tackle the other side of the same coin: the
-  <strong>context window</strong>, and how to keep a growing conversation inside it.</p>
+<p>So far <code>content</code> has been a string. The Chat Completions API also accepts a <strong>list of content
+  blocks</strong>, which is how you send an image. Images and long histories both fill the
+  <strong>context window</strong>, so the second half of this lecture keeps a growing conversation inside it.</p>
 </section>
 
 <section id="concept"><h2>Concept</h2>
@@ -49,7 +49,8 @@
 
 <h3>The context window</h3>
 <p>Every model has a maximum context: system prompt + history + new input + output must fit. Even when it
-  fits, very long contexts are slower and more expensive, and models can overlook details buried in the middle.</p>
+  fits, very long contexts are slower and more expensive, and models use information in the middle of a long
+  context less reliably than information at the start or end (Liu et al., <a href="https://arxiv.org/abs/2307.03172">"Lost in the Middle"</a>, 2023).</p>
 <div class="mermaid">flowchart LR
   subgraph W["Context window (e.g. 128k tokens)"]
     S[system] --- H1[old turns ...] --- H2[recent turns] --- Q[new question] --- O[room for the answer]
@@ -124,7 +125,7 @@ First kept non-system message: Question number 15: blah blah</code></pre>
 <section id="discussion"><h2>Discussion</h2>
 <div class="qa"><p>With million-token context windows, why trim at all?</p>
   <p>Cost and latency grow with every token you send, on every turn. Quality can also drop when relevant
-  details are buried in a huge context. Big windows are a safety net, not a strategy.</p></div>
+  details are buried in a huge context.</p></div>
 <div class="qa"><p>When would you summarize instead of trim?</p>
   <p>Long-running assistants where early facts matter (a customer's order number, preferences). Summaries keep them; trimming drops them.</p></div>
 </section>

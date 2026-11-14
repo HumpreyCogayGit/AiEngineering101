@@ -13,9 +13,9 @@ window by trimming history.
 Complete the TODOs in `starter/content_blocks.py`:
 
 1. `text_block`, `image_block_from_url`, `image_block_from_file` (base64 data URL)
-2. `build_multimodal_message` — one user message with a text block and image blocks
-3. `describe_image` — ask a question about [images/shapes.png](images/shapes.png)
-4. `trim_history` — keep the system prompt and the newest messages that fit a token budget
+2. `build_multimodal_message`: one user message with a text block and image blocks
+3. `describe_image`: ask a question about [images/shapes.png](images/shapes.png)
+4. `trim_history`: keep the system prompt and the newest messages that fit a token budget
 
 ## Run it
 
