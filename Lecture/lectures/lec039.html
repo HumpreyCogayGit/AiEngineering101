@@ -161,7 +161,8 @@ Setup costs once per conversation: one summary call (reads the whole history), o
 <div class="qa"><p>Which strategy would you ship for a support chat?</p>
   <p>Usually a combination: a short running summary for the gist, the last few turns word for word, and exact facts (order number, allergies) in structured memory. Retrieval over turns earns its place when conversations run to hundreds of turns or span several sessions.</p></div>
 <div class="qa"><p>The context window is a million tokens. Does any of this still matter?</p>
-  <p>The table answers it: 1,563 tokens against 234, on every question, for the same recall. At scale that is the difference between two bills. Long contexts are also slower, and details in the middle of them are overlooked more often (Lecture 006).</p></div>
+  <p>The table answers it: 1,563 tokens against 234 for the same recall, so retrieval sends about a seventh of the input
+  tokens, and pays a seventh of the input price, on every question. Long contexts are also slower, and details in the middle of them are overlooked more often (Lecture 006).</p></div>
 <div class="qa"><p>How is this different from the long-term memory of Lecture 028?</p>
   <p>That stored facts about a <em>user</em>, across conversations. This manages the text of <em>one</em> conversation. They combine: the summary and the retrieved turns serve the conversation, the store serves the person.</p></div>
 </section>
