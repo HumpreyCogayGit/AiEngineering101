@@ -16,14 +16,14 @@
 <main>
 <header class="lecture-header">
   <h1>HTTP and the Raw API Call</h1>
-  <p class="lede">Every SDK and framework in this course is a wrapper around one HTTP request.
-    Make that request yourself once, and nothing later will feel like magic.</p>
+  <p class="lede">Every SDK and framework in this course ends in the same HTTP request: a <code>POST</code>
+    to <code>/chat/completions</code>. Here you send it by hand, so you can recognise it inside every library that follows.</p>
 </header>
 
 <section id="overview"><h2>Overview</h2>
 <p>An LLM API is a web service. You send an HTTP <code>POST</code> with a JSON body describing the conversation,
   and get back a JSON body with the model's reply and some metadata. In this lecture we build that request piece
-  by piece with <code>httpx</code>, a modern Python HTTP client.</p>
+  by piece with <code>httpx</code>, a Python HTTP client with both sync and async APIs.</p>
 </section>
 
 <section id="concept"><h2>Concept</h2>
@@ -154,8 +154,10 @@ HTTP 404: {"error":{"message":"model 'no-such-model' not found","type":"not_foun
   <p>SDKs add typed responses, retries, timeouts, streaming parsers, file uploads and helpers such as structured
   output parsing. You'll appreciate each one more now that you've done without it.</p></div>
 <div class="qa"><p>Why is the model call a POST and not a GET?</p>
-  <p>The request carries a body (the conversation), it isn't cacheable, and it isn't idempotent: the same request
-  can produce a different answer.</p></div>
+  <p>The request carries a JSON body (the conversation). HTTP gives a body on <code>GET</code> no defined meaning
+  (RFC 9110, section 9.3.1), so servers and proxies may ignore or reject it. <code>POST</code> is the method for sending
+  content for the server to process, and its responses are not cached by default, which suits an answer that can
+  differ on every call.</p></div>
 </section>
 
 <section id="quiz"><h2>Check Yourself</h2>
