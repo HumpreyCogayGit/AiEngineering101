@@ -10,15 +10,15 @@ Understand tool (function) calling from first principles: tool schemas, the
 ## The project
 
 An assistant with two tools: `get_weather(city)` (fake data) and `calculate(expression)`
-(a safe arithmetic evaluator — never `eval()`).
+(a safe arithmetic evaluator that never calls `eval()`).
 
 ## Tasks
 
 Complete the TODOs in `starter/tools_raw.py`:
 
-1. `TOOLS` — JSON schemas describing both tools
-2. `run_tool` — dispatch by name, return results **and errors** as JSON strings
-3. `run_conversation` — the tool-calling loop with a round limit
+1. `TOOLS`: JSON schemas describing both tools
+2. `run_tool`: dispatch by name, return results **and errors** as JSON strings
+3. `run_conversation`: the tool-calling loop with a round limit
 
 ## Run it
 

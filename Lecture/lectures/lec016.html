@@ -17,11 +17,12 @@
 <header class="lecture-header">
   <h1>Tool Calling by Hand</h1>
   <p class="lede">Models can't check the weather, query a database or do exact math. They can <em>ask your code</em>
-    to do it. Tool calling turns a text generator into something that acts.</p>
+    to do it: the model answers with a structured request, and your code decides whether to run it.</p>
 </header>
 
 <section id="overview"><h2>Overview</h2>
-<p>Tool calling (also "function calling") is the foundation of agents. You describe functions to the model; when a
+<p>Tool calling (also "function calling") is what agents are built on: an agent is a model calling tools in a loop
+  until the task is done (Lecture 027). You describe functions to the model; when a
   question needs one, the model replies with a structured <em>request</em> to call it. Your code runs the function,
   sends the result back, and the model writes the final answer. We build the whole loop by hand with the raw SDK.</p>
 </section>
