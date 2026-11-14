@@ -29,13 +29,14 @@
 <section id="concept"><h2>Concept</h2>
 <h3>Traces and spans</h3>
 <p>A <strong>trace</strong> is one run (one user question). It's made of <strong>spans</strong>: timed steps such as a model
-  call or a tool call, each linked to its parent by a run id.</p>
+  call or a tool call, each linked to its parent (by a run id in LangChain, by a parent span id in
+  <a href="https://opentelemetry.io/docs/concepts/signals/traces/">OpenTelemetry</a>, the open standard these terms come from).</p>
 <pre><code class="language-text">Trace: "What is the refund window, and is shipping free?"
 ├─ LLM  gpt-4.1-mini   0.84s  in=412  out=38   → calls search_kb, search_kb
 ├─ TOOL search_kb      0.21s  {'query': 'refund window unopened beans'}
 ├─ TOOL search_kb      0.19s  {'query': 'free shipping'}
 └─ LLM  gpt-4.1-mini   1.32s  in=1288 out=96   → answer
-Totals: 2 LLM calls, 2 tool calls, 1,834 tokens, $0.0008, 2.6s</code></pre>
+Totals: 2 LLM calls, 2 tool calls, 1,834 tokens, $0.0009, 2.6s</code></pre>
 <p>Notice the second model call's input: the tool results made it three times bigger. Traces make costs like that visible.</p>
 
 <h3>Callbacks</h3>

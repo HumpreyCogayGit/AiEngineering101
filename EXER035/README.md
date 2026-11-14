@@ -12,9 +12,9 @@ a timeline and a usage report.
 
 Complete the TODOs in `starter/observability.py` (the `UsageTracker`):
 
-1. `on_llm_end` — close the span, record tokens and what the model decided
+1. `on_llm_end`: close the span, record tokens and what the model decided
 2. `on_tool_start`, `on_tool_end`, `on_tool_error`
-3. `report` — totals and cost
+3. `report`: totals and cost
 
 ## Run it
 
