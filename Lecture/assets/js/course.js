@@ -52,14 +52,24 @@ window.COURSE = {
     ]},
     { title: "Module 7: Toward Production", lectures: [
       { n: 35, title: "Observability and Cost", minutes: 60 },
-      { n: 36, title: "Safety and Guardrails", minutes: 75 },
+      { n: 36, title: "Safety and Guardrails", minutes: 90 },
       { n: 37, title: "Capstone: Nimbus Helpdesk", minutes: 240 },
     ]},
-    { title: "Module 8: Beyond the Capstone", lectures: [
+    { title: "Module 8: Evaluation, Context and Deployment", lectures: [
       { n: 38, title: "Evaluating Agents", minutes: 60 },
       { n: 39, title: "Conversation Memory Strategies", minutes: 60 },
-      { n: 40, title: "Context Engineering", minutes: 75 },
-      { n: 41, title: "Deploying the Capstone", minutes: 90 },
+      { n: 40, title: "Context Engineering", minutes: 105 },
+      { n: 41, title: "Deploying the Capstone", minutes: 105 },
+    ]},
+    { title: "Module 9: Running in Production", lectures: [
+      { n: 42, title: "Identity and Tenant Boundaries", minutes: 75 },
+      { n: 43, title: "Safe Side Effects", minutes: 75 },
+      { n: 44, title: "Operating Under Load", minutes: 105 },
+      { n: 45, title: "Caching and Batch Work", minutes: 75 },
+      { n: 46, title: "Model Selection and Routing", minutes: 75 },
+      { n: 47, title: "Privacy and Data Lifecycle", minutes: 75 },
+      { n: 48, title: "Release-Gated Evaluation", minutes: 75 },
+      { n: 49, title: "Learning from Production", minutes: 60 },
     ]},
   ],
 };

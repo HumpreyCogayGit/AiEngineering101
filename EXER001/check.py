@@ -34,9 +34,12 @@ def _():
 def _():
     gitignore = (ROOT_DIR / ".gitignore").read_text()
     assert ".env" in gitignore.splitlines(), ".env is missing from .gitignore"
-    result = subprocess.run(
-        ["git", "check-ignore", "-q", ".env"], cwd=ROOT_DIR, capture_output=True
-    )
+    try:
+        result = subprocess.run(
+            ["git", "check-ignore", "-q", ".env"], cwd=ROOT_DIR, capture_output=True
+        )
+    except FileNotFoundError:
+        return  # git is not installed (a ZIP download): the .gitignore line is enough
     # returncode 0 = ignored; 128 = not a git repo (fine, .gitignore line is enough)
     assert result.returncode in (0, 128), "git does not ignore .env"
 

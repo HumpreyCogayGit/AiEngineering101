@@ -72,6 +72,15 @@ class Reply:
  "expect_keywords": ["4620"], "expect_tools": ["search_knowledge_base", "calculator"]}</code></pre>
 <p>Each case says what a correct answer contains and which tools must have been used (so a lucky guess doesn't pass).
   Blocking cases check the guardrails. The run writes <code>output/capstone_eval.md</code>.</p>
+<p>The 26 cases are tagged with a <strong>category</strong>: grounding, arithmetic, refusal, memory, tool use and safety.
+  The bar is per category (75% each, 100% for safety), because an average hides a category that fails completely:
+  an assistant that answers every price question and leaks its prompt to anyone who asks can still average 90%.
+  Memory cases carry a <code>history</code> of earlier turns that are asked first, in the same thread. Arithmetic cases
+  set <code>expect_tools_in_order</code>: the price must be looked up <em>before</em> the calculator adds it up.
+  Lecture 038 takes trajectories further.</p>
+<p>A second file, <code>eval_heldout.json</code>, has one case per category that you do not look at while you iterate.
+  Run it once, at the end. It answers the question every evaluation set raises: did you fix the assistant, or did you
+  fix it for these 26 questions?</p>
 </section>
 
 <section id="project"><h2>The Project</h2>
@@ -82,12 +91,13 @@ class Reply:
   <tr><td><code>assistant.py</code></td><td>TODO</td><td><code>setup</code>, <code>ask</code></td></tr>
   <tr><td><code>cli.py</code></td><td>TODO</td><td>The <code>ask</code> command</td></tr>
   <tr><td><code>app.py</code></td><td>TODO</td><td>Answering in the chat UI</td></tr>
-  <tr><td><code>evaluate.py</code></td><td>TODO</td><td><code>score_case</code></td></tr>
+  <tr><td><code>evaluate.py</code></td><td>TODO</td><td><code>score_case</code>, including the in-order tool check</td></tr>
 </table>
 <pre><code class="language-bash">uv run python EXER037/starter/cli.py ask "What is your refund policy?" -v
 uv run python EXER037/starter/cli.py chat
 uv run streamlit run EXER037/starter/app.py
 uv run python EXER037/starter/cli.py eval
+uv run python EXER037/starter/cli.py eval --heldout     # once, at the end
 uv run python EXER037/check.py</code></pre>
 </section>
 
@@ -102,7 +112,7 @@ uv run python EXER037/check.py</code></pre>
 
 <section id="success"><h2>Success Criteria</h2>
 <ul class="checklist">
-  <li>All 11 checks pass, including the live evaluation (≥ 80% of eval_set.json)</li>
+  <li>All 14 checks pass, including the live evaluation: every category of eval_set.json at ≥ 75%, safety at 100%</li>
   <li>The CLI and the web UI give the same answers</li>
   <li>Conversations remember earlier turns within a thread</li>
   <li>Prompt-injection attempts are blocked before reaching the model</li>
@@ -123,7 +133,7 @@ uv run python EXER037/check.py</code></pre>
 <div class="stretch">
 <p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
 <ol>
-  <li><strong>Extend.</strong> Add one new tool and two evaluation cases that need it. <em>Done when:</em> the two new cases pass only when the tool is used, and the original eight still pass.</li>
+  <li><strong>Extend.</strong> Add one new tool and two evaluation cases that need it. <em>Done when:</em> the two new cases pass only when the tool is used, and the original cases still pass.</li>
   <li><strong>Connect (EXER035).</strong> Attach the EXER035 tracker to the evaluation run and report its cost. <em>Done when:</em> the script prints model calls, tokens and cost for the run and per question.</li>
 </ol>
 <p class="file-label">Reference code, for after you have tried: EXER037/stretch/</p>

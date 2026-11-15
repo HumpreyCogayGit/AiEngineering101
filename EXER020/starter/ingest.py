@@ -31,7 +31,7 @@ def load_text(path: Path) -> list[Document]:
 
 
 def load_html(path: Path) -> list[Document]:
-    """Keep the readable text; drop scripts, styles, navigation and footers.
+    r"""Keep the readable text; drop scripts, styles, navigation and footers.
 
     soup = BeautifulSoup(html, "html.parser")
     for tag in soup(["script", "style", "nav", "footer"]): tag.decompose()

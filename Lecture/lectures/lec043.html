@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Safe Side Effects</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/loader.js"></script>
+<script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="43">
+<main>
+<header class="lecture-header">
+  <h1>Safe Side Effects</h1>
+  <p class="lede">A retried request, a resumed checkpoint, or a crash between "refund issued" and "result saved" can each run the same refund twice.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>Lecture 011 taught retries, Lecture 028 resuming from a checkpoint, and Lecture 029 approval before risky actions.
+  Each of them runs a tool <em>again</em>. For a search that is harmless. For a tool that moves money, sends an email or
+  writes a record, running again means doing it again.</p>
+<p>This lesson makes a refund tool safe to repeat. The technique, an <strong>idempotency key</strong>, is decades older than
+  LLM agents, and payment APIs use it for the same reason. What is new is where the repeats come from, and that the model
+  making the decision is not the place to prevent them.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>Tool calls run at least once</h3>
+<table>
+  <tr><th>Cause</th><th>What repeats</th></tr>
+  <tr><td>A client times out and sends the request again (Lecture 011)</td><td>The whole question, and every tool call in it</td></tr>
+  <tr><td>A run crashes in the tools node and is resumed (Lecture 028)</td><td>The whole tools node, with the same tool calls</td></tr>
+  <tr><td>A tool pauses with <code>interrupt()</code> and is resumed (Lecture 029)</td><td>The tool function, from its first line</td></tr>
+  <tr><td>The process dies after the money moved, before the result was stored</td><td>Everything since the last checkpoint</td></tr>
+</table>
+<p>You cannot make a distributed system run something <em>exactly</em> once. You can make it run <em>at least</em> once and make
+  every run after the first do nothing. That second property is idempotency.</p>
+
+<h3>What LangGraph replays</h3>
+<p>The checkpointer saves state after each step. The model's decision, an <code>AIMessage</code> with tool calls, is saved
+  before the tools node starts. If the process dies inside the tool, <code>invoke(None, config)</code> resumes at the tools
+  node and calls the tool again with the <strong>same tool call id</strong> in the <strong>same thread</strong>:</p>
+<pre><code class="language-text">crashed:  power cut
+next:     ('tools',)
+calls:    [('NC-1042', 3450.0, 'call_X', 't1'),
+           ('NC-1042', 3450.0, 'call_X', 't1')]      ← the same call, twice</code></pre>
+<p>That makes <code>thread_id + tool_call_id</code> the identity of one decision, and a natural idempotency key. A tool
+  receives both without the model seeing them:</p>
+<pre><code class="language-python">@tool
+def refund_order(order_id: str, amount: float,
+                 tool_call_id: Annotated[str, InjectedToolCallId], config: RunnableConfig) -> str:
+    """Refund money for a Nimbus order. amount is in pesos."""
+    key = f"refund:{config['configurable']['thread_id']}:{tool_call_id}"
+    return issue_refund(ledger, gateway, key, order_id, amount, actor=...)</code></pre>
+
+<h3>Decide, then commit, once per key</h3>
+<div class="mermaid">flowchart TD
+  A["issue_refund(key)"] --> B{"ledger row for key?"}
+  B -->|done| R["return the stored result<br/>audit: replayed"]
+  B -->|none| V{"validate in code"}
+  V -->|refused| X["audit: rejected"]
+  V -->|ok| P["ledger: pending"]
+  B -->|pending| G{"gateway takes keys?"}
+  G -->|no| H["needs_review<br/>a person decides"]
+  G -->|yes| S
+  P --> S["audit: started<br/>gateway.refund(key)"]
+  S --> D["ledger: done<br/>audit: executed"]</div>
+<ul>
+  <li><strong>Record the intent before acting.</strong> The "pending" row is written before the gateway is called. After a
+    crash, a pending row is the evidence that the money may have moved.</li>
+  <li><strong>Pass the key downstream.</strong> Payment providers accept an idempotency key and return the first result for a
+    repeated one (<a href="https://docs.stripe.com/api/idempotent_requests">Stripe's idempotent requests</a> are a well-known
+    example). Then a pending row is safe to retry: the gateway will not pay twice.</li>
+  <li><strong>When the downstream has no keys, stop.</strong> An email server or an old internal API cannot tell you whether it
+    already acted. Retrying may pay twice; not retrying may pay nothing. Flag it for a person.</li>
+  <li><strong>Validate in code.</strong> The model proposed the amount. The code checks it against what was paid and what was
+    already refunded, counting pending refunds: they may have moved money too.</li>
+</ul>
+<div class="callout warn"><span class="title">Code before <code>interrupt()</code> runs twice</span>
+  When a tool pauses with <code>interrupt()</code> and is resumed, the function starts again from its first line, and
+  <code>interrupt()</code> returns the human's answer the second time (<a href="https://docs.langchain.com/oss/python/langgraph/interrupts">LangGraph:
+  interrupts</a>). Never put a side effect before an <code>interrupt()</code>. Stretch goal 1 counts the repeats.</div>
+
+<h3>The audit record</h3>
+<p>Every attempt writes a row: when, the key, who (the agent's thread or the approving person), the order, the amount, and
+  the outcome (<code>started</code>, <code>executed</code>, <code>replayed</code>, <code>rejected</code>, <code>needs_review</code>).
+  The <code>started</code> row is written before the gateway call, so a crash leaves a trace. When a customer says "I was
+  charged twice", the audit log answers in one query.</p>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>You complete <code>refunds.py</code>: the key, the validation, <code>issue_refund</code> and the tool. The demo runs a real
+  agent, makes the gateway crash right after it moves the money, and resumes.</p>
+<h3>Sample run</h3>
+<pre><code class="language-text">$ uv run python EXER043/solution/refunds.py
+CRASH: the process died after the money moved. The checkpoint says the next step is ('tools',).
+
+agent: Your full refund of **₱3,450** has been issued for order **NC-1042**.
+**Refund ID:** `re_00b5ae4ff6`
+
+Gateway: 2 calls, money moved 1 time(s): [{'refund_id': 're_00b5ae4ff6', 'order_id': 'NC-1042', 'amount': 3450.0}]
+audit  …21:49:40.940  started   NC-1042 ₱3,450  refund:support-7:call_cg1IofNB…
+audit  …21:49:40.942  started   NC-1042 ₱3,450  refund:support-7:call_cg1IofNB…
+audit  …21:49:40.942  executed  NC-1042 ₱3,450  refund:support-7:call_cg1IofNB…  re_00b5ae4ff6</code></pre>
+<p class="file-label">Captured from a real run. Two gateway calls, one payment: the second call carried the same key.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Name the four ways an agent's tool call can run more than once.</li>
+  <li>Derive an idempotency key from the decision, not from the request or the clock.</li>
+  <li>Record intent before acting, and commit at most once per key.</li>
+  <li>Recognize when a side effect cannot be made idempotent, and hand it to a person.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>The same decision (thread and tool call id) always gives the same idempotency key</li>
+  <li>A refund is refused for an unknown order, a non-positive amount, or more than is left to refund</li>
+  <li>Calling <code>issue_refund</code> twice with one key moves money once and returns the same answer</li>
+  <li>After a crash between "money moved" and "result saved", the resumed agent does not pay again</li>
+  <li>When the gateway has no idempotency keys, an unknown outcome is flagged for a person, never retried</li>
+  <li>The audit log shows every attempt, including the one that crashed</li>
+  <li>All 8 checks pass (offline)</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li><code>idempotency_key</code>: one line. Ask yourself why a <code>uuid4()</code> or a timestamp would be wrong.</li>
+  <li><code>validate_refund</code>: three refusals and one "allowed". Exactly the remaining amount is allowed.</li>
+  <li><code>issue_refund</code>: follow the diagram. Start with the "done" branch, then "none", then "pending".</li>
+  <li><code>make_refund_tool</code>: add the two injected parameters. The model's tool schema must not contain them.</li>
+  <li>Run the demo, then change the gateway to <code>PaymentGateway(supports_idempotency=False)</code> and run it again.</li>
+</ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend (EXER029).</strong> Refunds above ₱1,000 wait for a supervisor's approval with <code>interrupt()</code>. <em>Done when:</em> the run pauses, resumes on approval, the tool body visibly runs twice, and the money moves once.</li>
+  <li><strong>Connect (EXER035).</strong> Write a reconciliation report that compares the ledger with the gateway's refunds. <em>Done when:</em> every key is classified as matched, paid but not recorded, recorded but not paid, or an unknown payment, one JSON line each, with a summary.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER043/stretch/</p>
+</div>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>A key made from the arguments</summary><div>
+  <p><code>f"{order_id}:{amount}"</code> blocks a legitimate second refund of the same amount (two broken items), and a
+  model that rephrases the amount (<code>3450</code> vs <code>3450.0</code>) gets a new key. The key identifies the decision, not its content.</p></div></details>
+<details class="pitfall"><summary>Writing the ledger row after the payment</summary><div>
+  <p>If the process dies between the two, nothing records that money moved. Write "pending" first.</p></div></details>
+<details class="pitfall"><summary>"Check, then act" without a unique constraint</summary><div>
+  <p>Two threads both see "no row" and both pay. The database's <code>UNIQUE</code> key (or the gateway's own key) is what
+  makes the check and the insert one step.</p></div></details>
+<details class="pitfall"><summary>Catching the crash inside the tool</summary><div>
+  <p>A tool that catches every exception and returns "error" to the model invites the model to try again with a new tool
+  call, which is a new key. Let infrastructure failures stop the run; resume it.</p></div></details>
+<details class="pitfall"><summary>Trusting the prompt to prevent double refunds</summary><div>
+  <p>"Never refund the same order twice" does nothing when the repeat comes from a retry or a replay: the model is not even called again.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>How long must the ledger remember a key?</p>
+  <p>At least as long as any retry or resume can arrive. Payment providers keep keys for about a day; a checkpoint can be
+  resumed much later. Keep the ledger at least as long as the checkpoints, and the audit log as long as finance requires.</p></div>
+<div class="qa"><p>Which of the capstone's tools need this treatment?</p>
+  <p><code>notes_add_note</code> creates a new note on every call, so a replay makes a duplicate. Search and the calculator change
+  nothing and are safe to repeat.</p></div>
+<div class="qa"><p>Why is "needs review" a good outcome and not a failure?</p>
+  <p>Because the alternative is guessing with someone's money. A small queue of cases a person checks is cheaper than
+  either double payments or missing ones, and the reconciliation in stretch goal 2 finds them.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/">Amazon Builders' Library: making retries safe with idempotent APIs</a></li>
+  <li><a href="https://docs.stripe.com/api/idempotent_requests">Stripe: idempotent requests</a></li>
+  <li><a href="https://docs.langchain.com/oss/python/langgraph/persistence">LangGraph: persistence</a></li>
+  <li><a href="https://docs.langchain.com/oss/python/langgraph/interrupts">LangGraph: interrupts</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

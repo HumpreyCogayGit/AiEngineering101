@@ -37,4 +37,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD ["python", "-c", "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ.get('PORT', '8000') + '/healthz', timeout=3)"]
 
 # 6. Exec form (a JSON list): the service is process 1 and receives the stop signal directly.
+#    Receiving is not handling: process 1 ignores SIGTERM unless it installs a handler, and this
+#    service does not, so `docker stop` waits its grace period (10 s by default) and then kills it.
+#    EXER044 adds the handler.
 CMD ["python", "EXER041/solution/service.py"]

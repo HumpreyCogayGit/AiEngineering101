@@ -1,0 +1,12 @@
+[
+  {"question": "How much is an e-bike for a full day?", "expected_source": "rentals.md", "keywords": ["900"]},
+  {"question": "Can a 14-year-old rent a bike alone?", "expected_source": "rentals.md", "keywords": ["16"]},
+  {"question": "What deposit do I need for an e-bike?", "expected_source": "rentals.md", "keywords": ["2000"]},
+  {"question": "I cancel my booking 30 minutes before it starts. What do I get back?", "expected_source": "policies.md", "keywords": ["50%"]},
+  {"question": "What happens if I bring the bike back a day and a half late?", "expected_source": "policies.md", "keywords": ["deposit"]},
+  {"question": "Is the Molo Plaza station open on Wednesdays?", "expected_source": "stations.html", "keywords": ["closed"]},
+  {"question": "Can I rent an e-bike at Molo Plaza?", "expected_source": "stations.html", "keywords": ["not"]},
+  {"question": "When does the Esplanade station open?", "expected_source": "stations.html", "keywords": ["6:00"]},
+  {"question": "Do you rent kayaks?", "expected_source": null, "keywords": []},
+  {"question": "How many bikes does Harbor Bikes own?", "expected_source": null, "keywords": []}
+]

@@ -1,6 +1,6 @@
 # EXER039 — Conversation Memory Strategies
 
-**Module 8 · Beyond the Capstone** · Lecture: [Lecture/lectures/lec039.html](../Lecture/lectures/lec039.html)
+**Module 8 · Evaluation, Context and Deployment** · Lecture: [Lecture/lectures/lec039.html](../Lecture/lectures/lec039.html)
 
 ## Goal
 

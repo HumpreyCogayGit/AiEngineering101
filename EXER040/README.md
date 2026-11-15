@@ -1,6 +1,6 @@
 # EXER040 — Context Engineering
 
-**Module 8 · Beyond the Capstone** · Lecture: [Lecture/lectures/lec040.html](../Lecture/lectures/lec040.html)
+**Module 8 · Evaluation, Context and Deployment** · Lecture: [Lecture/lectures/lec040.html](../Lecture/lectures/lec040.html)
 
 ## Goal
 

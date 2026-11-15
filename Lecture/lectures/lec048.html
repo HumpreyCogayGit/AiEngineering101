@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Release-Gated Evaluation</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/loader.js"></script>
+<script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="48">
+<main>
+<header class="lecture-header">
+  <h1>Release-Gated Evaluation</h1>
+  <p class="lede">A one-line change to the system prompt can break a category nobody looked at. Make the evaluation a gate that every change passes before it ships.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>Lecture 037 said the evaluation is the definition of done. So far it is a command someone has to remember to run. This
+  lesson makes it part of the release process: every pull request is checked against an <strong>approved baseline</strong>,
+  per category, and a regression blocks the merge.</p>
+<p>Two problems make this harder than running unit tests in CI. Model answers vary between runs, and a live evaluation needs
+  the provider's secrets, which pull requests (especially from forks) must not get. The lesson solves both with two modes:
+  a deterministic <strong>replay</strong> on every pull request and a <strong>live</strong> run started by hand.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>What is being released</h3>
+<p>The answers change when the prompt, the tools or the model change. So a release is identified by exactly those:</p>
+<pre><code class="language-python">{"prompt_version": "p-6e59900d4803",          # sha256 of the system prompt, first 12 hex digits
+ "tools_version":  "p-41c5bdffbd08+mcp:notes", # the same for the tool names and descriptions
+ "model":          "gpt-5.6-sol"}</code></pre>
+<p>Treat prompts as versioned artifacts: the version is computed from the text, so nobody has to remember to bump it, and
+  a baseline is meaningless unless it names the version it was measured with.</p>
+
+<h3>A baseline, and a comparison per category</h3>
+<p><code>baseline.json</code> holds the per-category results of the last approved release, with who approved it and when.
+  The gate compares a candidate with it:</p>
+<table>
+  <tr><th>Situation</th><th>Result</th></tr>
+  <tr><td>Safety lost any case</td><td>fail (no tolerance)</td></tr>
+  <tr><td>Another category lost more cases than the tolerance</td><td>fail</td></tr>
+  <tr><td>A category fell below the capstone's bar (75%)</td><td>fail</td></tr>
+  <tr><td>A category lost cases within the tolerance</td><td>warn</td></tr>
+  <tr><td>A category disappeared from the run</td><td>fail: cases were dropped</td></tr>
+  <tr><td>A new category</td><td>warn: nothing to compare with yet</td></tr>
+</table>
+<p>The tolerance exists because live answers vary: the same release scored memory 4/4 in one run and 3/4 in the next while
+  this lesson was written. Lecture 046's stretch goal 1 measures that spread; set the tolerance from it, and keep it at zero
+  for categories where one failure is too many.</p>
+
+<h3>Replay on every pull request, live by hand</h3>
+<div class="mermaid">flowchart LR
+  PR["pull request"] --> RP["replay: recorded replies<br/>→ capstone score_case"]
+  RP --> CHK{"prompt/tools same<br/>as the recordings?"}
+  CHK -->|no| F1["FAIL: re-record live"]
+  CHK -->|yes| G1["gate vs baseline"]
+  MAN["started by hand<br/>(secrets)"] --> LV["live: real evaluation"] --> G2["gate vs baseline"]
+  G1 & G2 --> REP["report uploaded<br/>as an artifact"]</div>
+<p><strong>Replay</strong> feeds the recorded replies through the capstone's own scoring code. It is deterministic, free and
+  needs no secrets, so it runs on every pull request. It catches changes to the evaluation cases and the scoring, and it
+  refuses recordings made for another prompt or tool set: a pull request that changes what the model is asked must bring
+  new recordings, made live.</p>
+<p><strong>Live</strong> runs the real evaluation with the provider's credentials, from a protected environment, started by
+  hand before a release or on a schedule. GitHub Actions does not give secrets to workflows triggered from forks, which is
+  one more reason the pull-request job must not need them (<a href="https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions">GitHub: using secrets</a>).</p>
+<pre><code class="language-yaml">replay:
+  if: github.event_name == 'pull_request'
+  steps:
+    - run: uv run python EXER048/solution/release_gate.py gate --replay
+    - uses: actions/upload-artifact@v7
+      if: always()                     # the report matters most when the gate failed
+      with: {name: release-gate-replay, path: EXER048/solution/output/release_gate.md}</code></pre>
+
+<h3>Approval is a person's decision</h3>
+<p>A change that passes does not become the baseline by itself. Someone reads the report, runs
+  <code>release_gate.py approve --by &lt;name&gt;</code>, and commits the new <code>baseline.json</code> and
+  <code>recordings.json</code> with the change. The baseline's history in git is then the record of every quality decision.</p>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>You complete the prompt version, the comparison and the report in <code>release_gate.py</code>, and the two jobs of
+  <code>release-gate.yml</code>. The baseline and the recordings were made live and are given.</p>
+<h3>Sample run</h3>
+<pre><code class="language-text">$ uv run python EXER048/stretch/goal1_prompt_change.py      # one sentence added to the system prompt
+prompt version p-6e59900d4803 -> p-e029064f8f66
+replay: prompt_version changed since recording -> REFUSED, a live run is needed
+
+# Release gate: PASSED
+| | Baseline | This release |
+| prompt_version | p-6e59900d4803 | p-e029064f8f66 (changed) |
+
+| Category | Baseline | Now | Result | Why |
+| arithmetic | 4/4 | 4/4 | ✅ | same as the baseline |
+| grounding  | 6/6 | 6/6 | ✅ | same as the baseline |
+| memory     | 3/4 | 4/4 | ✅ | improved |
+| refusal    | 4/4 | 4/4 | ✅ | same as the baseline |
+| safety     | 4/4 | 4/4 | ✅ | same as the baseline |
+| tool_use   | 4/4 | 4/4 | ✅ | same as the baseline |
+
+The release differs from the baseline and did not regress. To make it the new baseline, run
+`release_gate.py approve --by &lt;your name&gt;` and commit `baseline.json`.</code></pre>
+<p class="file-label">Captured from a real run. The baseline's memory failure was the assistant answering "your name isn't in the Nimbus documents": the prompt's "only from the documents" rule, applied to the conversation itself.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Identify a release by what changes its answers, with versions computed from the content.</li>
+  <li>Compare a candidate with an approved baseline per category, with a stricter rule for safety.</li>
+  <li>Run a deterministic gate on every pull request without secrets, and a live gate by hand.</li>
+  <li>Keep a person in charge of approving a new baseline, with the report as the evidence.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>A prompt gets the same version id until its text changes; line endings do not matter</li>
+  <li>Safety fails on any drop; other categories fail beyond the tolerance or below the capstone's bar; a dropped category fails, a new one warns</li>
+  <li>The report shows both releases, marks what changed, has a row per category, and says how to approve a passing change</li>
+  <li>Replay reproduces the baseline from the recordings, and refuses recordings made for another prompt</li>
+  <li>The workflow replays on pull requests without secrets, runs live by hand with secrets, and uploads the report even when the gate fails</li>
+  <li>All 8 checks pass (offline)</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li><code>prompt_version</code>: normalize line endings, hash, shorten.</li>
+  <li><code>compare</code>: loop over the union of the categories; the order of the <code>if</code>s is the table above.</li>
+  <li><code>gate</code>: the report is for a reviewer. Put the release table first: "what changed" is the first question.</li>
+  <li>Run <code>gate --replay</code>, then edit one word of the capstone's system prompt and run it again (and undo the edit).</li>
+  <li>Complete <code>release-gate.yml</code>; the check reads it as YAML. Copy it to <code>.github/workflows/</code> in a repository of your own to see it run.</li>
+</ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Take one prompt change through the gate: the baseline's memory category is 3/4 because the assistant refuses to use the conversation itself. <em>Done when:</em> replay refuses the changed prompt, the live gate passes with memory improved, and the report shows the new prompt version.</li>
+  <li><strong>Connect (EXER038).</strong> Add a trajectory category scored with the EXER038 functions. <em>Done when:</em> a simulated release with the same answers but four searches per question passes every answer category and fails the trajectory one.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER048/stretch/</p>
+</div>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Gating on the overall pass rate</summary><div>
+  <p>A release that fixes two grounding cases and breaks one safety case keeps the same average. Gate per category.</p></div></details>
+<details class="pitfall"><summary>Secrets in the pull-request job</summary><div>
+  <p>Workflows triggered from forks do not get repository secrets, so a live job on every pull request fails for outside
+  contributors. Worse, a workaround that exposes secrets to forked code exposes them to anyone who opens a pull request.</p></div></details>
+<details class="pitfall"><summary>Replaying stale recordings</summary><div>
+  <p>If replay ignored the prompt version, a prompt change would pass by replaying the old prompt's answers. The version check
+  turns that into a clear failure with instructions.</p></div></details>
+<details class="pitfall"><summary>Approving automatically</summary><div>
+  <p>A job that writes the new baseline whenever the gate passes slowly lowers the bar: each run within the tolerance becomes
+  the next starting point. A person approves, and git keeps the record.</p></div></details>
+<details class="pitfall"><summary>A baseline without a release identity</summary><div>
+  <p>"Memory 3/4" means nothing without the prompt, tools and model it was measured with. Store them together.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>How large should the tolerance be?</p>
+  <p>Large enough that run-to-run noise does not fail good changes, small enough that a real regression does. Measure the
+  spread of a few live runs of the same release, per category. Safety and anything with money keep a tolerance of zero.</p></div>
+<div class="qa"><p>The live evaluation takes two minutes and costs money. How often should it run?</p>
+  <p>Before every release, and on a schedule (nightly or weekly) to catch changes on the provider's side: a model version
+  can change behind the same name. Replay covers every pull request for free.</p></div>
+<div class="qa"><p>What does the gate not catch?</p>
+  <p>Anything the cases do not cover. The gate protects what you measured; Lecture 049 is about finding what you did not.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions">GitHub: using secrets in GitHub Actions</a></li>
+  <li><a href="https://docs.github.com/en/actions/deployment/targeting-different-environments/managing-environments-for-deployment">GitHub: deployment environments</a></li>
+  <li><a href="https://github.com/actions/upload-artifact">actions/upload-artifact</a></li>
+  <li><a href="https://hamel.dev/blog/posts/evals/">Hamel Husain: Your AI product needs evals</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

@@ -2,9 +2,10 @@
 
 A hands-on course that takes you from your first LLM API call to production-style
 agents: messages, streaming, structured output, tool calling, CLI tools, RAG,
-LangGraph agents, MCP, observability, guardrails and evaluation.
+LangGraph agents, MCP, observability, guardrails and evaluation, and then the work of
+running them in production: identity, safe side effects, load, caching, privacy and release gates.
 
-41 lectures and 41 exercises in 9 modules, built on **LangChain**, **LangGraph**,
+49 lectures and 49 exercises in 10 modules, built on **LangChain**, **LangGraph**,
 **Chroma** and **Streamlit**. The models run on the inference provider you choose:
 **Azure Foundry** in the cloud or **Ollama** on your own machine.
 
@@ -40,7 +41,7 @@ AiEngineerCourse/
 │   ├── fakes.py               fake models so checks can run offline
 │   └── stretch.py             lets stretch-goal code build on a reference solution
 ├── data/                      Nimbus Coffee Co. knowledge base + RAG eval questions
-├── EXER001/ … EXER041/        one folder per exercise
+├── EXER001/ … EXER049/        one folder per exercise
 ├── check_all.py               checks every exercise, and the lecture quizzes
 ├── check_quizzes.py           validates the self-check quizzes of the lecture site
 └── Lecture/                   the lecture site (plain HTML/CSS/JS, works offline)
@@ -56,6 +57,10 @@ EXER005/
 ├── stretch/      reference code for the two optional stretch goals
 └── check.py      automated checks for the success criteria
 ```
+
+Modules 1, 4, 5 and 8 end with a **transfer task** in the last exercise's README (EXER011, EXER025, EXER031,
+EXER041): a new problem in a new domain, with no starter code and no checks, and a reference answer in
+its `transfer/` folder.
 
 Every exercise ends with two optional **stretch goals**: one extends the exercise, one connects it to
 another exercise. They are never needed for "complete". Each has runnable reference code in `stretch/`
@@ -87,6 +92,9 @@ uv run python check_all.py --offline    # the same without live API calls (free;
 uv run python check_all.py 16 17        # only these exercises
 uv run python check_all.py --mine       # progress report for YOUR code in every starter/
 ```
+
+The offline check runs on every push and pull request in GitHub Actions
+([.github/workflows/checks.yml](.github/workflows/checks.yml)).
 
 ## Inference providers
 
@@ -142,7 +150,8 @@ Things that differ between providers, and how the course handles them:
 | 5 · Agents with LangGraph | 026–031 | Graph basics, ReAct agent, memory and persistence, human in the loop, agentic RAG, multi-agent |
 | 6 · MCP | 032–034 | MCP concepts and clients, building a server, multi-server agents |
 | 7 · Toward Production | 035–037 | Observability and cost, safety and guardrails, capstone |
-| 8 · Beyond the Capstone | 038–041 | Evaluating agents (tool-call trajectories), conversation memory strategies, context engineering (token budgets, compacting tool results, sub-agent isolation, position and noise), deploying the capstone in a container |
+| 8 · Evaluation, Context and Deployment | 038–041 | Evaluating agents (tool-call trajectories), conversation memory strategies, context engineering (token budgets, compacting tool results, sub-agent isolation, position and noise), deploying the capstone in a container |
+| 9 · Running in Production | 042–049 | Identity and tenant boundaries, safe side effects (idempotency), operating under load (limits, SLOs, graceful shutdown), caching and batch work, model selection and routing, privacy and data lifecycle, release-gated evaluation, learning from production |
 
 ## Requirements
 
@@ -155,6 +164,6 @@ Things that differ between providers, and how the course handles them:
 - Any chat model with tool calling, structured output and image input works. The course is tested on a
   classic model (`gpt-4.1-mini`), on a reasoning model (gpt-5 family) and on a local model (`gemma4:e4b`). Reasoning models only accept
   the default `temperature`; the course detects that and leaves the parameter out (Lecture 004)
-- Optional: Node.js (MCP Inspector), a LangSmith account (tracing in EXER035), Docker (building the image in EXER041)
+- Optional: Node.js (MCP Inspector), a LangSmith account (tracing in EXER035), Docker (building the images in EXER041 and EXER044)
 
 See [Plan.MD](Plan.MD) for the course design.

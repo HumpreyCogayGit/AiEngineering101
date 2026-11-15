@@ -80,8 +80,14 @@ settings_from_environment()     # real environment variables ONLY; a .env file i
   <tr><td><code>COPY data ./data</code>, <code>COPY EXER037/solution …</code> (never <code>COPY . .</code>)</td><td>Only what the service needs. Nothing can leak that was never copied</td></tr>
   <tr><td><code>USER app</code></td><td>A bug in the service, or an injected instruction, runs with a normal user's rights, not root's</td></tr>
   <tr><td><code>EXPOSE 8000</code>, <code>HEALTHCHECK … /healthz</code></td><td>Tells the platform where the service listens and how to ask whether it is alive</td></tr>
-  <tr><td><code>CMD ["python", "…/service.py"]</code> (a JSON list)</td><td>Exec form: the service is process 1 and receives the stop signal itself, so it can shut down cleanly</td></tr>
+  <tr><td><code>CMD ["python", "…/service.py"]</code> (a JSON list)</td><td>Exec form: the service is process 1 and receives the stop signal itself, not a shell in between. Receiving it is not the same as handling it: see the callout below</td></tr>
 </table>
+<div class="callout warn"><span class="title">This service does not shut down gracefully</span>
+  <code>docker stop</code> sends <code>SIGTERM</code>. The Linux kernel does not apply the default action of a signal to process 1:
+  a signal that process 1 has no handler for is ignored. Python installs a handler for <code>SIGINT</code> (Ctrl+C) only,
+  so this service ignores <code>SIGTERM</code>, Docker waits out its grace period (10 seconds by default, <code>docker stop -t</code> changes it), and then kills it with <code>SIGKILL</code>: exit code 137.
+  Requests in flight are cut off. Lecture 044 installs a <code>SIGTERM</code> handler that stops accepting requests and lets
+  the running ones finish.</div>
 <p>A <code>.dockerignore</code> is the second lock on the same door: <code>.env</code>, <code>.venv/</code>, <code>.chroma/</code> and
   <code>.git/</code> are not even sent to the builder.</p>
 
@@ -156,6 +162,11 @@ healthy</code></pre>
 </ol>
 <p class="file-label">Reference code, for after you have tried: EXER041/stretch/</p>
 </div>
+<h3 id="transfer">Transfer task (end of Module 8)</h3>
+<div class="stretch">
+<p>Optional: a new problem in a new domain, with no starter code and no checks. The brief and its checklist are in <code>EXER041/README.md</code>; a reference answer is in <code>EXER041/transfer/</code>.</p>
+<p>Write a <strong>production-readiness review</strong> of the service you just deployed, as a short Markdown document (one or two pages). No code. Answer: who calls it and what may each caller do; what can go wrong with money or personal data; what happens under load and at shutdown; what it costs per question; how a release is checked; and what you will learn once real users arrive.</p>
+</div>
 </section>
 
 <section id="pitfalls"><h2>Common Pitfalls</h2>
@@ -173,7 +184,10 @@ healthy</code></pre>
 
 <section id="discussion"><h2>Discussion</h2>
 <div class="qa"><p>What is still missing before real customers could use this?</p>
-  <p>Authentication on <code>/ask</code>, rate limiting, HTTPS (usually from the platform), persistent state, a request timeout, structured logs and metrics, and a pipeline that runs the capstone evaluation before every release. The image is the unit all of those are built around.</p></div>
+  <p>Module 9 builds it, one lesson each: authentication and per-user boundaries (Lecture 042), tools that are safe to
+  run twice (043), limits, deadlines and graceful shutdown (044), caching (045), a measured choice of model (046),
+  privacy and deletion (047), and a release gate that runs the capstone evaluation before every release (048).
+  HTTPS usually comes from the platform. The image is the unit all of those are built around.</p></div>
 <div class="qa"><p>Why a hand-written HTTP server instead of a web framework?</p>
   <p>To keep the lecture about deployment and the dependencies unchanged. In a real project you would use a framework such as FastAPI for validation, async handlers and generated API docs. <code>route()</code> would become three small handler functions; nothing else in this lecture changes.</p></div>
 <div class="qa"><p>The first question to a new container is slow. Why, and what would you do?</p>

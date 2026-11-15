@@ -1,6 +1,6 @@
 # EXER041 — Deploying the Capstone
 
-**Module 8 · Beyond the Capstone** · Lecture: [Lecture/lectures/lec041.html](../Lecture/lectures/lec041.html)
+**Module 8 · Evaluation, Context and Deployment** · Lecture: [Lecture/lectures/lec041.html](../Lecture/lectures/lec041.html)
 
 ## Goal
 
@@ -71,3 +71,19 @@ Reference code, for after you have tried (it builds on `solution/` and changes n
 uv run python EXER041/stretch/goal1_index_readiness.py
 uv run python EXER041/stretch/goal2_request_stats.py
 ```
+
+## Transfer task (end of Module 8)
+
+Optional, and different from the stretch goals: a new problem in a new domain, with **no starter code and no `check.py`**. It shows whether you can use Module 8's ideas without scaffolding.
+
+Write a **production-readiness review** of the service you just deployed, as a short Markdown
+document (one or two pages). No code. Answer: who calls it and what may each caller do; what can go
+wrong with money or personal data; what happens under load and at shutdown; what it costs per question;
+how a release is checked; and what you will learn once real users arrive.
+
+- [ ] Every gap names a concrete failure ("user A continues user B's thread"), not a category ("security")
+- [ ] The load section has numbers: a concurrency limit, a deadline, and a proposed SLO
+- [ ] Each gap says how you would verify the fix with a test or a measurement
+- [ ] You listed what is out of scope for the first release, and why
+
+Reference answer, for after you have written yours: [transfer/reference_production_readiness.md](transfer/reference_production_readiness.md). Module 9 builds the fixes, one lesson per gap.

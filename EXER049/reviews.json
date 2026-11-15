@@ -1,0 +1,248 @@
+{
+  "t0007": {
+    "verdict": "fail",
+    "category": "grounding",
+    "expect_keywords": [
+      "outdoor"
+    ],
+    "expect_tools": [
+      "search_knowledge_base"
+    ],
+    "note": "pets welcome at BGC outdoor tables"
+  },
+  "t0010": {
+    "verdict": "fail",
+    "category": "grounding",
+    "expect_keywords": [
+      "14",
+      "50%"
+    ],
+    "expect_tools": [
+      "search_knowledge_base"
+    ],
+    "note": "opened bags: 14 days, 50% store credit"
+  },
+  "t0086": {
+    "verdict": "ok",
+    "note": "answer is correct (thumbs down was not about the answer)"
+  },
+  "t0094": {
+    "verdict": "fail",
+    "category": "grounding",
+    "expect_keywords": [
+      "25%"
+    ],
+    "expect_tools": [
+      "search_knowledge_base"
+    ],
+    "note": "25% faster, not twice"
+  },
+  "t0131": {
+    "verdict": "ok",
+    "note": "answer is correct (thumbs down was not about the answer)"
+  },
+  "t0175": {
+    "verdict": "fail",
+    "category": "grounding",
+    "expect_keywords": [
+      "25%"
+    ],
+    "expect_tools": [
+      "search_knowledge_base"
+    ],
+    "note": "25% faster, not twice"
+  },
+  "t0195": {
+    "verdict": "fail",
+    "category": "grounding",
+    "expect_keywords": [
+      "14",
+      "50%"
+    ],
+    "expect_tools": [
+      "search_knowledge_base"
+    ],
+    "note": "opened bags: 14 days, 50% store credit"
+  },
+  "t0225": {
+    "verdict": "fail",
+    "category": "grounding",
+    "expect_keywords": [
+      "5"
+    ],
+    "expect_tools": [
+      "search_knowledge_base"
+    ],
+    "note": "answered 'I don't know' to a question the documents answer (week of the re-index)"
+  },
+  "t0230": {
+    "verdict": "fail",
+    "category": "grounding",
+    "expect_keywords": [
+      "1500"
+    ],
+    "expect_tools": [
+      "search_knowledge_base"
+    ],
+    "note": "answered 'I don't know' to a question the documents answer (week of the re-index)"
+  },
+  "t0232": {
+    "verdict": "ok",
+    "note": "answer is correct (thumbs down was not about the answer)"
+  },
+  "t0235": {
+    "verdict": "fail",
+    "category": "grounding",
+    "expect_keywords": [
+      "5"
+    ],
+    "expect_tools": [
+      "search_knowledge_base"
+    ],
+    "note": "answered 'I don't know' to a question the documents answer (week of the re-index)"
+  },
+  "t0243": {
+    "verdict": "fail",
+    "category": "grounding",
+    "expect_keywords": [
+      "14",
+      "50%"
+    ],
+    "expect_tools": [
+      "search_knowledge_base"
+    ],
+    "note": "opened bags: 14 days, 50% store credit"
+  },
+  "t0258": {
+    "verdict": "fail",
+    "category": "grounding",
+    "expect_keywords": [
+      "950"
+    ],
+    "expect_tools": [
+      "search_knowledge_base"
+    ],
+    "note": "answered 'I don't know' to a question the documents answer (week of the re-index)"
+  },
+  "t0252": {
+    "verdict": "fail",
+    "category": "grounding",
+    "expect_keywords": [
+      "outdoor"
+    ],
+    "expect_tools": [
+      "search_knowledge_base"
+    ],
+    "note": "pets welcome at BGC outdoor tables"
+  },
+  "t0260": {
+    "verdict": "fail",
+    "category": "grounding",
+    "expect_keywords": [
+      "5"
+    ],
+    "expect_tools": [
+      "search_knowledge_base"
+    ],
+    "note": "answered 'I don't know' to a question the documents answer (week of the re-index)"
+  },
+  "t0262": {
+    "verdict": "fail",
+    "category": "grounding",
+    "expect_keywords": [
+      "250"
+    ],
+    "expect_tools": [
+      "search_knowledge_base"
+    ],
+    "note": "answered 'I don't know' to a question the documents answer (week of the re-index)"
+  },
+  "t0278": {
+    "verdict": "fail",
+    "category": "grounding",
+    "expect_keywords": [
+      "950"
+    ],
+    "expect_tools": [
+      "search_knowledge_base"
+    ],
+    "note": "answered 'I don't know' to a question the documents answer (week of the re-index)"
+  },
+  "t0285": {
+    "verdict": "fail",
+    "category": "grounding",
+    "expect_keywords": [
+      "1500"
+    ],
+    "expect_tools": [
+      "search_knowledge_base"
+    ],
+    "note": "answered 'I don't know' to a question the documents answer (week of the re-index)"
+  },
+  "t0287": {
+    "verdict": "fail",
+    "category": "grounding",
+    "expect_keywords": [
+      "5"
+    ],
+    "expect_tools": [
+      "search_knowledge_base"
+    ],
+    "note": "answered 'I don't know' to a question the documents answer (week of the re-index)"
+  },
+  "t0015": {
+    "verdict": "ok",
+    "note": "answer is correct"
+  },
+  "t0027": {
+    "verdict": "ok",
+    "note": "answer is correct"
+  },
+  "t0097": {
+    "verdict": "fail",
+    "category": "grounding",
+    "expect_keywords": [
+      "14",
+      "50%"
+    ],
+    "expect_tools": [
+      "search_knowledge_base"
+    ],
+    "note": "opened bags: 14 days, 50% store credit"
+  },
+  "t0109": {
+    "verdict": "ok",
+    "note": "answer is correct"
+  },
+  "t0116": {
+    "verdict": "ok",
+    "note": "answer is correct"
+  },
+  "t0149": {
+    "verdict": "ok",
+    "note": "answer is correct"
+  },
+  "t0158": {
+    "verdict": "ok",
+    "note": "answer is correct"
+  },
+  "t0211": {
+    "verdict": "ok",
+    "note": "answer is correct"
+  },
+  "t0238": {
+    "verdict": "fail",
+    "category": "grounding",
+    "expect_keywords": [
+      "950"
+    ],
+    "expect_tools": [
+      "search_knowledge_base"
+    ],
+    "note": "answered 'I don't know' to a question the documents answer (week of the re-index)"
+  },
+  "t0289": {
+    "verdict": "ok",
+    "note": "answer is correct"
+  }
+}

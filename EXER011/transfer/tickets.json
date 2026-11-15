@@ -1,0 +1,14 @@
+[
+  {"text": "The VPN drops every 10 minutes since this morning. I can reconnect but it is annoying.", "label": {"system": "network", "severity": "medium", "needs_human": false}},
+  {"text": "Nobody in the Cebu branch can log in to payroll. Salaries go out tomorrow.", "label": {"system": "payroll", "severity": "critical", "needs_human": true}},
+  {"text": "Can you add a new email signature template for the marketing team?", "label": {"system": "email", "severity": "low", "needs_human": false}},
+  {"text": "My laptop screen flickers when I unplug the charger.", "label": {"system": "hardware", "severity": "low", "needs_human": false}},
+  {"text": "Outlook keeps asking for my password even after I type it correctly.", "label": {"system": "email", "severity": "medium", "needs_human": false}},
+  {"text": "The office Wi-Fi in Makati is completely down. 40 people cannot work.", "label": {"system": "network", "severity": "critical", "needs_human": true}},
+  {"text": "I think I clicked a phishing link and typed my password. What do I do?", "label": {"system": "security", "severity": "high", "needs_human": true}},
+  {"text": "Payroll shows my overtime hours from last month twice on my payslip.", "label": {"system": "payroll", "severity": "medium", "needs_human": true}},
+  {"text": "The printer on the 3rd floor is out of toner again.", "label": {"system": "hardware", "severity": "low", "needs_human": false}},
+  {"text": "Our shared mailbox stopped receiving customer emails two hours ago.", "label": {"system": "email", "severity": "high", "needs_human": true}},
+  {"text": "Antivirus flagged a file on the finance file server as ransomware.", "label": {"system": "security", "severity": "critical", "needs_human": true}},
+  {"text": "Please reset the MFA device for a colleague who lost her phone.", "label": {"system": "security", "severity": "medium", "needs_human": true}}
+]

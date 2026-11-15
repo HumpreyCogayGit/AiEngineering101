@@ -2569,7 +2569,7 @@ window.QUIZZES = {
     },
   ],
 
-  // ------------------------------------------------------------------ Module 8 · Beyond the Capstone
+  // ------------------------------------------------------------------ Module 8 · Evaluation, Context and Deployment
   38: [
     {
       q: "Two agents both answer \"₱2,210\". One called `lookup_product` twice and then `calculator`; the other called no tool. Why does the second one fail the evaluation?",
@@ -2831,6 +2831,535 @@ window.QUIZZES = {
         "uv works either way. The order is about the build cache.",
         "The size is the same. The build time is what changes.",
         "Docker accepts any order. This one is a choice you make for speed.",
+      ],
+    },
+  ],
+  // ------------------------------------------------------------------ Module 9 · Running in Production
+  42: [
+    {
+      q: "The token is valid and belongs to Ana. The request body is `{\"question\": \"Hi\", \"user_id\": \"ben\"}`. Whose conversation does the question go to?",
+      options: [
+        "Ana's: the user comes from the validated token, and identity fields in the body are ignored",
+        "Ben's: the body states the user explicitly, so it overrides the token",
+        "Neither: the server must answer 403 because the two user ids differ",
+        "Both: the question is stored in each user's thread to be safe",
+      ],
+      answer: 0,
+      why: [
+        "The server knows who is calling only because it validated the credential; anything in the body was written by the client.",
+        "If the body could override the token, any authenticated user could act as any other user.",
+        "Rejecting is not wrong as such, but it is unnecessary: the body field is simply not used for identity.",
+        "Writing one user's message into another user's conversation is the leak this lesson prevents.",
+      ],
+    },
+    {
+      q: "Why is the internal conversation key `f\"{user_id}/{thread_id}\"` and not just `thread_id`?",
+      options: [
+        "Because thread ids must be globally unique and uuid4 is not",
+        "So user B cannot build user A's key, whatever thread id B sends",
+        "Because LangGraph requires a slash in every thread id",
+        "So the log shows which user wrote which message",
+      ],
+      answer: 1,
+      why: [
+        "uuid4 collisions are not the concern; the problem is a client choosing an id that belongs to someone else.",
+        "With the user id from the token inside the key, B's \"t1\" becomes \"ben/t1\": a different conversation, never Ana's.",
+        "LangGraph accepts any string as a thread id.",
+        "Logging is a side benefit; the reason is that the key enforces the boundary.",
+      ],
+    },
+    {
+      q: "Ben asks for Ana's thread `t1`. Why does the service answer 404 rather than 403?",
+      options: [
+        "403 is only for missing tokens",
+        "404 tells the client to retry with another token",
+        "A 403 would confirm that the thread exists; a 404 reveals nothing about other users' data",
+        "The two codes mean the same thing, and 404 is shorter to write",
+      ],
+      answer: 2,
+      why: [
+        "A missing or invalid token gives 401 with WWW-Authenticate, not 403.",
+        "A 404 says there is nothing here; it does not invite another attempt.",
+        "HTTP allows a server to hide a forbidden resource behind a 404, so the response gives an attacker no information.",
+        "They differ: 403 means the resource exists and you may not access it.",
+      ],
+    },
+    {
+      q: "A customer must never see the employee handbook. Where should that rule be enforced?",
+      options: [
+        "In the system prompt: tell the model not to quote the handbook to customers",
+        "In an output check that blocks answers mentioning the handbook",
+        "In the user interface, by hiding answers that cite `employee_handbook.pdf`",
+        "In the search query, as a metadata filter, before any text reaches the model",
+      ],
+      answer: 3,
+      why: [
+        "A prompt is a request to the model and can be talked around (Lecture 036).",
+        "An output check catches only what it anticipates; a paraphrase of the handbook passes it.",
+        "The text has already been sent to the browser and may be in traces; hiding it is not access control.",
+        "A document the model never receives cannot leak, whatever the prompt or the user says.",
+      ],
+    },
+  ],
+  43: [
+    {
+      q: "An agent crashed inside the refund tool and is resumed from its checkpoint. What does LangGraph run again?",
+      options: [
+        "The tools node, with the same tool call: same arguments, same tool call id, same thread",
+        "The model call, which may now decide on a different refund",
+        "Nothing: a checkpoint resumes after the step that crashed",
+        "Only the part of the tool after the line that crashed",
+      ],
+      answer: 0,
+      why: [
+        "The model's decision was saved before the tools node started, so the resume repeats the tool call exactly.",
+        "The model step finished and was checkpointed; it is not called again.",
+        "A step that did not finish is run again; that is what makes resuming work.",
+        "Python cannot resume a function halfway; the tool starts again from its first line.",
+      ],
+    },
+    {
+      q: "Which idempotency key identifies one refund decision correctly?",
+      options: [
+        "`order_id` plus the amount",
+        "`thread_id` plus the tool call id",
+        "A new `uuid4()` created inside the tool",
+        "The current time in milliseconds",
+      ],
+      answer: 1,
+      why: [
+        "This blocks a legitimate second refund of the same amount and changes when the model writes the number differently.",
+        "A replay keeps both the thread and the tool call id, and a new decision by the model gets a new tool call id.",
+        "A new uuid on every run means every replay has a different key, so nothing is deduplicated.",
+        "A replay happens at a different time, so it gets a different key.",
+      ],
+    },
+    {
+      q: "Why does `issue_refund` write a \"pending\" ledger row BEFORE calling the payment gateway?",
+      options: [
+        "Because SQLite cannot be written after a network call",
+        "So the model can read the pending row and decide whether to retry",
+        "If the process dies after the money moved, the pending row is the record that the payment may have happened",
+        "To make the refund faster",
+      ],
+      answer: 2,
+      why: [
+        "There is no such limit; the order matters for crash safety, not for SQLite.",
+        "The model is not involved in the replay at all; the tool runs again on its own.",
+        "Without it, a crash between paying and recording leaves no trace, and the replay pays again.",
+        "It adds a write; the point is safety, not speed.",
+      ],
+    },
+    {
+      q: "A pending refund is found after a crash, and the gateway does not support idempotency keys. What should the tool do?",
+      options: [
+        "Call the gateway again, because the customer is owed the money",
+        "Mark it as done, because the crash happened after the call",
+        "Delete the row and let the model start over",
+        "Flag it for a person: the outcome is unknown, and either guess can be wrong",
+      ],
+      answer: 3,
+      why: [
+        "If the first call did pay, this pays twice.",
+        "The crash may have happened before the money moved, and then the customer is never refunded.",
+        "Deleting the evidence makes a double payment more likely, not less.",
+        "Without a key the gateway cannot say whether it already paid, so only someone checking the provider's records can decide.",
+      ],
+    },
+  ],
+  44: [
+    {
+      q: "Every slot is busy and the queue is full. What should the service answer?",
+      options: [
+        "`503` with a `Retry-After` header, immediately",
+        "Nothing yet: keep the connection open until a slot frees up",
+        "`429`, because the user sent too many requests",
+        "`500`, because the service could not handle the request",
+      ],
+      answer: 0,
+      why: [
+        "A quick, explicit refusal costs almost nothing and tells the client when to come back.",
+        "An unbounded wait turns overload into unbounded latency, and waiting clients time out and retry.",
+        "429 means this client is over its own limit; here the whole service is busy.",
+        "500 says something broke; overload is an expected state with its own code.",
+      ],
+    },
+    {
+      q: "A question hits the 60-second deadline and the client gets a `504`. Why is its concurrency slot released only when its work finishes?",
+      options: [
+        "Because the client might still read the answer later",
+        "The thread keeps running and calling the model after the 504; releasing early would let more work run than the limit allows",
+        "Because Python releases the slot automatically after 60 seconds",
+        "It should be released at once; holding it only wastes capacity",
+      ],
+      answer: 1,
+      why: [
+        "The client already received its 504; the answer is discarded.",
+        "A Python thread cannot be killed, so the work still uses resources; the limit must count it.",
+        "Nothing releases it automatically; the done-callback does.",
+        "Releasing early lets timed-out work pile up outside the limit, which is how overload grows.",
+      ],
+    },
+    {
+      q: "The service runs as process 1 in a container and installs no `SIGTERM` handler. What does `docker stop` do?",
+      options: [
+        "The process exits immediately, because SIGTERM's default action is to terminate",
+        "Python raises KeyboardInterrupt and the service shuts down cleanly",
+        "The signal is ignored; after the grace period Docker kills the process with SIGKILL (exit code 137)",
+        "Docker restarts the container instead of stopping it",
+      ],
+      answer: 2,
+      why: [
+        "That is true for an ordinary process, but process 1 in a container is the exception.",
+        "Python turns SIGINT (Ctrl+C) into KeyboardInterrupt, not SIGTERM.",
+        "The kernel does not apply default signal actions to process 1, so only a handler makes SIGTERM do anything.",
+        "docker stop stops; a restart policy is a separate setting.",
+      ],
+    },
+    {
+      q: "A load test reports a mean latency of 0.8 s. Why report p95 and p99 as well?",
+      options: [
+        "Because the mean is always lower than the median",
+        "Percentiles include the refused requests, the mean does not",
+        "Because p99 is the latency of the fastest 1% of requests",
+        "A mean can hide a slow tail: 5% of users waiting 10 s barely moves it",
+      ],
+      answer: 3,
+      why: [
+        "The mean can be above or below the median; neither is guaranteed.",
+        "In this lesson the latency percentiles count answered requests only; refusals are counted separately.",
+        "p99 is the value 99% of requests are at or below: the slow end, not the fast one.",
+        "Percentiles describe what the unlucky users experienced, which is what an SLO is about.",
+      ],
+    },
+  ],
+  45: [
+    {
+      q: "The response cache key holds the question, model, prompt version, tools and policy, but not the tenant or role. What can go wrong?",
+      options: [
+        "An answer built from staff-only documents, or for another company, is served to a customer who asks the same question",
+        "The cache misses more often than it should",
+        "Nothing: answers to the same question are the same for everyone",
+        "The provider rejects the request because the key is too short",
+      ],
+      answer: 0,
+      why: [
+        "The cache would bypass the access rules of Lecture 042: whoever asks first decides what everyone gets.",
+        "Leaving parts out makes hits MORE likely, which is the problem.",
+        "Staff and customers retrieve different documents, and companies have different policies, so the answers differ.",
+        "The cache key never reaches the provider; it is internal to your service.",
+      ],
+    },
+    {
+      q: "Why does the exercise not use a semantic cache that matches questions by embedding similarity?",
+      options: [
+        "Embeddings are too slow to compute for every question",
+        "Questions with different answers can be more similar than true paraphrases, so no threshold separates them",
+        "Semantic caches cannot store JSON replies",
+        "Exact-match caches have a higher hit rate",
+      ],
+      answer: 1,
+      why: [
+        "An embedding call is fast and cheap compared with the model call it would save; speed is not the issue.",
+        "The check measures it: \"unopened\" vs \"opened\" beans (30 vs 14 days) scored higher than a real paraphrase.",
+        "What a cache stores is independent of how it matches keys.",
+        "Exact matching has a LOWER hit rate; it is chosen because its hits are safe.",
+      ],
+    },
+    {
+      q: "Which prompt layout lets a provider reuse the most of a long prompt across customers?",
+      options: [
+        "The current time first, so the model always knows when it is",
+        "The question first, so the model reads it before the documents",
+        "System prompt and documents first, the customer's name, the date and the question last",
+        "A random order, so the model does not overfit to positions",
+      ],
+      answer: 2,
+      why: [
+        "A timestamp on the first line makes every prompt different from its first token.",
+        "The question differs every time, so nothing after it can be reused.",
+        "Prefix caching reuses an identical BEGINNING; everything after the first difference is processed again.",
+        "A different order every time means no two prompts share a prefix.",
+      ],
+    },
+    {
+      q: "Which job is a good fit for a batch endpoint?",
+      options: [
+        "Answering a customer's question in the chat window",
+        "Streaming an answer token by token",
+        "Calling a tool in the middle of an agent run",
+        "Re-running the 26-case capstone evaluation for a nightly report",
+      ],
+      answer: 3,
+      why: [
+        "A customer is waiting; batch results arrive within hours.",
+        "Batch requests return complete results later; there is no stream.",
+        "The agent needs the result to take its next step right away.",
+        "Nobody waits for it, so a result within hours at about half the price is a good trade.",
+      ],
+    },
+  ],
+  46: [
+    {
+      q: "Two models both meet every accuracy bar and the latency bar. One costs four times as much. Which should `choose` return?",
+      options: [
+        "The cheaper one: meeting the bar is the requirement, and cost is the tie-breaker",
+        "The expensive one, because a higher price usually means better answers",
+        "Neither: two qualifying models means the bars are too low",
+        "The one with the higher average accuracy, whatever it costs",
+      ],
+      answer: 0,
+      why: [
+        "The bars define \"good enough\" for these tasks; above that, paying more buys nothing the application needs.",
+        "Price is not a quality measurement; the suite is.",
+        "Several models meeting a bar is normal and gives you a choice.",
+        "Higher accuracy above the bar may be noise, and it is not free.",
+      ],
+    },
+    {
+      q: "Model A scores 1.0 on extraction and model B scores 0.75, in one run of four cases. What should you conclude first?",
+      options: [
+        "Model A is clearly better at extraction",
+        "Nothing yet: one case is 25 points, so check whether the gap exceeds each model's run-to-run spread",
+        "Model B is broken and should be removed",
+        "Extraction should always go to the more expensive model",
+      ],
+      answer: 1,
+      why: [
+        "One run of four cases cannot show that; repeat it.",
+        "The same model can score 0.75 and 1.0 on two runs of four cases; a gap smaller than that is noise.",
+        "Three of four correct is not broken, and it may be the same on the next run.",
+        "Routing decisions need measurements, not a rule about price.",
+      ],
+    },
+    {
+      q: "The small model answers \"I don't know\" to \"Who won the 2022 World Cup?\" without searching. Should the router escalate?",
+      options: [
+        "Yes: every \"I don't know\" should go to the large model",
+        "Yes: the large model may know who won",
+        "No: refusing an off-topic question is the correct answer, and escalating pays for it twice",
+        "No: the router never escalates",
+      ],
+      answer: 2,
+      why: [
+        "Escalating correct refusals adds cost without changing the answer.",
+        "It might, but the helpdesk must not answer from it: the system prompt forbids it.",
+        "The helpdesk must not answer from general knowledge; the small model did exactly what it should.",
+        "It escalates when the small model searched the documents and still could not answer.",
+      ],
+    },
+    {
+      q: "Why does `with_provider_fallback` handle only connection, timeout, rate-limit and server errors?",
+      options: [
+        "LangChain can only catch those four exceptions",
+        "Other errors are rare enough to ignore",
+        "The fallback model is cheaper, so it should only be used for errors that happen often",
+        "Other errors, such as a ValueError or a 400, are bugs in the request that would fail on every model",
+      ],
+      answer: 3,
+      why: [
+        "exceptions_to_handle accepts any exception types; the choice is deliberate.",
+        "They are not ignored: they surface as errors, which is what should happen to bugs.",
+        "Frequency and price are not the reason; whether another model could succeed is.",
+        "Falling back on a bug hides it, doubles the latency, and logs the fallback's error instead of the real one.",
+      ],
+    },
+  ],
+  47: [
+    {
+      q: "Why does `minimize` use a list of ALLOWED profile fields instead of a list of forbidden ones?",
+      options: [
+        "A new field (a birthday, an ID number) stays out of the prompt until someone decides it is needed",
+        "Allowlists are faster to check than blocklists",
+        "The model rejects prompts that contain unknown fields",
+        "Blocklists cannot be written in Python",
+      ],
+      answer: 0,
+      why: [
+        "With a blocklist, every field nobody thought about is sent by default.",
+        "Speed is irrelevant here; the difference is what happens to fields nobody listed.",
+        "The model accepts any text; nothing stops extra personal data from being sent.",
+        "Either list is easy to write; the default behaviour is what matters.",
+      ],
+    },
+    {
+      q: "A customer's deletion request removed their rows from the conversations table. What else must be checked?",
+      options: [
+        "Nothing: the conversation table is the source of all the other data",
+        "Every derived store too: memories, notes, the index of past turns, traces, and future backup restores",
+        "Only the traces, because they are kept longest",
+        "Only the model provider, because it saw the conversation",
+      ],
+      answer: 1,
+      why: [
+        "Derived data keeps existing after its source is deleted; that is the usual leak.",
+        "Each store holds its own copy; deleting the source does not delete what was derived from it.",
+        "Traces are one of several stores, not the only one.",
+        "The provider is governed by its terms; your own stores are what deletion must cover.",
+      ],
+    },
+    {
+      q: "Why is the tombstone list stored OUTSIDE the database that is backed up?",
+      options: [
+        "Because SQLite cannot store JSON",
+        "So the tombstones are not deleted by purge_expired",
+        "Restoring an older database would otherwise restore an older tombstone list, without the latest deletions",
+        "To make the deletion faster",
+      ],
+      answer: 2,
+      why: [
+        "SQLite stores text fine; the location matters, not the format.",
+        "Retention is not the reason; restores are.",
+        "The tombstones must survive the restore so they can be applied after it.",
+        "Where the list lives does not change the speed of a delete.",
+      ],
+    },
+    {
+      q: "`redact` replaces a 16-digit number only when it passes the Luhn check. Why?",
+      options: [
+        "Luhn proves the card is still valid at the bank",
+        "Luhn makes the regular expression faster",
+        "Numbers that fail Luhn are always phone numbers",
+        "Card numbers satisfy Luhn, so tracking numbers and other ids that do not stay readable",
+      ],
+      answer: 3,
+      why: [
+        "Luhn only checks the digits are well formed; it says nothing about the bank account.",
+        "It adds work; the reason is precision.",
+        "They can be tracking numbers, order ids or anything else; phone numbers have their own pattern.",
+        "The checksum separates likely card numbers from the many other long numbers support work needs.",
+      ],
+    },
+  ],
+  48: [
+    {
+      q: "A release fixes two grounding cases and breaks one safety case. The overall pass rate goes up. What should the gate do?",
+      options: [
+        "Fail: safety may never drop, whatever happens elsewhere",
+        "Pass: the overall rate improved",
+        "Warn, and let the reviewer decide",
+        "Pass, but only if the tolerance is at least 1",
+      ],
+      answer: 0,
+      why: [
+        "The gate is per category precisely so that gains in one cannot hide a loss in another.",
+        "An average hides which category moved; that is the failure this lesson prevents.",
+        "A warning is for drops within the tolerance of other categories; safety has none.",
+        "Safety's tolerance is zero regardless of the setting for other categories.",
+      ],
+    },
+    {
+      q: "Why does the pull-request job replay recorded replies instead of running the live evaluation?",
+      options: [
+        "Recorded replies are more accurate than live ones",
+        "It is deterministic, free, and needs no secrets, which pull requests from forks do not get",
+        "The live evaluation cannot run on GitHub Actions",
+        "Replay also tests whether the model has changed",
+      ],
+      answer: 1,
+      why: [
+        "They are the answers of one past run; their value is that they do not change.",
+        "That makes it safe and cheap enough to run on every pull request.",
+        "It can run there; it runs in a separate, manually started job with secrets.",
+        "Replay cannot see model changes at all; the live job is for that.",
+      ],
+    },
+    {
+      q: "A pull request edits one sentence of the system prompt. What happens in replay mode?",
+      options: [
+        "It passes, because the recorded answers still score the same",
+        "It re-runs only the cases whose answers mention the edited sentence",
+        "It fails: the prompt version no longer matches the recordings, so new recordings must be made live",
+        "It updates the baseline automatically",
+      ],
+      answer: 2,
+      why: [
+        "That is the hole the version check closes.",
+        "Replay never calls the model; it cannot produce new answers.",
+        "Old answers say nothing about the new prompt; passing them would let any prompt change through untested.",
+        "Baselines change only when a person approves a result.",
+      ],
+    },
+    {
+      q: "Why is the prompt version computed as a hash of the prompt text?",
+      options: [
+        "Hashes make the prompt shorter for the model",
+        "The provider requires a prompt id",
+        "So the prompt can be decrypted later",
+        "Any edit changes it automatically, so a baseline always names exactly the prompt it was measured with",
+      ],
+      answer: 3,
+      why: [
+        "The model still receives the full prompt; the hash is for our records.",
+        "No provider requires it; it is for the gate.",
+        "A hash cannot be reversed, and it is not meant to be.",
+        "Nobody has to remember to bump a number; the version follows the content.",
+      ],
+    },
+  ],
+  49: [
+    {
+      q: "A customer asks \"Can I talk to a human please?\" right after an answer. Which trace goes into the review queue?",
+      options: [
+        "The answer before the request: the request is a signal about it",
+        "The request itself, because it is the message that shows the problem",
+        "Neither: asking for a person is a normal part of support",
+        "Both, as two separate failures",
+      ],
+      answer: 0,
+      why: [
+        "The customer gave up on the previous answer; that is what a reviewer needs to judge.",
+        "The request is not an answer that could be right or wrong; reviewing it teaches nothing.",
+        "It is normal, and it is also one of the strongest signals that the last answer did not help.",
+        "It is one failure, seen through one signal.",
+      ],
+    },
+    {
+      q: "Why does the review queue include a random sample on top of the flagged traces?",
+      options: [
+        "To make the queue a fixed size every week",
+        "Most wrong answers are never flagged; only a sample of unflagged traces finds them",
+        "Because random traces are cheaper to review",
+        "So reviewers do not get bored",
+      ],
+      answer: 1,
+      why: [
+        "The flagged part varies with traffic; the sample is there to find failures, not to pad the queue.",
+        "In the exercise, the random sample found a confidently wrong refund answer nobody had reported.",
+        "They cost the same to review; their value is in what they reveal.",
+        "Motivation is not the reason; coverage is.",
+      ],
+    },
+    {
+      q: "A thumbs-down was given to a correct answer. What should happen to it?",
+      options: [
+        "It becomes a case expecting a different answer",
+        "The answer is changed to whatever the customer wanted",
+        "The reviewer marks it ok; it does not become an evaluation case",
+        "The feedback is deleted from the traces",
+      ],
+      answer: 2,
+      why: [
+        "A case that expects a wrong answer turns the gate against the right one.",
+        "The documents decide the answer, not the feedback.",
+        "Customers also press thumbs-down on policies they dislike; a person decides whether the answer was wrong.",
+        "The feedback is still a useful signal about the policy; it is just not a test case.",
+      ],
+    },
+    {
+      q: "No single trace looks unusual, but the weekly refusal rate jumps from 0% to 24%. What is this, and what do you check first?",
+      options: [
+        "Noise: wait a few more weeks before looking",
+        "A guardrail problem: lower the blocking threshold",
+        "Customer behaviour: nothing in the system needs checking",
+        "Drift: check what changed that week, such as a deploy, a re-index or a provider model update",
+      ],
+      answer: 3,
+      why: [
+        "A jump from 0% to 24% against several quiet weeks is far outside normal variation.",
+        "Refusals here are \"I don't know\" answers, not blocked requests.",
+        "Customers may have changed, but the system's changes are the first and cheapest thing to rule out.",
+        "A distribution shift shows up in aggregates, and its cause is usually a change in the system or its inputs.",
       ],
     },
   ],

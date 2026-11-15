@@ -111,6 +111,56 @@ def _():
     assert evaluate_mod.score_case({"expect_blocked": True}, Reply("x")) != []
 
 
+@checker.check("score_case() checks tool order when a case asks for it")
+def _():
+    Reply = assistant_mod.Reply
+    case = {"expect_keywords": ["4620"], "expect_tools": ["search_knowledge_base", "calculator"],
+            "expect_tools_in_order": True}
+    right = Reply("4,620", ["search_knowledge_base", "calculator"])
+    extra = Reply("4,620", ["search_knowledge_base", "search_knowledge_base", "calculator"])
+    wrong = Reply("4,620", ["calculator", "search_knowledge_base"])
+    assert evaluate_mod.score_case(case, right) == [] and evaluate_mod.score_case(case, extra) == []
+    failures = evaluate_mod.score_case(case, wrong)
+    assert len(failures) == 1 and "order" in failures[0], failures
+    assert evaluate_mod.score_case({**case, "expect_tools_in_order": False}, wrong) == []
+
+
+@checker.check("run_eval() replays a case's history in the same thread; the bar is per category")
+def _():
+    Reply = assistant_mod.Reply
+
+    class Recorder:
+        def __init__(self):
+            self.calls = []
+
+        async def ask(self, question, thread_id="default"):
+            self.calls.append((question, thread_id))
+            return Reply("Your name is Ana.")
+
+    recorder = Recorder()
+    cases = [{"category": "memory", "history": ["I'm Ana."], "question": "What's my name?", "expect_keywords": ["ana"]},
+             {"category": "refusal", "question": "Capital of France?", "expect_keywords": ["don't know"]}]
+    rows = asyncio.run(evaluate_mod.run_eval(recorder, cases))
+    (q1, t1), (q2, t2), (_, t3) = recorder.calls
+    assert (q1, q2) == ("I'm Ana.", "What's my name?") and t1 == t2 != t3, recorder.calls
+    scores = evaluate_mod.category_scores(rows)
+    assert scores == {"memory": (1, 1), "refusal": (0, 1)}, scores
+    assert not evaluate_mod.meets_bar(scores), "one category at 0% must fail the bar, whatever the average"
+    assert evaluate_mod.meets_bar({"grounding": (3, 4), "safety": (4, 4)})
+    assert not evaluate_mod.meets_bar({"grounding": (4, 4), "safety": (3, 4)}), "safety must be perfect"
+
+
+@checker.check("the evaluation set covers six categories, and the held-out set covers the same ones")
+def _():
+    import json
+    dev = json.loads(evaluate_mod.EVAL_SET.read_text(encoding="utf-8"))
+    held = json.loads(evaluate_mod.HELDOUT_SET.read_text(encoding="utf-8"))
+    categories = {c["category"] for c in dev}
+    assert categories == {"grounding", "arithmetic", "refusal", "memory", "tool_use", "safety"}, categories
+    assert {c["category"] for c in held} == categories
+    assert not {c["question"] for c in dev} & {c["question"] for c in held}, "held-out questions must be new"
+
+
 @checker.check("the CLI has ask, chat and eval commands, and ask prints the answer")
 def _():
     runner = CliRunner()
@@ -132,7 +182,7 @@ def _():
     assert "Helpdesk" in at.title[0].value and len(at.chat_input) == 1
 
 
-@checker.check("the evaluation set passes at >= 80%  [live API]")
+@checker.check("the evaluation set meets the bar in every category  [live API]")
 def _():
     assert asyncio.run(evaluate_mod.main()), "see the report in output/capstone_eval.md"
 

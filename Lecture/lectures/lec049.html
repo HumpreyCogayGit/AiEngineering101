@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Learning from Production</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/loader.js"></script>
+<script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="49">
+<main>
+<header class="lecture-header">
+  <h1>Learning from Production</h1>
+  <p class="lede">The evaluation set was written before anyone used the assistant. Real customers ask other questions, and most of them never press a thumbs-down.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>Lecture 048 made the evaluation a gate. The gate protects what the cases cover and nothing else. This last lesson is
+  about where new cases come from once the assistant is live: the traces it writes (Lecture 035), the feedback customers
+  give, and a person who reviews a sample each week.</p>
+<p>The loop is simple to draw and easy to do badly. Read only the thumbs-downs and you see a handful of complaints, some
+  of them about the price of coffee. Read everything and nobody keeps it up. The lesson builds the middle path.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<div class="mermaid">flowchart LR
+  T["traces + feedback"] --> S["signals:<br/>thumbs down, asked again,<br/>asked for a person"]
+  S --> Q["review queue<br/>+ random sample"]
+  Q --> R["a person reviews"]
+  R --> C["new eval cases<br/>(EXER037 format)"]
+  C --> G["release gate (L048)"]
+  T --> W["weekly metrics"] --> D["drift alerts"]</div>
+
+<h3>1. Explicit feedback is rare and noisy</h3>
+<p>In the four weeks of traces in this exercise, 68 of 291 answers were rated and 9 got a thumbs-down. Three of those were
+  correct answers: the customer disliked the policy, not the answer. Explicit feedback is worth collecting, and it is not
+  enough.</p>
+
+<h3>2. Implicit signals are common</h3>
+<p>What a customer does next says more than what they rate:</p>
+<table>
+  <tr><th>Signal</th><th>How to detect it</th><th>What it suggests</th></tr>
+  <tr><td>Asked again</td><td>Next message in the thread within a minute, sharing a content word</td><td>The answer did not help</td></tr>
+  <tr><td>Asked for a person</td><td>"human", "agent", "person" in the next message</td><td>The customer gave up on the assistant</td></tr>
+  <tr><td>Abandoned</td><td>No further message after an answer that ended in a question</td><td>Weak on its own; combine with others</td></tr>
+</table>
+<p>The signal belongs to the <em>previous</em> answer. "Can I talk to a human?" is not a failure to review; the answer
+  before it is.</p>
+
+<h3>3. Review a sample, on purpose</h3>
+<p>The queue holds every thumbs-down and every implicit signal, plus a random sample of everything else, drawn with a fixed
+  seed so two reviewers see the same queue. The random part matters: in this exercise it found a confidently wrong answer
+  ("opened beans can be returned within 30 days") that no customer had flagged. Blocked attacks are left out; the
+  guardrail report covers them.</p>
+
+<h3>4. A reviewed failure becomes a test</h3>
+<pre><code class="language-json">{"category": "grounding", "question": "Can I return opened beans?",
+ "expect_keywords": ["14", "50%"], "expect_tools": ["search_knowledge_base"],
+ "source": "production:t0010"}</code></pre>
+<p>The case uses the customer's own words, the EXER037 format, and a <code>source</code> that points back to the trace.
+  Duplicates are removed: the same failure seen ten times is one case. The candidates are run against today's assistant
+  (stretch goal 2) and then enter the gate with a new baseline (Lecture 048). This is the loop the course has been building
+  towards: the evaluation set grows from what customers actually asked.</p>
+
+<h3>5. Watch for drift</h3>
+<p>Some problems are not one bad answer but a change in the whole distribution. Weekly metrics compared with the earlier
+  weeks catch them:</p>
+<pre><code class="language-text">week       questions  thumbs-down  refusals  p95 s
+2026-W43         73           0%        0%   3.92
+2026-W44         64          12%        0%   3.87
+2026-W45         68          11%        0%   3.76
+2026-W46         67          31%       24%   6.09
+ALERT 2026-W46: refusal_rate 0.239 vs 0 before
+ALERT 2026-W46: p95_seconds 6.09 vs 3.85 before</code></pre>
+<p>In the last week the assistant started answering "I don't know" to shipping questions (in the story, a re-index lost
+  <code>shipping.md</code>) and got slower. No single trace shows that; the weekly refusal rate does. The same comparison
+  works for cost: mean tokens per question rising after a release is a regression the answer-based gate cannot see.</p>
+<div class="callout"><span class="title">A model can help triage</span>
+  Stretch goal 1 lets a model propose a verdict for each queued trace with the documents in view, and compares it with
+  the person's verdicts. Treat it like any judge (Lecture 024): count the failures it calls "ok", because those never reach a person.</div>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>You complete the signals, the queue, the conversion to cases, deduplication, weekly metrics and drift alerts in
+  <code>feedback_loop.py</code>. The traces and a person's reviews of the queue are given.</p>
+<h3>Sample run</h3>
+<pre><code class="language-text">$ uv run python EXER049/solution/feedback_loop.py
+291 traces, 68 rated, 9 thumbs down, 15 with an implicit signal
+review queue: 29 traces
+  t0007 asked for a person      Is the BGC café pet friendly?        -> No pets are allowed in our cafés.
+  t0010 asked again             Can I return opened beans?           -> Yes, within 30 days for a full refund.
+  t0086 thumbs down             Do you ship to Japan?                -> Yes: 7–14 business days, flat ₱950.
+  …
+18 reviewed failures -> 7 new evaluation cases (after removing duplicates) in eval_candidates.json</code></pre>
+<p class="file-label">Captured from a real run. t0086 is a thumbs-down on a correct answer: the reviewer marks it ok.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Collect explicit feedback and derive implicit signals from what customers do next.</li>
+  <li>Build a review queue that combines flagged traces with a reproducible random sample.</li>
+  <li>Turn reviewed failures into deduplicated evaluation cases that feed the release gate.</li>
+  <li>Detect drift in quality, latency and cost by comparing weeks.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>A request for a person, or the same question again within a minute, marks the previous answer</li>
+  <li>The review queue holds every thumbs-down and every signal, plus a reproducible random sample, and no blocked attacks</li>
+  <li>A reviewed failure becomes a case in the EXER037 format that its <code>score_case</code> accepts; duplicates are dropped</li>
+  <li>Weekly metrics show the thumbs-down rate, refusal rate, tokens and p95 latency per ISO week</li>
+  <li>The drift in the last week (refusals and latency) raises alerts; the quiet weeks do not</li>
+  <li>All 7 checks pass (offline)</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li><code>implicit_signals</code>: group by thread, walk pairs of consecutive messages, label the first of each pair.</li>
+  <li><code>sample_for_review</code>: filter, flag, then sample the rest with <code>random.Random(seed)</code>, not the global <code>random</code>.</li>
+  <li><code>to_eval_case</code> and <code>dedupe</code>: small, but they decide what the gate will test for years.</li>
+  <li><code>weekly_metrics</code> and <code>drift_alerts</code>: ISO weeks from <code>isocalendar()</code>; each week against the mean of the earlier ones.</li>
+  <li>Run the script and read the queue as a reviewer would. Which verdicts in <code>reviews.json</code> would you change?</li>
+</ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Let a model pre-triage the review queue with the documents in view, and compare it with the person's verdicts. <em>Done when:</em> the script prints the agreement and, separately, the failures the model called "ok".</li>
+  <li><strong>Connect (EXER048).</strong> Run the new candidate cases against today's assistant before they enter the gate. <em>Done when:</em> each case is reported as failing today (a live bug) or passing (a guard against a return).</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER049/stretch/</p>
+</div>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Reviewing only thumbs-downs</summary><div>
+  <p>Most failures are never reported, and some reports are not failures. A random sample is how you find the first kind.</p></div></details>
+<details class="pitfall"><summary>Adding cases straight from feedback, without review</summary><div>
+  <p>A thumbs-down on a correct answer becomes a test that expects a wrong one. A person decides the verdict and the expected keywords.</p></div></details>
+<details class="pitfall"><summary>Personal data in new cases</summary><div>
+  <p>Cases are committed to the repository and read by everyone. Build them from the redacted traces (Lecture 047), and read
+  each question once more before it is added.</p></div></details>
+<details class="pitfall"><summary>Comparing a week with the week before only</summary><div>
+  <p>One noisy week makes the next look like an improvement or a regression. Compare with the mean of several earlier weeks.</p></div></details>
+<details class="pitfall"><summary>An unseeded sample</summary><div>
+  <p>Two reviewers, or the same reviewer running the script twice, get different queues and cannot compare notes.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>How many traces should a person review each week?</p>
+  <p>Enough to find new failure types, few enough that it actually happens: often 20–50. Watch what the random part finds.
+  If it keeps finding failures nothing flagged, the signals are missing something; if it finds nothing for weeks, shrink it.</p></div>
+<div class="qa"><p>A drift alert fires. What do you check first?</p>
+  <p>What changed that week: a deploy (the gate's report names the release), a re-index of the documents, a model version
+  at the provider, or a new kind of customer question. The traces of the alert week, filtered by the metric, usually show which.</p></div>
+<div class="qa"><p>When is the loop "done"?</p>
+  <p>Never, and that is the point. The evaluation set, the gate and the review queue together are how an AI feature keeps
+  working after launch: each failure found once is tested forever.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://eugeneyan.com/writing/llm-patterns/">Eugene Yan: Patterns for building LLM-based systems (collecting user feedback)</a></li>
+  <li><a href="https://hamel.dev/blog/posts/field-guide/">Hamel Husain: A field guide to rapidly improving AI products</a></li>
+  <li><a href="https://arxiv.org/abs/2404.12272">Shankar et al., Who Validates the Validators? (2024)</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

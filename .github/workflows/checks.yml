@@ -1,0 +1,32 @@
+name: Course checks
+
+# The course's definition of done, on every push and pull request:
+# every reference solution passes its checks, every untouched starter fails,
+# and the lecture quizzes are valid. Offline only: no API key is needed and
+# nothing is billed. Live checks are run by hand (uv run python check_all.py).
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+      - name: Install the locked dependencies
+        run: uv sync --frozen
+      - name: Run every exercise check (offline)
+        run: uv run python check_all.py --offline

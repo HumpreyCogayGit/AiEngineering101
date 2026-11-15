@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caching and Batch Work</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/loader.js"></script>
+<script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="45">
+<main>
+<header class="lecture-header">
+  <h1>Caching and Batch Work</h1>
+  <p class="lede">Three ways to pay less for the same answers: store them, let the provider reuse your prompt, or ask for them later. Each one can serve a wrong answer if you are careless.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>Lecture 035 measured what each question costs. Most of the cost is input tokens: the retrieved documents and the system
+  prompt, sent again with every question. Many questions repeat ("Is shipping free?"), and much of every prompt repeats too.
+  This lesson removes some of that repetition at three levels, and is careful about what each level may and may not do.</p>
+<table>
+  <tr><th>Technique</th><th>Where</th><th>Saves</th><th>Hazard</th></tr>
+  <tr><td>Response cache</td><td>Your service</td><td>The whole model call</td><td>A stale answer, or someone else's answer</td></tr>
+  <tr><td>Prompt-prefix caching</td><td>The provider</td><td>Part of the input price, sometimes latency</td><td>Almost none; it only works if you lay the prompt out for it</td></tr>
+  <tr><td>Batch endpoint</td><td>The provider</td><td>About half the price, where offered</td><td>Answers arrive within hours, not seconds</td></tr>
+</table>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>1. A response cache, and what goes into its key</h3>
+<p>An exact-match cache returns the stored reply when the same question arrives again. The danger is in the word "same".
+  The answer depends on more than the question:</p>
+<pre><code class="language-python">cache_key(question,
+          model=...,            # a new model answers differently
+          prompt_version=...,   # so does a new system prompt
+          tools=...,            # or a new tool set
+          policy_version=...,   # or new guardrails, or new documents (stretch goal 1)
+          tenant=...,           # company A's answer must never reach company B
+          role=...)             # staff search staff-only documents (Lecture 042)</code></pre>
+<p>Leave one out and the cache serves answers from before the change. Leave out the tenant or role and it serves answers
+  across a boundary that Lecture 042 just built. The question itself is normalized (case, spacing, trailing punctuation),
+  and the whole key is hashed, because keys end up in logs.</p>
+<p>Some replies must never be stored:</p>
+<ul>
+  <li><strong>Follow-up turns.</strong> "And to Cebu?" means something different in every conversation.</li>
+  <li><strong>Answers that changed something.</strong> Replaying "I saved your note" saves nothing.</li>
+  <li><strong>Blocked replies.</strong> The guardrails are cheap; run them every time.</li>
+</ul>
+<p>Entries also expire (a time to live). The TTL bounds how long a wrong answer can live; it does not prevent one.</p>
+
+<h3>Why not a semantic cache?</h3>
+<p>A semantic cache matches questions by embedding similarity, so "Do you ship for free?" hits the entry for "Is shipping
+  free?". The check in this exercise measures why that is dangerous, with the course's embedding model:</p>
+<pre><code class="language-text">different answers   unopened vs opened beans (30 vs 14 days)   0.963
+                    express vs standard shipping to Cebu        0.900
+same answer         "Is shipping free?" / "Do you ship for free?"  0.840</code></pre>
+<p>The pair with <em>different</em> answers is more similar than the paraphrase. Any threshold low enough to accept the
+  paraphrase also returns the 30-day answer to someone who opened the bag. Embeddings measure topic, not the one word that
+  changes the policy.</p>
+
+<h3>2. Prompt-prefix caching at the provider</h3>
+<p>When the beginning of a prompt is identical to a recent one, providers that support prompt caching reuse the processing
+  of that prefix and charge less for it, usually only above a minimum length (1,024 tokens on several providers). They
+  report it in <code>usage.prompt_tokens_details.cached_tokens</code>. Your job is the layout: static first, volatile last.</p>
+<pre><code class="language-text">$ uv run python EXER045/solution/prefix_experiment.py
+unstable  call 1: prompt  1806 tokens, cached     0
+unstable  call 2: prompt  1806 tokens, cached     0      ← the time is the first line: every prompt differs
+stable    call 1: prompt  1805 tokens, cached     0
+stable    call 2: prompt  1805 tokens, cached  1771      ← documents first, name and time last
+stable    call 3: prompt  1805 tokens, cached  1771</code></pre>
+<p>Where the prefix can end depends on the provider. On the deployment used to write this lesson, reuse stopped at the end
+  of an identical <em>system message</em>: the same 2,000 tokens of order data in the user message were not reused when only
+  the question after them changed, and were reused once moved into the system message (stretch goal 2). Measure on your
+  provider before rearranging prompts for a cache.</p>
+<div class="callout"><span class="title">Not every provider reports it</span>
+  A local Ollama keeps the processed prompt of its last request and reuses a shared prefix, but reports no cached tokens.
+  Compare latencies there instead.</div>
+
+<h3>3. Batch endpoints for work nobody waits for</h3>
+<p>Evaluation runs, re-scoring a dataset, summarizing yesterday's tickets: nobody is waiting for these answers. Several
+  providers accept a file of requests and return the results within a day for about half the normal price
+  (<a href="https://learn.microsoft.com/azure/ai-foundry/openai/how-to/batch">Azure</a> and
+  <a href="https://platform.openai.com/docs/guides/batch">OpenAI</a> both document it). The file is one JSON request per line:</p>
+<pre><code class="language-json">{"custom_id": "q-0003", "method": "POST", "url": "/v1/chat/completions",
+ "body": {"model": "...", "messages": [{"role": "system", "content": "..."}, {"role": "user", "content": "Is shipping free?"}]}}</code></pre>
+<p>Results can come back in any order; <code>custom_id</code> is how you match them. Submitting the file is provider-specific
+  and not every provider offers it (Ollama does not), so the exercise builds the file and stops there.</p>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>You complete the key, the cache lookup, the rules for what may be cached, the stable prompt layout and the batch file in
+  <code>caching.py</code>. <code>CachedHelpdesk</code> puts your cache in front of the EXER042 helpdesk.</p>
+<h3>Sample run</h3>
+<pre><code class="language-text">$ uv run python EXER045/solution/caching.py
+MISS  5.72s  1470 tokens  ana   Is shipping free?
+HIT   0.00s     0 tokens  ben   is shipping free
+MISS  3.38s  1389 tokens  ana   Do you ship for free?
+HIT   0.00s     0 tokens  carla Is shipping free?
+MISS  2.76s   959 tokens  ana   Save a note titled 'x' saying y.
+
+hit rate 40%  {'hits': 2, 'misses': 3, 'expired': 0}</code></pre>
+<p class="file-label">Captured from a real run. Ben and Carla are customers of the same company and get Ana's stored answer. The paraphrase misses: an exact cache only matches the same words, which is the safe side. The note is never cached.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Build a cache key from everything an answer depends on, including tenant and role.</li>
+  <li>Decide which replies may be cached, and expire the rest.</li>
+  <li>Explain why similarity-based caching serves wrong answers.</li>
+  <li>Lay out prompts so a provider can reuse their prefix, and measure whether it does.</li>
+  <li>Package offline work for a batch endpoint.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>The cache key changes when the model, prompt version, tools, policy, tenant or role changes, and not for case, spacing or trailing punctuation</li>
+  <li>Expired entries are removed and counted; hits, misses and the hit rate are reported</li>
+  <li>Blocked replies, follow-up turns and answers that saved something are never cached</li>
+  <li>Two customers on two days send prompts that are identical up to the volatile part</li>
+  <li><code>prefix_experiment.py</code> shows cached prompt tokens for the stable layout from the second call on (on a provider that reports them)</li>
+  <li>All 8 checks pass (one is <code>[live API]</code>: it shows with your embedding model why a semantic cache is unsafe)</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li><code>normalize</code> and <code>cache_key</code>: <code>json.dumps(..., sort_keys=True)</code> makes the same dictionary give the same text, then hash it.</li>
+  <li><code>ResponseCache.get</code>: an expired entry is deleted and counted before it is reported as a miss.</li>
+  <li><code>cacheable</code>: four rules, each one a sentence in the Concept section.</li>
+  <li><code>build_messages</code>: documents in the system message; name, date and question in the user message.</li>
+  <li><code>batch_lines</code>: one <code>json.dumps</code> per question, no newlines inside a line.</li>
+  <li>Run <code>caching.py</code> and <code>prefix_experiment.py</code>, then the live check, and look at the similarity numbers your embedding model gives.</li>
+</ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Put a version of the knowledge base into the cache key. <em>Done when:</em> in a simulated week where a policy document changes on day 3, the versioned cache serves no stale answers, and the script prints how many a TTL-only cache served.</li>
+  <li><strong>Connect (EXER040).</strong> Measure which layout of the EXER040 context lets your provider reuse the prefix. <em>Done when:</em> the script prints the cached tokens per call for three layouts, with a never-seen question each time.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER045/stretch/</p>
+</div>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>A key without the tenant or role</summary><div>
+  <p>The cache becomes a way around every access rule in Lecture 042. The first staff member's answer, from the handbook,
+  is served to every customer who asks the same question.</p></div></details>
+<details class="pitfall"><summary>Caching answers to follow-up questions</summary><div>
+  <p>"How much is it?" has a different answer in every conversation. Cache only first turns, or include a hash of the
+  conversation in the key (which makes hits rare anyway).</p></div></details>
+<details class="pitfall"><summary>A timestamp at the top of the system prompt</summary><div>
+  <p>"Today is 2026-11-15 14:03:22" as the first line makes every prompt unique from token one, and the provider can reuse
+  nothing. Put the date last, and only to the day if that is all the model needs.</p></div></details>
+<details class="pitfall"><summary>Measuring a cache with repeated prompts</summary><div>
+  <p>Sending the same prompt twice measures whole-prompt reuse, not prefix reuse. Make each test question unique (stretch
+  goal 2 adds a random reference) or the numbers flatter the layout.</p></div></details>
+<details class="pitfall"><summary>A batch job for something a user waits for</summary><div>
+  <p>Batch results arrive within hours. Use it for evaluations and bulk jobs only.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>The hit rate is 3%. Is the cache worth it?</p>
+  <p>Measure the questions first: a support desk often has a few questions that make up a large share of the traffic, and
+  those are the ones worth caching. If the traffic is all long, personal conversations, a response cache saves little;
+  prefix caching still helps every call.</p></div>
+<div class="qa"><p>How would you share the cache between three replicas?</p>
+  <p>Move it to a shared store such as Redis, with the same key and a TTL set on each entry. The rules for what may be cached
+  do not change.</p></div>
+<div class="qa"><p>A document changes. What has to happen, in which order?</p>
+  <p>Re-index the document, then change the knowledge-base version in the key in the same deploy. Old entries stop matching at
+  once, and the first question after the change pays for one fresh answer.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://platform.openai.com/docs/guides/prompt-caching">OpenAI: prompt caching</a></li>
+  <li><a href="https://learn.microsoft.com/azure/ai-foundry/openai/how-to/prompt-caching">Azure: prompt caching</a></li>
+  <li><a href="https://learn.microsoft.com/azure/ai-foundry/openai/how-to/batch">Azure: global batch</a></li>
+  <li><a href="https://platform.openai.com/docs/guides/batch">OpenAI: batch API</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

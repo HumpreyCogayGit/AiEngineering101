@@ -44,7 +44,7 @@
   <tr><th>Metric</th><th>Question it answers</th><th>How</th></tr>
   <tr><td>Hit rate</td><td>Did we retrieve the right document at all?</td><td>Code</td></tr>
   <tr><td>MRR</td><td>How high was it ranked? (1/position of the first hit)</td><td>Code</td></tr>
-  <tr><td>Faithfulness</td><td>Is every claim supported by the retrieved context? (The definition used by <a href="https://arxiv.org/abs/2309.15217">RAGAS</a>: the share of the answer's claims that can be inferred from the context.)</td><td>LLM judge</td></tr>
+  <tr><td>Faithfulness</td><td>Is every claim supported by the retrieved context? (The definition used by <a href="https://arxiv.org/abs/2309.15217">RAGAS</a>: the share of the answer's claims that can be inferred from the context. This exercise uses a simpler 1 to 5 judge score inspired by the same idea; it does not split the answer into claims.)</td><td>LLM judge</td></tr>
   <tr><td>Correctness</td><td>Does it match the reference answer in meaning?</td><td>LLM judge</td></tr>
   <tr><td>Refusal rate</td><td>Does it say "I don't know" when it should?</td><td>Code</td></tr>
 </table>
@@ -59,9 +59,9 @@
 judge_llm.with_structured_output(Grade).invoke(FAITHFULNESS_PROMPT.format(context=..., question=..., answer=...))</code></pre>
 <ul>
   <li><strong>A clear rubric</strong> ("5 = fully supported, 3 = partly, 1 = invents facts") makes scores consistent.</li>
-  <li><strong>Reasoning before score</strong>: since fields are generated in order, the model "thinks" first, which improves judgments.</li>
+  <li><strong>A short justification</strong> next to the score shows you <em>why</em> the judge decided, so you can audit it. Ask for evidence: which claim is unsupported, which rubric line applies. Fields are generated in order, so putting the justification first means the score is written after it; whether that improves the score depends on the model and is something to measure, not assume. Treat the justification as a diagnostic, never as ground truth.</li>
   <li><strong>Structured output</strong> makes scores machine-readable; <code>ge</code>/<code>le</code> enforce the range.</li>
-  <li><strong>Calibrate</strong>: check the judge with known good and bad answers (the live check does exactly this).</li>
+  <li><strong>Calibrate</strong>: check the judge with known good and bad answers (the live check does exactly this), and compare it with human labels (stretch goal 1). A judge that agrees with itself on every run can still disagree with a person.</li>
 </ul>
 <div class="callout warn"><span class="title">Judges have biases</span>
   LLM judges can favour longer answers, answers in their own style, or the first option shown (verbosity,
@@ -150,7 +150,7 @@ Report written to EXER024/solution/output/eval_report.md</code></pre>
 <div class="stretch">
 <p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
 <ol>
-  <li><strong>Extend.</strong> Grade each answer twice and report how often the judge disagrees with itself. <em>Done when:</em> the script prints, per metric, on how many answers the two grades differ and by how much.</li>
+  <li><strong>Extend: calibrate the judge.</strong> Grade the 18 human-labelled answers in <code>EXER024/stretch/human_labels.json</code> twice each. Report how often the judge agrees with itself, and its exact and within-one-point agreement with the human scores, per metric and per kind of answer. <em>Done when:</em> the script prints those numbers and you can name the kind of answer the judge scores worst.</li>
   <li><strong>Connect (EXER023).</strong> Evaluate the RAG chain with the best EXER023 retriever and compare both reports. <em>Done when:</em> two reports are written and one table shows every metric for both retrievers.</li>
 </ol>
 <p class="file-label">Reference code, for after you have tried: EXER024/stretch/</p>

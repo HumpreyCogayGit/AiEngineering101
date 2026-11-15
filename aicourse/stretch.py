@@ -58,3 +58,16 @@ def solution_module(stretch_file: str, filename: str, exercise: str | None = Non
     sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def solution_of(exercise: str, filename: str) -> ModuleType:
+    """Import `EXERnnn/solution/<filename>` from anywhere in the course.
+
+    Module 9 lessons build on earlier ones: EXER042 changes the EXER041 service,
+    EXER048 gates the EXER037 evaluation. Their code imports the earlier
+    reference solution with this instead of copying it:
+
+        service = solution_of("EXER041", "service.py")
+    """
+    root = Path(__file__).resolve().parent.parent
+    return solution_module(str(root / exercise / "solution" / filename), filename)

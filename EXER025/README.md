@@ -44,3 +44,23 @@ uv run streamlit run EXER025/stretch/goal2_feedback_app.py
 ```
 
 Also in [stretch/](stretch/): `remove_file.py`.
+
+## Transfer task (end of Module 4)
+
+Optional, and different from the stretch goals: a new problem in a new domain, with **no starter code and no `check.py`**. It shows whether you can use Module 4's ideas without scaffolding.
+
+Answer questions about **Harbor Bikes**, a bike rental company, from the three documents in
+[transfer/harbor_docs/](transfer/harbor_docs/) (Markdown and HTML), with no starter code. Measure your
+pipeline with the ten golden questions in [transfer/questions.json](transfer/questions.json); two of them
+cannot be answered from the documents.
+
+- [ ] The documents are loaded, chunked and indexed in their own collection, not the Nimbus one
+- [ ] Answers cite their passages, and say they don't know when the documents don't cover the question
+- [ ] The script reports hit rate, MRR, correctness and refusal as four separate numbers (EXER024)
+- [ ] You changed one thing (chunk size, k, or the prompt) and can say which number it moved
+
+Reference answer, for after you have tried:
+
+```bash
+uv run python EXER025/transfer/reference_harbor_rag.py
+```

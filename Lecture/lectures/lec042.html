@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Identity and Tenant Boundaries</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/loader.js"></script>
+<script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="42">
+<main>
+<header class="lecture-header">
+  <h1>Identity and Tenant Boundaries</h1>
+  <p class="lede">The EXER041 service lets the caller choose the <code>thread_id</code>. Anyone who learns one can read and continue another person's conversation.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>Module 9 takes the deployed helpdesk from Lecture 041 and fixes what stands between it and real users. This first
+  lesson is about <em>who</em> is calling. The service answers anyone who can reach it, stores every conversation
+  under an id the client picks, writes every caller's notes to one shared file, and lets every caller search the
+  employee handbook. None of that is visible in a demo with one user.</p>
+<p>The fix is not a feature of the model or the agent. It is the same work as in any multi-user web service:
+  authenticate the request, derive the user from the credential, put the user into every key, and check
+  permissions where data is read. The AI part adds one twist: retrieval is a read, and what is retrieved goes into a prompt.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>Authentication and authorization are two questions</h3>
+<table>
+  <tr><th></th><th>Authentication</th><th>Authorization</th></tr>
+  <tr><td>Question</td><td>Who is calling?</td><td>May this caller do this, to this object?</td></tr>
+  <tr><td>Answered</td><td>Once per request, from the credential</td><td>At every read and write of user data</td></tr>
+  <tr><td>Failure code</td><td><code>401</code> with <code>WWW-Authenticate</code></td><td><code>404</code> (or <code>403</code>)</td></tr>
+</table>
+<p>The most common API vulnerability is a missing authorization check on an object id the client sends:
+  <a href="https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/">OWASP API1:2023, Broken
+  Object Level Authorization</a>. <code>POST /ask {"thread_id": "t1"}</code> in EXER041 is exactly that object id.</p>
+
+<h3>1. A bearer token, stored as a hash</h3>
+<p>The client sends <code>Authorization: Bearer &lt;token&gt;</code> (<a href="https://datatracker.ietf.org/doc/html/rfc6750">RFC 6750</a>).
+  Without a valid one the server answers <code>401</code> with <code>WWW-Authenticate: Bearer</code>, which tells the client what it must send.</p>
+<pre><code class="language-python">token = secrets.token_urlsafe(32)                    # 32 random bytes, shown to the user once
+store[sha256(token)] = Principal("ana", "customer")  # only the hash is kept
+
+principal = store.get(sha256(presented_token))       # look up the hash of what was sent</code></pre>
+<p>A leaked token file contains hashes, not tokens. A plain SHA-256 is enough here because the token is random; a password,
+  which people choose, needs a slow hash. In production the token usually comes from an identity provider (an OAuth access
+  token or a signed JWT) and the service validates it instead of storing it, but the rest of this lesson is the same.</p>
+
+<h3>2. The user comes from the credential, never from the body</h3>
+<p>If the server reads <code>{"user_id": "ana"}</code> from the request, the client can write any user id. The server
+  knows the user only because it validated the token. Ignore every identity field in the body.</p>
+
+<h3>3. The user is part of every key</h3>
+<div class="mermaid">flowchart LR
+  T["Authorization: Bearer …"] --> P["Principal(ana, customer)"]
+  B["body: thread_id = t1"] --> K["key = ana/t1"]
+  P --> K
+  K --> M["conversation memory"]
+  P --> N["notes/ana.json"]
+  P --> F["search filter: no staff documents"]</div>
+<p>When the internal key is <code>f"{user_id}/{thread_id}"</code>, user B cannot build user A's key: B's <code>t1</code>
+  becomes <code>ben/t1</code>. That only holds if neither part can contain a separator, so both ids are checked against
+  <code>[A-Za-z0-9_-]{1,64}</code>. The same rule protects the notes file: <code>../ana</code> as a user id would otherwise be a path.</p>
+<p>When B asks for A's thread, answer <code>404</code>, not <code>403</code>. A 403 confirms that the thread exists; HTTP
+  explicitly allows a 404 to hide a forbidden resource (<a href="https://www.rfc-editor.org/rfc/rfc9110#name-403-forbidden">RFC 9110, 403 Forbidden</a>).</p>
+
+<h3>4. Permission-aware retrieval</h3>
+<p>Search is a read of company data, and its result goes into the model's context. If a customer's search returns the
+  employee handbook, the model can quote it, and no output filter reliably catches a paraphrase. So the filter goes
+  <strong>into the query</strong>:</p>
+<pre><code class="language-python">def search_filter(principal):
+    if principal.role == "staff":
+        return None                                          # everything
+    return {"source": {"$nin": ["employee_handbook.pdf"]}}   # a Chroma `where` filter
+
+store.similarity_search(query, k=4, filter=search_filter(principal))</code></pre>
+<p>Filtering after the search is weaker in two ways: the forbidden text may already be in a prompt or a trace, and the
+  user gets fewer than <code>k</code> results. Real systems store an access label on every chunk at ingestion (a group,
+  a tenant, a document ACL) and filter on it the same way.</p>
+<div class="callout warn"><span class="title">The system prompt is not an access control</span>
+  "Do not reveal the employee handbook to customers" is a request to the model. Lecture 036 showed that requests can be
+  talked around. A document the model never receives cannot leak.</div>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>You complete <code>secure_service.py</code>: parsing the bearer token, authenticating, building namespaced keys and
+  notes paths, the search filter, and the routes. One EXER037 assistant per user is given (<code>UserHelpdesks</code>):
+  each has its own notes file and a search tool that applies that user's filter.</p>
+<h3>Sample run</h3>
+<pre><code class="language-text">$ curl -X POST localhost:8000/ask -H "Authorization: Bearer $ANA" \
+       -d '{"question": "How many vacation days do full-time employees get?", "thread_id": "t1"}'
+{"thread_id": "t1", "answer": "Full-time employees get **15 days of paid vacation per year**. [careers.html]",
+ "tools_used": ["search_knowledge_base"], "blocked": false, "reasons": [], "tokens": 1230}
+
+$ curl localhost:8000/threads/t1 -H "Authorization: Bearer $BEN"
+{"error": "no such thread"}
+
+$ curl -X POST localhost:8000/ask -H "Authorization: Bearer $BEN" \
+       -d '{"question": "How many vacation days do full-time employees get?"}'
+{"thread_id": "2e21…", "answer": "Full-time employees receive **15 days of paid vacation leave per year**.
+ Up to **5 unused days** can carry over to the next year. [employee_handbook.pdf]", …}</code></pre>
+<p class="file-label">Captured from a real run. Ana is a customer: her answer comes from the public careers page. Ben is staff: his comes from the handbook, with the carry-over rule only staff may see.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Explain the difference between authentication and authorization, and where each is checked.</li>
+  <li>Authenticate requests with a bearer token stored as a hash, and answer 401 correctly.</li>
+  <li>Derive the user from the credential and bind every conversation and file to it.</li>
+  <li>Filter retrieval by permission inside the query, before the model sees any text.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>Without a valid token every route except the health checks answers 401 with a <code>WWW-Authenticate</code> header</li>
+  <li>A <code>user_id</code> in the request body is ignored: the user comes from the token</li>
+  <li>User B gets 404 for user A's thread, and B's questions with A's thread id go to B's own conversation</li>
+  <li>Thread ids and user ids with <code>/</code> or <code>..</code> are rejected</li>
+  <li>A customer's search never returns the employee handbook; a staff member's does</li>
+  <li>All 9 checks pass (one is <code>[live API]</code>: it searches the real index)</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li><code>bearer_token</code> and <code>authenticate</code>: header names are case-insensitive, and so is the word <code>Bearer</code>.</li>
+  <li><code>thread_key</code> and <code>notes_file</code>: validate first, build the key second. For the file, also check the resolved path: two checks, either of which would be enough.</li>
+  <li><code>search_filter</code> and <code>permitted_search</code>: one dictionary and one call. The live check runs the same question as a customer and as staff.</li>
+  <li><code>route</code>: health routes first (no token), then authenticate, then <code>/ask</code> and <code>/threads/&lt;id&gt;</code>. Return the public <code>thread_id</code>, never the internal key.</li>
+  <li>Issue two tokens, start the service, and try to read one user's thread with the other user's token.</li>
+</ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Authorize tools by role: customers may search and calculate, only staff may use the notes tools. <em>Done when:</em> the same "save a note" request writes a note for a staff member and cannot for a customer, because the customer's assistant never receives the tool.</li>
+  <li><strong>Connect (EXER028).</strong> Store conversations in SQLite so they survive a restart. <em>Done when:</em> after a restart, user A can read and continue their thread and user B still gets 404 for it.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER042/stretch/</p>
+</div>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Checking the token and then trusting the body</summary><div>
+  <p>Authentication passed, so the request "is Ana", and then the code reads <code>data["user_id"]</code>. Every identity
+  the server uses must come from the principal it built itself.</p></div></details>
+<details class="pitfall"><summary>Namespacing without validating</summary><div>
+  <p><code>f"{user}/{thread}"</code> with <code>thread = "../ben/t1"</code>, or a user id used in a file path, undoes the namespace.
+  Validate ids against an allowlist pattern before they become part of a key or a path.</p></div></details>
+<details class="pitfall"><summary>Filtering retrieved documents after generation</summary><div>
+  <p>Checking the answer for handbook content is checking for a leak that already happened. Filter in the query.</p></div></details>
+<details class="pitfall"><summary>Authenticating the health checks</summary><div>
+  <p>The platform calls <code>/healthz</code> without your users' tokens. If it gets a 401, it restarts a healthy container.
+  Keep health routes open and make sure they reveal nothing.</p></div></details>
+<details class="pitfall"><summary>Tokens in logs</summary><div>
+  <p>An access log that records request headers stores every user's credential. Log the user id, never the header.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>Why not let the model decide what a user may see, with the role in the system prompt?</p>
+  <p>Because the model follows instructions from its whole context, including the user's message and retrieved text.
+  Access decisions have to hold even when the model is persuaded otherwise, so they are made in code, before the model
+  receives anything.</p></div>
+<div class="qa"><p>A tenant is a company, not a person. What changes?</p>
+  <p>The key gets one more level (<code>tenant/user/thread</code>), the search filter matches the tenant's documents, and
+  every cache, index and log is partitioned the same way. Lecture 045 adds the tenant to the cache key for this reason.</p></div>
+<div class="qa"><p>What would you test before calling this done?</p>
+  <p>Every route with no token, a wrong token and another user's token; ids with separators; and a retrieval question
+  whose only good answer is in a document the caller may not read. The checks do these.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/">OWASP API1:2023 Broken Object Level Authorization</a></li>
+  <li><a href="https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html">OWASP Authorization Cheat Sheet</a></li>
+  <li><a href="https://datatracker.ietf.org/doc/html/rfc6750">RFC 6750: Bearer Token Usage</a></li>
+  <li><a href="https://docs.python.org/3/library/secrets.html">Python: the secrets module</a></li>
+  <li><a href="https://docs.trychroma.com/docs/querying-collections/metadata-filtering">Chroma: metadata filtering</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

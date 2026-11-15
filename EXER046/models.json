@@ -1,0 +1,9 @@
+{
+  "_readme": {"note": "Prices are USD per 1M tokens. The cloud entries are EXAMPLE values (the same as EXER035): replace them with your provider's price page, and add your own deployment names. A local model costs nothing per token. Retirement dates come from your provider's model lifecycle page."},
+  "example-small-cloud-model": {"price": {"input": 0.10, "output": 0.40}},
+  "example-large-cloud-model": {"price": {"input": 0.40, "output": 1.60}},
+  "example-retiring-model": {"price": {"input": 0.15, "output": 0.60}, "retires": "2026-12-31", "replacement": "example-small-cloud-model"},
+  "gemma4:e4b": {"price": {"input": 0, "output": 0}},
+  "qwen2.5:3b": {"price": {"input": 0, "output": 0}},
+  "phi4-mini:3.8b": {"price": {"input": 0, "output": 0}}
+}

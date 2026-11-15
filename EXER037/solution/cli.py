@@ -66,11 +66,11 @@ def chat(verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False) -> N
 
 
 @app.command("eval")
-def run_eval() -> None:
-    """Run the evaluation set and write a report."""
+def run_eval(heldout: bool = typer.Option(False, "--heldout", help="Run the held-out set (once, at the end).")) -> None:
+    """Run the evaluation set and write a report with a score per category."""
     from evaluate import main as evaluate_main
 
-    passed = asyncio.run(evaluate_main())
+    passed = asyncio.run(evaluate_main(heldout=heldout))
     raise typer.Exit(0 if passed else 1)
 
 

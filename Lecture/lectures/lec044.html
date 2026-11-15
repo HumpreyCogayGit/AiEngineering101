@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operating Under Load</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/loader.js"></script>
+<script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="44">
+<main>
+<header class="lecture-header">
+  <h1>Operating Under Load</h1>
+  <p class="lede">A service that accepts every request answers nobody well once enough of them arrive. Say no early, say when to come back, and stop cleanly.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>The EXER042 service starts a thread for every request and lets each one run for up to 300 seconds. With ten users that
+  is fine. With a thousand, every request waits for the same model provider, latency climbs for everyone, clients time out
+  and retry, and the retries add more load. Lecture 011 covered the client side of this (retries, backoff, a concurrency
+  limit on outgoing calls). This lesson covers the server side.</p>
+<p>Three ideas carry the lesson: <strong>refuse cheaply</strong> before doing expensive work, <strong>tell clients when to
+  come back</strong>, and <strong>measure from the user's side</strong> with percentiles and an objective. A fourth fixes the
+  problem Lecture 041 left open: the service ignored <code>SIGTERM</code>.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>Refuse early, in order of cost</h3>
+<div class="mermaid">flowchart LR
+  R["request"] --> S{"body &gt; 20 KB?"} -->|yes| E413["413"]
+  S --> A{"token?"} -->|no| E401["401"]
+  A --> D{"draining?"} -->|yes| E503a["503"]
+  D --> L{"rate / budget?"} -->|over| E429["429 + Retry-After"]
+  L --> Q{"free slot or<br/>room in queue?"} -->|no| E503b["503 + Retry-After"]
+  Q --> M["ask the model"] --> T{"in time?"} -->|no| E504["504"]
+  T --> OK["200"]</div>
+<p>Every check before "ask the model" costs microseconds. A request refused there costs the service almost nothing; a request
+  that waits five minutes and then fails costs a thread, a connection, model tokens and the user's patience.
+  The Google SRE book calls this <a href="https://sre.google/sre-book/handling-overload/">handling overload</a>: a fast,
+  explicit rejection is better than a slow failure.</p>
+<table>
+  <tr><th>Code</th><th>Meaning</th><th>Client should</th></tr>
+  <tr><td><code>413</code></td><td>Content too large</td><td>Not retry; send less</td></tr>
+  <tr><td><code>429</code></td><td>This client is over its limit (<a href="https://www.rfc-editor.org/rfc/rfc6585#section-4">RFC 6585</a>)</td><td>Wait <code>Retry-After</code> seconds</td></tr>
+  <tr><td><code>503</code></td><td>The service is busy or shutting down</td><td>Wait <code>Retry-After</code>, possibly try another replica</td></tr>
+  <tr><td><code>504</code></td><td>No answer within the deadline</td><td>Retry later, with backoff</td></tr>
+</table>
+<p><a href="https://www.rfc-editor.org/rfc/rfc9110#field.retry-after"><code>Retry-After</code></a> turns a refusal into a schedule.
+  Stretch goal 2 measures what happens when clients ignore it.</p>
+
+<h3>Two limits per user, one for the service</h3>
+<ul>
+  <li><strong>A rate limit counts requests.</strong> A token bucket allows a burst (5 at once) and then a steady rate (one every
+    3 seconds). Each user has their own bucket.</li>
+  <li><strong>A budget counts cost.</strong> One user with long prompts can spend more tokens in ten requests than others in a
+    thousand. A daily token budget per user caps the bill a single account can run up.</li>
+  <li><strong>A concurrency limit protects the service.</strong> At most N questions run at once; at most M wait, each for a
+    limited time. Beyond that: 503. The queue is bounded on purpose: an unbounded queue turns overload into unbounded latency.</li>
+</ul>
+
+<h3>Deadlines, and what a timeout does not stop</h3>
+<pre><code class="language-python">future = executor.submit(ask, question, key, principal)
+future.add_done_callback(lambda _: admission.release())   # release when the work STOPS
+reply = future.result(timeout=60)                          # 504 after 60 s</code></pre>
+<p>A Python thread cannot be killed. After the 504 the question keeps running, and keeps calling the model, until it finishes.
+  So its slot is released when the work stops, not when the caller stops waiting; otherwise timed-out work piles up
+  outside the limit. Real cancellation needs cooperation: an async task that can be cancelled, or a timeout passed down to
+  the model client (Lecture 011).</p>
+
+<h3>Measure what users experience</h3>
+<p>An average hides the slow requests. Report <strong>percentiles</strong>: p50 is the typical user, p95 and p99 are the
+  unlucky ones. Then state an objective: a <a href="https://sre.google/sre-book/service-level-objectives/">service level
+  objective (SLO)</a> over a service level indicator (SLI).</p>
+<pre><code class="language-text">SLI   share of requests that were answered within 2 s, or refused with a 4xx
+SLO   SLI ≥ 95% over the measurement window
+error budget = 1 − SLO = 5% of requests may be bad;  "used ×2.0" means twice that</code></pre>
+<p>A <code>429</code> counts as good here: the service did what it promised to that user. A <code>503</code> does not.</p>
+
+<h3>Graceful shutdown as process 1</h3>
+<p>Lecture 041 found that its service ignored <code>docker stop</code>: process 1 in a container gets no default signal
+  handling, and the service installed no handler. The fix is a handler that drains:</p>
+<pre><code class="language-python">def on_sigterm(signum, frame):
+    def stop():
+        shutdown.drain(grace)    # readiness → 503, new questions → 503, running ones finish
+        server.shutdown()        # serve_forever() returns; main() exits 0
+    threading.Thread(target=stop, daemon=True).start()   # NOT in the handler: see Pitfalls
+
+signal.signal(signal.SIGTERM, on_sigterm)</code></pre>
+<p>Measured on the two images:</p>
+<pre><code class="language-text">EXER041  docker stop -t 10  took 10.1 s, exit code 137 (killed)
+EXER044  docker stop        took  0.4 s, exit code 0
+         INFO helpdesk: SIGTERM: draining 0 request(s), up to 25 s
+         INFO helpdesk: drained
+         INFO helpdesk: stopped cleanly</code></pre>
+<p>The grace period of the service (25 s) must be shorter than the platform's (Docker: <code>docker stop -t</code>;
+  Kubernetes: <code>terminationGracePeriodSeconds</code>, 30 s by default), or the platform kills it while it drains.</p>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>You complete the rate limit, the admission control, the <code>SIGTERM</code> handler and the routes in
+  <code>load_service.py</code>, then the report functions in <code>loadtest.py</code>. The load test starts the service in-process
+  with a fake assistant (0.4 s per answer, no model calls) and lets 16 users talk to it over real HTTP.</p>
+<h3>Sample run</h3>
+<pre><code class="language-text">$ uv run python EXER044/solution/loadtest.py
+
+2 concurrent slots: 128 requests, 32 answered, 4.64 answers/s
+   latency  p50 1.11 s   p95 1.24 s   p99 1.24 s
+   status   {"200": 32, "429": 28, "503": 68}
+   SLO      46.9% good (objective 95%): MISSED, error budget used x10.62
+
+8 concurrent slots: 128 requests, 128 answered, 18.91 answers/s
+   latency  p50 0.70 s   p95 0.81 s   p99 0.81 s
+   status   {"200": 128}
+   SLO      100.0% good (objective 95%): met, error budget used x0.0</code></pre>
+<p class="file-label">Captured from a real run. With 2 slots, quick 503s send users straight back, and they then hit their rate limit: the 429s are a symptom of the 503s.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Reject excess work early and cheaply, with the right status code and <code>Retry-After</code>.</li>
+  <li>Limit each user by request rate and by token cost, and the service by concurrency and queue length.</li>
+  <li>Enforce a deadline, and explain why a timed-out request still holds resources.</li>
+  <li>Shut down gracefully on <code>SIGTERM</code>, including as process 1 in a container.</li>
+  <li>Report latency percentiles and an SLO from a load test.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>Every refusal (413, 429, 503) happens before any model call, and 429 and 503 carry <code>Retry-After</code></li>
+  <li>A question that misses the deadline gets 504, and keeps its slot until its work actually stops</li>
+  <li>On <code>SIGTERM</code> the process finishes the question in flight, answers new ones with 503, and exits 0</li>
+  <li>The load test prints throughput, p50/p95/p99, counts by status, and whether the SLO was met</li>
+  <li>All 9 checks pass (offline; one starts the service as a real process and sends it <code>SIGTERM</code>)</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li><code>percentile</code>, <code>summarize</code>, <code>slo_report</code> first: pure functions, quick to check.</li>
+  <li><code>TokenBucket.take</code>: refill by elapsed time, cap at the burst, take one. The check uses a fake clock.</li>
+  <li><code>AdmissionControl.acquire</code>: try for a free slot, then join the queue if there is room, then wait with a timeout.</li>
+  <li><code>route</code>: follow the diagram from top to bottom. The order is the design.</li>
+  <li><code>install_sigterm_handler</code>: the last check starts a real process, sends <code>SIGTERM</code> mid-question and expects exit code 0.</li>
+  <li>Run <code>loadtest.py</code>, then build the image and time <code>docker stop</code> for EXER041 and EXER044.</li>
+</ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Sweep the concurrency limit against a simulated provider that serves 4 requests at once, and find the knee. <em>Done when:</em> a table shows throughput and p95 per limit, and the script names the largest limit that meets the p95 objective.</li>
+  <li><strong>Connect (EXER011).</strong> Write a client that honours <code>Retry-After</code> with jitter, and compare it with one that retries at once. <em>Done when:</em> both send the same questions to the same service and the script prints answers, requests sent and refusals for each.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER044/stretch/</p>
+</div>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Calling <code>server.shutdown()</code> inside the signal handler</summary><div>
+  <p>The handler runs on the main thread, which is inside <code>serve_forever()</code>. <code>shutdown()</code> waits for
+  <code>serve_forever()</code> to return: the thread waits for itself, forever. Start a thread.</p></div></details>
+<details class="pitfall"><summary>An unbounded queue</summary><div>
+  <p>Requests are never refused; they wait. Latency grows without limit, clients time out and retry, and the queue grows
+  faster. A bounded queue with a wait timeout turns that into quick 503s.</p></div></details>
+<details class="pitfall"><summary>Releasing the slot on timeout</summary><div>
+  <p>The caller got its 504, but the work is still running. Count it until it stops, or the limit no longer limits anything.</p></div></details>
+<details class="pitfall"><summary>Failing liveness while draining</summary><div>
+  <p>Readiness should fail (send no new traffic). Liveness should not: a failing liveness check makes the platform kill the
+  process before the running requests finish.</p></div></details>
+<details class="pitfall"><summary>Reporting the average latency</summary><div>
+  <p>A mean of 0.8 s can hide 5% of users waiting 10 s. Report p95 and p99, and count refused requests separately from answered ones.</p></div></details>
+<details class="pitfall"><summary>A tiny accept backlog</summary><div>
+  <p>Before any of your code runs, the operating system queues new connections. Python's <code>socketserver</code> allows 5;
+  a burst beyond that is reset. The service sets <code>request_queue_size = 128</code>.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>Where should the limits live when there are three replicas?</p>
+  <p>The concurrency limit protects one process, so it stays local. Per-user rate limits and budgets must be shared, or
+  each user gets three times their limit: keep the counters in a shared store such as Redis, or enforce them in an API
+  gateway in front of the replicas.</p></div>
+<div class="qa"><p>How do you choose the concurrency limit?</p>
+  <p>Measure. Find the point where throughput stops growing and latency starts climbing (stretch goal 1). That point is
+  usually set by the model provider's rate limit or the GPU behind a local model, not by your service.</p></div>
+<div class="qa"><p>Why count a 429 as "good" in the SLO?</p>
+  <p>The SLO measures whether the service kept its promise. Refusing a user who is over their limit is the promise. If
+  many well-behaved users get 429s, the limit is wrong, and that shows up as complaints and in a separate metric.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://sre.google/sre-book/handling-overload/">Google SRE book: Handling Overload</a></li>
+  <li><a href="https://sre.google/sre-book/service-level-objectives/">Google SRE book: Service Level Objectives</a></li>
+  <li><a href="https://www.rfc-editor.org/rfc/rfc9110#field.retry-after">RFC 9110: Retry-After</a></li>
+  <li><a href="https://docs.python.org/3/library/signal.html">Python: the signal module</a></li>
+  <li><a href="https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-termination">Kubernetes: termination of pods</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

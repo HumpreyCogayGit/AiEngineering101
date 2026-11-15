@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy and Data Lifecycle</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/loader.js"></script>
+<script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="47">
+<main>
+<header class="lecture-header">
+  <h1>Privacy and Data Lifecycle</h1>
+  <p class="lede">A helpdesk that remembers people keeps their data in more places than anyone remembers. Deleting a person means finding all of them, including the backup.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>Lecture 028 stored long-term memories, Lecture 035 recorded traces, Lecture 039 indexed past turns, Lecture 042 gave
+  each user a notes file. Each was a good idea on its own. Together they mean that one customer's phone number, typed once
+  into the chat, can sit in five stores and their backups.</p>
+<p>This lesson treats personal data as something with a life: what is collected, where it goes, how long it stays, and how
+  it is removed. The rules come from privacy law (the Philippine <a href="https://privacy.gov.ph/data-privacy-act/">Data
+  Privacy Act</a>, the <a href="https://gdpr-info.eu/art-5-gdpr/">GDPR</a> and others), but every step is engineering.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>Where the data goes</h3>
+<div class="mermaid">flowchart LR
+  U["customer types:<br/>'I'm ana@…, 0917 …'"] --> C["conversations<br/>(SQLite)"]
+  U --> M["memories (L028)"]
+  U --> N["notes file (L042)"]
+  U --> V["index of past turns (L039)"]
+  U --> T["traces (L035)"]
+  C & M --> B["database backups"]
+  U --> P["model provider"]</div>
+<p>Every arrow is a decision. The lesson makes five of them explicit.</p>
+
+<h3>1. Minimize before the model call</h3>
+<pre><code class="language-python">ALLOWED_PROFILE_FIELDS = ("first_name", "loyalty_tier")
+minimize({"first_name": "Ana", "loyalty_tier": "Gold", "email": "…", "phone": "…", "address": "…"})
+# 'first_name: Ana, loyalty_tier: Gold'</code></pre>
+<p>The model needs the first name to greet and the tier to answer reward questions. It does not need the email, the phone
+  number or the address, so they are never sent. Data that is not sent cannot be logged by the provider, leaked by the model,
+  or quoted in a prompt-injection attack (<a href="https://genai.owasp.org/llmrisk/llm022025-sensitive-information-disclosure/">OWASP
+  LLM02: sensitive information disclosure</a>). Check your provider's retention and training settings for what it does with
+  the data you do send.</p>
+
+<h3>2. Redact everything derived</h3>
+<p>The conversation keeps the customer's own words: they may read their history. Everything derived from it (traces, the
+  index of past turns) is redacted, because debugging and retrieval need the meaning of a question, not the phone number.</p>
+<pre><code class="language-text">question  I'm ana.reyes@example.com, 0917 555 0142. Card 4111 1111 1111 1111 was charged twice for NC-1042.
+trace     I'm [EMAIL], [PHONE]. Card [CARD] was charged twice for NC-1042.</code></pre>
+<p>Patterns catch what they anticipate. A card number is only replaced when it passes the Luhn checksum, so tracking numbers
+  and order ids survive. Names, addresses and free-text descriptions of a person get through any regex; that is why
+  minimization comes first.</p>
+
+<h3>3. Retention: data has an end date</h3>
+<p>Decide how long each kind of data is useful, and delete it after that: traces for 30 days, conversations for 90, for
+  example. <code>purge_expired</code> runs daily and removes old rows, index entries and trace lines. Data you no longer
+  hold cannot leak and does not have to be searched for a deletion request.</p>
+
+<h3>4. Deletion everywhere, with a receipt</h3>
+<pre><code class="language-text">deletion receipt: {'sqlite:conversations': 2, 'sqlite:memories': 1, 'notes file': 1,
+                   'vector index': 1, 'traces': 1}</code></pre>
+<p>The receipt lists every store and what was removed from it, so the answer to "did you delete my data?" is a record, not a
+  belief. Deletion must be safe to repeat (a retried request deletes nothing more), and must leave everyone else untouched.
+  <code>find_user_data</code> then searches every store for the user id and the raw values, and must find nothing. Lecture
+  028 mentioned the GDPR's <a href="https://gdpr-info.eu/art-17-gdpr/">right to erasure</a>: this is how it is honoured.</p>
+
+<h3>5. Backups and tombstones</h3>
+<p>Backups are meant to bring data back, which is exactly what must not happen to a deleted user. Rewriting every old backup
+  is often impossible. The common answer is a <strong>tombstone</strong>: a record of the deletion, kept <em>outside</em> the
+  data that gets restored, and applied after every restore.</p>
+<pre><code class="language-text">restoring yesterday's backup ... re-applied deletions: {'ana': 3}
+after restore, ana appears in:    []</code></pre>
+<p>Backups themselves expire under the retention policy, so a deleted user's data eventually disappears from them too.</p>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>You complete redaction, minimization, retention, deletion and the tombstone pass in <code>privacy.py</code>. The five
+  stores are given, in a temporary folder, with fake embeddings: everything runs offline.</p>
+<h3>Sample run</h3>
+<pre><code class="language-text">$ uv run python EXER047/solution/privacy.py
+Profile in the prompt: 'first_name: Ana, loyalty_tier: Gold'  (no email, phone or address)
+
+trace line: {"at": "2026-11-14T22:16:38…", "user_id": "ana", "question": "Hi, I'm [EMAIL], [PHONE].
+             Card [CARD] was charged twice for NC-1042.", "tokens": 900}
+
+before deletion, ana appears in: ['sqlite:conversations', 'sqlite:memories', 'notes file', 'vector index', 'traces']
+deletion receipt: {'sqlite:conversations': 2, 'sqlite:memories': 1, 'notes file': 1, 'vector index': 1, 'traces': 1}
+after deletion, ana appears in:   []
+ben is untouched:                  ['sqlite:conversations', 'vector index', 'traces']
+
+restoring yesterday's backup ... re-applied deletions: {'ana': 3}
+after restore, ana appears in:    []</code></pre>
+<p class="file-label">Captured from a real run.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>List every store where a user's data ends up, including derived data and backups.</li>
+  <li>Minimize what is sent to the model and redact what is written to traces and indexes.</li>
+  <li>Enforce retention periods, and delete one user everywhere with a receipt.</li>
+  <li>Keep deletions in force across backup restores with tombstones.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>Emails, mobile numbers and card numbers (checked with Luhn) are redacted; order numbers and prices are not</li>
+  <li>Only the allowed profile fields reach the prompt</li>
+  <li>Traces and the index of past turns never hold an email, phone or card number</li>
+  <li>Deleting a user removes them from all five stores, returns a receipt, leaves other users alone, and is safe to repeat</li>
+  <li>Restoring a backup taken before the deletion does not bring the user back</li>
+  <li>Data older than the retention period is removed from conversations, the index and the traces</li>
+  <li>All 7 checks pass (offline)</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li><code>luhn_ok</code>, then <code>redact</code>: the card pattern matches any long digit run, so pass a function to <code>re.sub</code> that checks Luhn.</li>
+  <li><code>minimize</code>: an allowlist, not a blocklist. A new profile field stays out until someone decides it is needed.</li>
+  <li><code>delete_user</code>: one block per store, a count for each, then the tombstone.</li>
+  <li><code>apply_tombstones</code> and <code>purge_expired</code>: the same deletes, driven by a list of users or by a date.</li>
+  <li>Run the demo and read <code>find_user_data</code>'s output before and after each step.</li>
+</ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Answer a data access request: export everything held about one user as JSON. <em>Done when:</em> the export covers every store, says when it was made, and contains nothing about other users.</li>
+  <li><strong>Connect (EXER035).</strong> Make the EXER035 tracker redact what it stores. <em>Done when:</em> for a live question containing a phone number and an email, the original tracker's tool span shows them and the redacting tracker's does not.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER047/stretch/</p>
+</div>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Forgetting a derived store</summary><div>
+  <p>The conversation table is deleted, but the index of past turns, built from it, still holds the text. Keep a list of every
+  store and let deletion and <code>find_user_data</code> use the same list.</p></div></details>
+<details class="pitfall"><summary>Tombstones inside the database</summary><div>
+  <p>Restoring last week's database also restores last week's tombstone table, without this week's deletions. Keep the record
+  of deletions where a restore cannot reach it.</p></div></details>
+<details class="pitfall"><summary>Treating redaction as complete</summary><div>
+  <p>Regexes find formats. "My neighbour Maria at the blue house on Maginhawa" passes them all. Minimize first; redact as the second line.</p></div></details>
+<details class="pitfall"><summary>A blocklist for profile fields</summary><div>
+  <p>"Send everything except email and phone" sends the next field someone adds, a birthday or an ID number, without anyone
+  deciding to.</p></div></details>
+<details class="pitfall"><summary>Logging the deletion request with the data</summary><div>
+  <p>"Deleted ana.reyes@example.com" in an application log is a new copy of what was just deleted. Log the user id and the receipt.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>The model provider also received the conversation. What does deletion mean there?</p>
+  <p>It depends on the provider's terms: whether requests are stored, for how long, and whether they are used for training.
+  Choose a provider and settings where the answer is acceptable before the first request, and say so in your privacy notice.
+  Minimization is the part you control after that.</p></div>
+<div class="qa"><p>Why keep the customer's own words in the conversation table at all?</p>
+  <p>So the customer can scroll back through their history and the assistant can continue the conversation. Both are
+  features the customer wants. The trade-off is a retention period on that table and a deletion that covers it.</p></div>
+<div class="qa"><p>What should a trace contain, if not the question?</p>
+  <p>Enough to debug: the user id, the redacted question, the tools used, token counts and timings. If an engineer needs
+  the raw text to fix a bug, ask the customer, or reproduce it with test data.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://privacy.gov.ph/data-privacy-act/">Philippine Data Privacy Act of 2012</a></li>
+  <li><a href="https://gdpr-info.eu/art-5-gdpr/">GDPR Article 5: principles, including data minimisation and storage limitation</a></li>
+  <li><a href="https://gdpr-info.eu/art-17-gdpr/">GDPR Article 17: right to erasure</a></li>
+  <li><a href="https://genai.owasp.org/llmrisk/llm022025-sensitive-information-disclosure/">OWASP LLM02:2025 Sensitive Information Disclosure</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

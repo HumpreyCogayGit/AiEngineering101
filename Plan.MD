@@ -116,7 +116,7 @@ The Walkthrough ends with the exercise's two **stretch goals**. Lectures 016–0
 
 ## 4. Curriculum
 
-41 exercises in 9 modules. Lecture `lecNNN.html` pairs with `EXERNNN`.
+49 exercises in 10 modules. Lecture `lecNNN.html` pairs with `EXERNNN`.
 
 ### Module 0 — Foundations
 
@@ -195,7 +195,7 @@ The Walkthrough ends with the exercise's two **stretch goals**. Lectures 016–0
 | 036 | Safety and Guardrails | Attacks against, then defenses for, an earlier app | prompt injection, input and output validation, provider content filters, least privilege |
 | 037 | Capstone | A complete assistant: Streamlit UI, LangGraph agent, RAG, MCP tools, CLI entry point, evaluation | design, integration, a written review against a rubric |
 
-### Module 8 — Beyond the Capstone
+### Module 8 — Evaluation, Context and Deployment
 
 | # | Title | The learner builds | Key concepts |
 |---|---|---|---|
@@ -203,6 +203,19 @@ The Walkthrough ends with the exercise's two **stretch goals**. Lectures 016–0
 | 039 | Conversation Memory Strategies | Trimming, summarizing and retrieval over past turns, compared | recall vs tokens per question, lossy summaries, indexing exchanges, setup cost |
 | 040 | Context Engineering | A context assembler for an order lookup, measured four ways, plus a position-and-noise experiment | token budget per section, compacting tool results, sub-agent isolation, position and noise in long contexts, accuracy vs tokens per call |
 | 041 | Deploying the Capstone | The EXER037 assistant as an HTTP service in a container | configuration from the environment, liveness and readiness, Dockerfile layers, non-root user, no secrets in images |
+
+### Module 9 — Running in Production
+
+| # | Title | The learner builds | Key concepts |
+|---|---|---|---|
+| 042 | Identity and Tenant Boundaries | Bearer-token authentication on `/ask`; threads, notes and memory bound to the authenticated user; a test that user A cannot read or continue user B's thread | authentication vs authorization, identity from the credential and never from request JSON, per-user namespaces, server-side authorization of every stateful tool, permission-aware retrieval (filter documents by who may read them) |
+| 043 | Safe Side Effects | A refund tool that is safe to retry, and an agent run that is killed mid-tool and resumed without paying twice | idempotency keys, at-least-once execution, what a checkpoint replays on resume, separating "decide" from "commit", an audit record per side effect |
+| 044 | Operating Under Load | A concurrency limit and bounded queue in front of the service, graceful shutdown, and a local load test with a report | backpressure, HTTP 429/503 and `Retry-After`, deadlines and cancellation, per-user quotas and token budgets, p50/p95/p99, SLIs and SLOs, `SIGTERM` handling as process 1, HTTP 413 for oversized bodies |
+| 045 | Caching and Batch Work | An exact-match response cache and a measured prompt-prefix cache experiment on the helpdesk | cache keys (model, prompt version, tools, policy, tenant), invalidation, why semantic caches return wrong answers, stable prefixes for provider prompt caching, hit rate vs stale-answer rate, batch endpoints for offline work |
+| 046 | Model Selection and Routing | The existing evaluations run against two models, then a deterministic router with a fallback | quality vs latency vs cost per task, structured-output and tool-call reliability, cheap-first with escalation, provider fallback, re-evaluating when a model is retired or upgraded |
+| 047 | Privacy and Data Lifecycle | Deletion of one user's conversations, memory, notes and vector entries, with a check that retrieval and logs no longer expose them | data minimization before the model call, redaction in traces, retention periods, provider retention settings, deletion across stores, indexes, caches and backups |
+| 048 | Release-Gated Evaluation | A workflow that compares evaluation results with an approved baseline and fails on a per-category regression | prompts as versioned artifacts, baselines, per-category thresholds, deterministic gate vs manually triggered live evaluation, reports as build artifacts |
+| 049 | Learning from Production | A pipeline from user feedback and traces to new evaluation cases | thumbs up/down and implicit signals, sampling traces for review, turning a failure into a regression case, watching quality and cost drift over time |
 
 ## 5. Build Phases
 
@@ -219,7 +232,7 @@ The Walkthrough ends with the exercise's two **stretch goals**. Lectures 016–0
 | 9. Polish | Glossary, cross-links, full run-through of every exercise from a clean clone | |
 | 10. Extensions | Quizzes, stretch goals with reference code, worked examples, Module 8 (EXER038–039, and Deploying the Capstone, now EXER041) | Built 2026-11-14. Its planning record, `extended_plan.md`, was removed once done; it is in the git history |
 | 11. Context Engineering | EXER040, added to Module 8 after EXER039; Deploying the Capstone moved from 040 to 041 | Follows the Phase D layout: quiz, two stretch goals with reference code |
-| 12. Review fixes and Module 9 | Corrections from the course review, a CI workflow, a stronger capstone evaluation, and EXER042–049 (Module 9 — Running in Production) | **Planned, not built.** Scope and checklist in section 8; reasoning in [improvement.md](improvement.md) |
+| 12. Review fixes and Module 9 | Corrections from the course review, a CI workflow, a stronger capstone evaluation, judge calibration, transfer tasks, and EXER042–049 (Module 9 — Running in Production) | Built 2026-11-15. Checklist in section 8; reasoning in [improvement.md](improvement.md) |
 
 **Definition of done for each exercise**
 
@@ -253,14 +266,19 @@ The Walkthrough ends with the exercise's two **stretch goals**. Lectures 016–0
 - **`check_all.py`** automates the definition of done: every solution passes, every untouched starter fails, and the quizzes are valid.
 - **Stretch goals** have reference code in `EXERnnn/stretch/`. It imports the reference solution through `aicourse.stretch.solution_module()` and never modifies it, so `check.py` is unaffected. Stretch code is run by hand, not by `check_all.py`; most of it calls the live model.
 - **`aicourse.settings.settings_from_environment()`** loads settings from real environment variables only (EXER041): a deployed service must not depend on a `.env` file.
+- **`aicourse.stretch.solution_of(exercise, filename)`** imports another exercise's reference solution. Module 9 lessons build on earlier ones through it (EXER042 on the EXER041 service, EXER044 on EXER042, EXER048 on the EXER037 evaluation) instead of copying code.
+- **Module 9 builds on reference solutions, not on the learner's starters.** A learner who has not finished EXER042 can still do EXER044: the starter imports the EXER042 *solution*.
+- **CI:** `.github/workflows/checks.yml` runs `uv sync --frozen` and `check_all.py --offline` on every push and pull request. EXER048 ships an example release-gate workflow for learners to copy into their own repository; it is not active in this one.
+- **EXER048's `recordings.json` and `baseline.json`** were recorded live from the EXER037 reference solution. A change to the capstone's system prompt or tool descriptions makes EXER048's replay check fail on purpose: re-record (`release_gate.py record`) and re-approve.
+- **Transfer tasks** (end of Modules 1, 4, 5, 8) live in `EXER011/transfer/`, `EXER025/transfer/`, `EXER031/transfer/`, `EXER041/transfer/`: a brief and checklist in the exercise README, reference answers in the folder, no starter and no `check.py`.
 - **Rules that must always hold are enforced in code, not only in prompts** (example: the EXER031 supervisor cannot finish before the writer has replied).
 - **`aicourse.rag.get_vector_store()`** returns one cached store per process, behind a lock: agents run parallel tool calls in threads, and opening the same Chroma folder twice at once fails.
 - **MCP exercises** ship their servers inside the exercise folder (`EXER032/servers`, `EXER034/servers`, `EXER037/servers`) so each exercise is self-contained.
 - **Lecture site:** `Lecture/assets/js/course.js` is the manifest; `app.js` builds navigation, progress (browser storage), checklists, copy buttons and diagrams. highlight.js 11.9.0 and Mermaid 10.9.1 are vendored for offline use.
 
-## 8. Planned: Review Fixes and Module 9 (Phase 12)
+## 8. Review Fixes and Module 9 (Phase 12)
 
-Nothing in this section is built yet. Sections 1–7 describe the course as it exists; this section is the work queue. It comes from the course review in [improvement.md](improvement.md), whose findings were each checked against the files before being accepted.
+Built 2026-11-15. The work came from the course review in [improvement.md](improvement.md), whose findings were each checked against the files before being accepted. Module 9's lessons are listed in section 4.
 
 ### Numbering decision
 
@@ -271,56 +289,41 @@ Nothing in this section is built yet. Sections 1–7 describe the course as it e
 - The review suggested splitting Lecture 040. A split would push Deploying the Capstone to a third number in two days. The time estimate is raised instead (checklist B5).
 - Module 8 is renamed, not renumbered: "Beyond the Capstone" becomes "Evaluation, Context and Deployment".
 
-### Module 9 — Running in Production
-
-Each lesson changes the EXER041 service or the EXER037 assistant and follows the standard layout (starter, solution, `check.py`, quiz, two stretch goals with reference code).
-
-| # | Title | The learner builds | Key concepts |
-|---|---|---|---|
-| 042 | Identity and Tenant Boundaries | Bearer-token authentication on `/ask`; threads, notes and memory bound to the authenticated user; a test that user A cannot read or continue user B's thread | authentication vs authorization, identity from the credential and never from request JSON, per-user namespaces, server-side authorization of every stateful tool, permission-aware retrieval (filter documents by who may read them) |
-| 043 | Safe Side Effects | A refund tool that is safe to retry, and an agent run that is killed mid-tool and resumed without paying twice | idempotency keys, at-least-once execution, what a checkpoint replays on resume, separating "decide" from "commit", an audit record per side effect |
-| 044 | Operating Under Load | A concurrency limit and bounded queue in front of the service, graceful shutdown, and a local load test with a report | backpressure, HTTP 429/503 and `Retry-After`, deadlines and cancellation, per-user quotas and token budgets, p50/p95/p99, SLIs and SLOs, `SIGTERM` handling as process 1, HTTP 413 for oversized bodies |
-| 045 | Caching and Batch Work | An exact-match response cache and a measured prompt-prefix cache experiment on the helpdesk | cache keys (model, prompt version, tools, policy, tenant), invalidation, why semantic caches return wrong answers, stable prefixes for provider prompt caching, hit rate vs stale-answer rate, batch endpoints for offline work |
-| 046 | Model Selection and Routing | The existing evaluations run against two models, then a deterministic router with a fallback | quality vs latency vs cost per task, structured-output and tool-call reliability, cheap-first with escalation, provider fallback, re-evaluating when a model is retired or upgraded |
-| 047 | Privacy and Data Lifecycle | Deletion of one user's conversations, memory, notes and vector entries, with a check that retrieval and logs no longer expose them | data minimization before the model call, redaction in traces, retention periods, provider retention settings, deletion across stores, indexes, caches and backups |
-| 048 | Release-Gated Evaluation | A workflow that compares evaluation results with an approved baseline and fails on a per-category regression | prompts as versioned artifacts, baselines, per-category thresholds, deterministic gate vs manually triggered live evaluation, reports as build artifacts |
-| 049 | Learning from Production | A pipeline from user feedback and traces to new evaluation cases | thumbs up/down and implicit signals, sampling traces for review, turning a failure into a regression case, watching quality and cost drift over time |
-
 Still out of scope (unchanged from section 6): fine-tuning and LoRA, quantization, model-serving internals, audio and real-time interfaces, managed-cloud walkthroughs.
 
 ### Checklist
 
 **A. Corrections to existing content** (small, do first)
 
-- [ ] A1. Lecture 041 and `EXER041/solution/Dockerfile`: stop claiming exec-form `CMD` gives a clean shutdown. The service has no `SIGTERM` handler, and a process 1 without one ignores the signal, so `docker stop` waits its 10 seconds and then kills. Reword now; the handler itself is built in EXER044.
-- [ ] A2. Lecture 024: reword "reasoning before score … improves judgments". Keep the short justification as a diagnostic, say it is not ground truth.
-- [ ] A3. Lecture 024: state that the exercise's 1–5 faithfulness score is a simplification and not the claim-level proportion RAGAS defines.
-- [ ] A4. Lecture 008: delimiters "separate instructions from data; not a prompt-injection defence by themselves (Lecture 036)".
-- [ ] A5. `EXER020/starter/ingest.py`: make the `load_html` docstring raw so `\s` no longer raises a `SyntaxWarning`.
-- [ ] A6. Run every stretch goal's reference code on Ollama (the one open item carried over from `extended_plan.md`).
+- [x] A1. Lecture 041 and `EXER041/solution/Dockerfile`: stop claiming exec-form `CMD` gives a clean shutdown. The service has no `SIGTERM` handler, and a process 1 without one ignores the signal, so `docker stop` waits its 10 seconds and then kills. Reword now; the handler itself is built in EXER044. Done: reworded in Lecture 041 (with a callout) and the Dockerfile. Verified in Docker: `docker stop -t 10` took 10.1 s and exit code 137 for the EXER041 image, 0.4 s and exit 0 for EXER044's.
+- [x] A2. Lecture 024: reword "reasoning before score … improves judgments". Keep the short justification as a diagnostic, say it is not ground truth.
+- [x] A3. Lecture 024: state that the exercise's 1–5 faithfulness score is a simplification and not the claim-level proportion RAGAS defines.
+- [x] A4. Lecture 008: delimiters "separate instructions from data; not a prompt-injection defence by themselves (Lecture 036)".
+- [x] A5. `EXER020/starter/ingest.py`: make the `load_html` docstring raw so `\s` no longer raises a `SyntaxWarning`.
+- [x] A6. Run every stretch goal's reference code on Ollama (the one open item carried over from `extended_plan.md`). Done 2026-11-15 on Ollama (`gemma4:e4b`, `nomic-embed-text`): all 100 stretch scripts and the 3 runnable transfer answers ran (the MCP server `EXER034/stretch/inventory_server.py` is started by its goal script; the EXER028 memory CLI was run with its documented commands).
 
 **B. Structure and assessment**
 
-- [ ] B1. Add `.github/workflows/checks.yml`: `uv sync --frozen`, then `uv run python check_all.py --offline`, on every push and pull request.
-- [ ] B2. Rename Module 8 to "Evaluation, Context and Deployment" in `course.js`, `quizzes.js` (comment), `README.md` and this file.
-- [ ] B3. Capstone evaluation: grow `EXER037/eval_set.json` from 8 cases to about 24, tagged by category (grounding, refusal, arithmetic, memory, tool use, safety); report a score per category; keep a small held-out file; add an optional in-order tool check with a pointer to Lecture 038. Update the 80% rule in the README and rubric to per-category.
-- [ ] B4. Judge calibration: add 15–20 human-labelled answers to EXER024 and report exact and adjacent agreement of the judge with them (as a third stretch-style lab or a replacement for goal 1).
-- [ ] B5. Raise the Lecture 040 estimate from 75 to 105 minutes; re-time Lectures 036 and 041.
-- [ ] B6. Transfer tasks: one unscaffolded task at the end of Modules 1, 4, 5 and 8, each with a short manual checklist and no starter.
+- [x] B1. Add `.github/workflows/checks.yml`: `uv sync --frozen`, then `uv run python check_all.py --offline`, on every push and pull request.
+- [x] B2. Rename Module 8 to "Evaluation, Context and Deployment" in `course.js`, `quizzes.js` (comment), `README.md` and this file.
+- [x] B3. Capstone evaluation: grow `EXER037/eval_set.json` from 8 cases to about 24, tagged by category (grounding, refusal, arithmetic, memory, tool use, safety); report a score per category; keep a small held-out file; add an optional in-order tool check with a pointer to Lecture 038. Update the 80% rule in the README and rubric to per-category. Done: 26 cases in six categories, `history` for memory cases, `expect_tools_in_order`, `eval_heldout.json` (6 cases), bar 75% per category and 100% for safety. Live: 26/26 and 6/6.
+- [x] B4. Judge calibration: add 15–20 human-labelled answers to EXER024 and report exact and adjacent agreement of the judge with them (as a third stretch-style lab or a replacement for goal 1). Done as a replacement for EXER024 stretch goal 1: 18 human-labelled answers in `EXER024/stretch/human_labels.json`, self-agreement and exact/adjacent agreement per metric and per kind of answer.
+- [x] B5. Raise the Lecture 040 estimate from 75 to 105 minutes; re-time Lectures 036 and 041. Done: 040 → 105 min, 036 → 90 min, 041 → 105 min.
+- [x] B6. Transfer tasks: one unscaffolded task at the end of Modules 1, 4, 5 and 8, each with a short manual checklist and no starter. Done: EXER011 (IT ticket triage), EXER025 (Harbor Bikes RAG), EXER031 (library-loans agent), EXER041 (production-readiness review).
 
 **C. Module 9** (one box per lesson; each closes only when the definition of done in section 5 holds)
 
-- [ ] C1. EXER042 Identity and Tenant Boundaries
-- [ ] C2. EXER043 Safe Side Effects
-- [ ] C3. EXER044 Operating Under Load
-- [ ] C4. EXER045 Caching and Batch Work
-- [ ] C5. EXER046 Model Selection and Routing
-- [ ] C6. EXER047 Privacy and Data Lifecycle
-- [ ] C7. EXER048 Release-Gated Evaluation
-- [ ] C8. EXER049 Learning from Production
+- [x] C1. EXER042 Identity and Tenant Boundaries
+- [x] C2. EXER043 Safe Side Effects
+- [x] C3. EXER044 Operating Under Load
+- [x] C4. EXER045 Caching and Batch Work
+- [x] C5. EXER046 Model Selection and Routing
+- [x] C6. EXER047 Privacy and Data Lifecycle
+- [x] C7. EXER048 Release-Gated Evaluation
+- [x] C8. EXER049 Learning from Production
 
 **D. After Module 9**
 
-- [ ] D1. Update sections 1–7 of this file, `README.md`, `course.js`, the glossary and the home page for 49 exercises in 10 modules.
-- [ ] D2. Rewrite the Lecture 041 Discussion answer "What is still missing before real customers could use this?" to point at Lectures 042–048.
-- [ ] D3. `check_all.py` on both providers: 49/49.
+- [x] D1. Update sections 1–7 of this file, `README.md`, `course.js`, the glossary and the home page for 49 exercises in 10 modules.
+- [x] D2. Rewrite the Lecture 041 Discussion answer "What is still missing before real customers could use this?" to point at Lectures 042–048.
+- [x] D3. `check_all.py` on both providers: 49/49. Done 2026-11-15: offline 49/49; live on Azure 49/49; live on Ollama 49/49 after the EXER046 live check was changed to count a schema failure as a result instead of a crash; a clean Linux container (the CI workflow's steps) 49/49 after EXER001's git check was made to tolerate a machine without git.

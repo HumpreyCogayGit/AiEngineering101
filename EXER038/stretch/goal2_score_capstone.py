@@ -2,8 +2,9 @@
 
     uv run python EXER038/stretch/goal2_score_capstone.py
 
-The capstone's own evaluation checks `expect_tools` as a SET: was each tool
-used at all? Your scorer says more. Here the EXER037 assistant answers three
+The capstone's own evaluation checks `expect_tools` as a set (was each tool
+used at all?), plus an optional in-order flag. Your scorer says more: it names
+what is missing and what is extra. Here the EXER037 assistant answers three
 questions, and its tool calls are scored for missing and extra calls and for
 order: the price must be looked up BEFORE the calculator can add it up.
 

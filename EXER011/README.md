@@ -44,3 +44,23 @@ Reference code, for after you have tried (it builds on `solution/` and changes n
 uv run python EXER011/stretch/goal1_circuit_breaker.py
 uv run python EXER011/stretch/goal2_concurrent_eval.py
 ```
+
+## Transfer task (end of Module 1)
+
+Optional, and different from the stretch goals: a new problem in a new domain, with **no starter code and no `check.py`**. It shows whether you can use Module 1's ideas without scaffolding.
+
+Build an **IT ticket triager** for a different company, with no starter code. For each ticket in
+[transfer/tickets.json](transfer/tickets.json), return its system (network, email, payroll, hardware,
+security), a severity (low to critical) and whether an engineer must act. The labels are in the same file.
+
+- [ ] The result of every call is a validated Pydantic object, not text you parse yourself (EXER009)
+- [ ] The prompt defines every category and severity, and shows at least two examples (EXER008)
+- [ ] Calls are retried with backoff on temporary errors, and run concurrently with a limit (EXER011)
+- [ ] The script prints accuracy per field over all 12 tickets
+- [ ] You can explain the misses of the weakest field, and whether the label or the prompt is wrong
+
+Reference answer, for after you have tried:
+
+```bash
+uv run python EXER011/transfer/reference_triage.py
+```

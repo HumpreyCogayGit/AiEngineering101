@@ -1,0 +1,18 @@
+# What `docker build` must never send to the builder. A file named
+# <Dockerfile>.dockerignore next to the Dockerfile applies to that Dockerfile only.
+
+# Secrets: configuration is injected when the container runs.
+.env
+.env.*
+!.env.example
+
+# Local state that is rebuilt or must not be shared.
+.venv/
+.chroma/
+.git/
+.aicourse_cache.json
+**/__pycache__/
+**/output/
+*.sqlite
+*.pyc
+.DS_Store

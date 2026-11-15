@@ -1,6 +1,6 @@
 # EXER038 — Evaluating Agents
 
-**Module 8 · Beyond the Capstone** · Lecture: [Lecture/lectures/lec038.html](../Lecture/lectures/lec038.html)
+**Module 8 · Evaluation, Context and Deployment** · Lecture: [Lecture/lectures/lec038.html](../Lecture/lectures/lec038.html)
 
 ## Goal
 

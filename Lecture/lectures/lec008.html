@@ -34,7 +34,7 @@
   <tr><td><strong>Role and task</strong></td><td>"You are a support-ticket classifier."</td><td>Sets context and expectations.</td></tr>
   <tr><td><strong>Explicit options with definitions</strong></td><td>"billing: payments, refunds, invoices …"</td><td>Removes guesswork at the boundaries between categories.</td></tr>
   <tr><td><strong>Output format</strong></td><td>"Reply with the category name only, lowercase."</td><td>Makes the output parseable by code.</td></tr>
-  <tr><td><strong>Delimiters</strong></td><td><code>&lt;ticket&gt; … &lt;/ticket&gt;</code></td><td>Separates instructions from data, and helps against injection (Lecture 036).</td></tr>
+  <tr><td><strong>Delimiters</strong></td><td><code>&lt;ticket&gt; … &lt;/ticket&gt;</code></td><td>Separates instructions from data. Useful prompt structure, but not a defence against prompt injection by itself (Lecture 036).</td></tr>
   <tr><td><strong>Few-shot examples</strong></td><td>user/assistant pairs showing input → label</td><td>Shows the task instead of only describing it. Most useful for output format and edge cases.</td></tr>
   <tr><td><strong>Low temperature</strong></td><td><code>**model_params(temperature=0)</code></td><td>Consistent outputs for classification. <code>model_params</code> leaves the parameter out on models that reject it (Lecture 004).</td></tr>
 </table>

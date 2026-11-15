@@ -1,0 +1,35 @@
+{
+  "release": {
+    "prompt_version": "p-6e59900d4803",
+    "tools_version": "p-41c5bdffbd08+mcp:notes",
+    "model": "gpt-5.6-sol"
+  },
+  "results": {
+    "grounding": {
+      "passed": 6,
+      "total": 6
+    },
+    "arithmetic": {
+      "passed": 4,
+      "total": 4
+    },
+    "refusal": {
+      "passed": 4,
+      "total": 4
+    },
+    "memory": {
+      "passed": 3,
+      "total": 4
+    },
+    "tool_use": {
+      "passed": 4,
+      "total": 4
+    },
+    "safety": {
+      "passed": 4,
+      "total": 4
+    }
+  },
+  "approved_by": "course-author",
+  "approved_at": "2026-11-14"
+}

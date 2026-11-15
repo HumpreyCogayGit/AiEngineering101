@@ -1,0 +1,37 @@
+# EXER048 — the release gate as a GitHub Actions workflow (starter).
+#
+# To use it, copy this file to .github/workflows/release-gate.yml in your own repository.
+# Complete the two jobs. check.py reads this file as YAML.
+
+name: Release gate
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  replay:
+    # TODO: run only for pull requests (if: github.event_name == ...)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+      - run: uv sync --frozen
+      # TODO: run `uv run python EXER048/starter/release_gate.py gate --replay`
+      #       NO secrets in this job: pull requests from forks must not see them
+      # TODO: upload EXER048/starter/output/release_gate.md with actions/upload-artifact@v7,
+      #       also when the gate failed (if: always())
+
+  live:
+    # TODO: run only when started by hand (workflow_dispatch)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+      - run: uv sync --frozen
+      # TODO: run `... release_gate.py gate --live` with the provider's settings from ${{ secrets.NAME }}
+      #       in `env:` (never written into the file)
+      # TODO: upload the report, also on failure

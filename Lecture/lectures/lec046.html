@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Model Selection and Routing</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/loader.js"></script>
+<script src="../assets/js/course.js"></script>
+<script src="../assets/js/quizzes.js"></script>
+<script defer src="../assets/vendor/highlight.min.js"></script>
+<script defer src="../assets/vendor/mermaid.min.js"></script>
+<script defer src="../assets/js/app.js"></script>
+</head>
+<body data-root="../" data-lecture="46">
+<main>
+<header class="lecture-header">
+  <h1>Model Selection and Routing</h1>
+  <p class="lede">"Which model?" has measurable answers: quality on your tasks, latency, and cost. Measure them, choose the cheapest model that meets the bar, and re-measure when the model is retired.</p>
+</header>
+
+<section id="overview"><h2>Overview</h2>
+<p>Every exercise so far used one configured chat model. In production that choice is revisited often: a cheaper model
+  appears, the provider retires the one you use, a local model becomes good enough, or one question type is too slow. Each
+  time the question is the same: is the other model good enough <em>for these tasks</em>, and at what cost?</p>
+<p>This lesson reuses the course's evaluation habit (Lectures 008, 024, 038) to compare models, then builds two mechanisms
+  around the result: a <strong>router</strong> that sends each question to the cheapest model likely to answer it, and a
+  <strong>fallback</strong> for when the provider fails.</p>
+</section>
+
+<section id="concept"><h2>Concept</h2>
+<h3>Measure what your application needs</h3>
+<table>
+  <tr><th>Measure</th><th>Task in the suite</th><th>Why it differs between models</th></tr>
+  <tr><td>Classification accuracy</td><td>8 EXER008 support tickets</td><td>Following a label set exactly</td></tr>
+  <tr><td>Structured-output reliability</td><td>4 order extractions into a Pydantic model</td><td>Small models break schemas more often</td></tr>
+  <tr><td>Tool selection</td><td>4 questions with 3 tools bound</td><td>The first thing to degrade in small models</td></tr>
+  <tr><td>Latency</td><td>p50 and p95 over all cases</td><td>Model size, reasoning effort, provider load</td></tr>
+  <tr><td>Cost</td><td>Tokens × price per 1,000 requests</td><td>Price per token, and how many tokens a model uses</td></tr>
+</table>
+<p>General benchmarks rank models on other people's tasks. Your suite ranks them on yours, and it is small enough to run
+  every time something changes.</p>
+
+<h3>Choose the cheapest model that meets every bar</h3>
+<pre><code class="language-python">bars = {"classify": 0.75, "extract": 1.0, "tool": 1.0}
+choose(summaries, bars, max_p95=8.0)     # cheapest qualifying candidate; None if none qualifies</code></pre>
+<p>"Best" is the wrong target. If two models both meet the bar, the cheaper one is the better engineering choice. An unknown
+  price is not a zero price: a candidate without one is chosen only when no priced candidate qualifies.</p>
+<div class="callout warn"><span class="title">One run is a small sample</span>
+  With four cases in a task, one case is 25 points. The same model can score 0.75 on one run and 1.0 on the next (it
+  happened while this lesson was written). Before switching because of a gap, check that the gap is larger than each
+  model's spread against itself (stretch goal 1).</div>
+
+<h3>Route with rules you can read</h3>
+<div class="mermaid">flowchart LR
+  Q["question"] --> R{"route_question"}
+  R -->|"short, factual"| S["small model"]
+  R -->|"arithmetic, why, complaint,<br/>long, several questions"| L["large model"]
+  S --> E{"needs_escalation?"}
+  E -->|"searched, still 'don't know'<br/>empty, failed"| L
+  E -->|no| A["answer"]
+  L --> A</div>
+<p>The router is deliberately a few lines of rules, not a model. When a customer gets a poor answer, you can read why the
+  question went where it went. Learned routers exist (for example <a href="https://arxiv.org/abs/2406.18665">RouteLLM</a>),
+  and so do cascades that try models from cheap to expensive (<a href="https://arxiv.org/abs/2305.05176">FrugalGPT</a>); both
+  need the same measurements before you can trust them.</p>
+<p>Escalation needs a quality signal you can compute. "I don't know" after the small model searched the documents is one: the
+  information was there and the model did not use it. "I don't know" to an off-topic question is not: that is the correct answer.
+  Escalation has a cost too: in the sample run below, a correct refusal was escalated, and the question was paid for twice.</p>
+
+<h3>Fall back on provider errors only</h3>
+<pre><code class="language-python">PROVIDER_ERRORS = (openai.APIConnectionError, openai.APITimeoutError,
+                   openai.RateLimitError, openai.InternalServerError)
+primary.with_fallbacks([fallback], exceptions_to_handle=PROVIDER_ERRORS)</code></pre>
+<p>A connection error or a 5xx says nothing about your request; another model or provider may answer. A <code>ValueError</code>
+  or a 400 is a bug in your request: it will fail on every model, and a fallback would only hide it while doubling the latency.
+  LangChain's <a href="https://python.langchain.com/docs/how_to/fallbacks/">fallbacks</a> take exactly this list.</p>
+
+<h3>Models are retired</h3>
+<p>Hosted models have a lifecycle: providers announce retirement dates, and after that date requests fail
+  (<a href="https://learn.microsoft.com/azure/ai-foundry/openai/concepts/model-retirements">Azure</a> and
+  <a href="https://platform.openai.com/docs/deprecations">OpenAI</a> publish them). Keep the dates next to the prices in a
+  registry, warn when one is within 90 days, and run the same suite on the replacement. That suite is usually the reason a
+  team has a model comparison at all.</p>
+</section>
+
+<section id="project"><h2>The Project</h2>
+<p>You complete the summary, the choice, the router, the escalation rule, the fallback and the retirement warning in
+  <code>routing.py</code>. The task suite and the routed helpdesk are given.</p>
+<h3>Sample run</h3>
+<pre><code class="language-text">$ AICOURSE_COMPARE_MODELS="gpt-5.6-sol@low,gpt-5.6-sol@high" uv run python EXER046/solution/routing.py compare
+gpt-5.6-sol@low   {"classify": 1, "extract": 1, "tool": 1}  p50 1.4 s  p95 3.79 s  errors 0  cost/1000 unknown
+gpt-5.6-sol@high  {"classify": 1, "extract": 1, "tool": 1}  p50 1.36 s  p95 2.1 s  errors 0  cost/1000 unknown
+
+Bars: {'classify': 0.75, 'extract': 1.0, 'tool': 1.0}, p95 <= 8 s  ->  choose: gpt-5.6-sol@high
+WARNING: example-retiring-model retires in 46 days: run this suite on its replacement now.
+
+$ … routing.py route
+small         1410 tokens  Is shipping free?
+large         2544 tokens  What do 3 bags of Barako Bold and a Hand Grinder Pro cost in total?
+small→large   1386 tokens  Who is the CEO of Nimbus?
+             I don't know—the CEO isn't identified in the Nimbus documents. [company_faq.md]</code></pre>
+<p class="file-label">Captured from a real run on one deployment at two reasoning efforts. Both qualify, and without prices the choice falls to p95, which is noisy at 16 cases. Add your prices to <code>models.json</code>.</p>
+</section>
+
+<section id="goal"><h2>Goal</h2>
+<ol class="objectives">
+  <li>Compare models on your own tasks for quality, latency and cost.</li>
+  <li>Choose the cheapest model that meets every bar, and recognize when a difference is noise.</li>
+  <li>Route questions with readable rules and escalate on a computable quality signal.</li>
+  <li>Fall back on provider errors without hiding bugs, and plan for model retirement.</li>
+</ol>
+</section>
+
+<section id="success"><h2>Success Criteria</h2>
+<ul class="checklist">
+  <li>The comparison prints accuracy per task, p50/p95 latency, errors and cost per 1,000 requests for every candidate</li>
+  <li><code>choose</code> picks the cheapest candidate that meets every bar, prefers a known price, and returns None when none qualifies</li>
+  <li>Easy questions go to the small model; arithmetic, reasons, complaints and long questions to the large one</li>
+  <li>A small model's answer is escalated when it searched and still could not answer, never for a correct off-topic refusal</li>
+  <li>Provider errors fall back to another model; a bug in the request is not hidden</li>
+  <li>Models retiring within 90 days are reported, soonest first</li>
+  <li>All 9 checks pass (one is <code>[live API]</code>: it runs the suite on your model)</li>
+</ul>
+</section>
+
+<section id="walkthrough"><h2>Walkthrough</h2>
+<ol>
+  <li><code>summarize</code>: accuracy per task, then latency, then cost. Return <code>None</code> for an unknown price.</li>
+  <li><code>choose</code>: filter by every bar, then sort by a tuple. One <code>min(..., key=...)</code> is enough.</li>
+  <li><code>route_question</code> and <code>needs_escalation</code>: the checks list the questions that must go each way.</li>
+  <li><code>with_provider_fallback</code>: one line. The check proves a <code>ValueError</code> is not swallowed.</li>
+  <li><code>retiring_soon</code>: date arithmetic. Overdue models are the most urgent, so keep them.</li>
+  <li>Set <code>AICOURSE_COMPARE_MODELS</code> to two candidates and run <code>compare</code> and <code>route</code>.</li>
+</ol>
+<h3 id="stretch">Stretch goals</h3>
+<div class="stretch">
+<p>Optional, for when the checks pass. Neither goal is needed for "complete", and the checks must still pass afterwards.</p>
+<ol>
+  <li><strong>Extend.</strong> Run the suite several times per candidate and decide whether their difference is larger than the noise. <em>Done when:</em> the script prints each task's accuracy per run, its spread, and a verdict per task.</li>
+  <li><strong>Connect (EXER038).</strong> Score the capstone's multi-step tool trajectories on every candidate with the EXER038 scorer. <em>Done when:</em> the script prints each trajectory, what is missing, and a total per candidate.</li>
+</ol>
+<p class="file-label">Reference code, for after you have tried: EXER046/stretch/</p>
+</div>
+</section>
+
+<section id="pitfalls"><h2>Common Pitfalls</h2>
+<details class="pitfall"><summary>Choosing on a public leaderboard</summary><div>
+  <p>A model that ranks higher on general benchmarks can still break your schema or pick the wrong tool. Run your suite.</p></div></details>
+<details class="pitfall"><summary>Treating an unknown price as free</summary><div>
+  <p>A candidate without a price then always wins on cost. Unknown is unknown: rank it last until you know.</p></div></details>
+<details class="pitfall"><summary>A fallback that catches everything</summary><div>
+  <p><code>with_fallbacks([...])</code> without <code>exceptions_to_handle</code> also catches your own bugs. The fallback model
+  fails the same way, the user waits twice as long, and the error in the log is the fallback's, not the original.</p></div></details>
+<details class="pitfall"><summary>Escalating every refusal</summary><div>
+  <p>Off-topic questions should be refused by the small model. Escalating them pays the large model to say the same thing.</p></div></details>
+<details class="pitfall"><summary>Switching models without re-running the evaluations</summary><div>
+  <p>A replacement for a retired model is a new model. Run the task suite and the capstone evaluation (Lecture 037) on it before the date, not after.</p></div></details>
+</section>
+
+<section id="discussion"><h2>Discussion</h2>
+<div class="qa"><p>When is a model router not worth it?</p>
+  <p>When one model already meets every bar at an acceptable cost, or when the traffic is small. A router adds a second
+  model to evaluate, monitor and update. Start with one model; add routing when the cost report says one question type is
+  expensive and a cheaper model passes the suite for it.</p></div>
+<div class="qa"><p>A local model passes the suite but its p95 is 12 seconds. What would you do?</p>
+  <p>Look at where it is acceptable: nightly batch work, internal tools, or the small half of a router with a tight timeout
+  that escalates. The suite gives you the numbers to decide per use, not one verdict for the whole application.</p></div>
+<div class="qa"><p>Your provider retires your model in 30 days, and the replacement scores lower on one task. Options?</p>
+  <p>Improve the prompt or the tool descriptions for that task and re-measure; route that task to another model; or accept
+  a lower bar for it, documented. The worst option is finding out after the retirement date.</p></div>
+</section>
+
+<section id="quiz"><h2>Check Yourself</h2>
+<div id="quiz-box"><p class="quiz-intro">A short self-check quiz appears here when JavaScript is on.
+  The questions live in <code>assets/js/quizzes.js</code>.</p></div>
+</section>
+
+<section id="reading"><h2>Further Reading</h2>
+<ul>
+  <li><a href="https://python.langchain.com/docs/how_to/fallbacks/">LangChain: fallbacks</a></li>
+  <li><a href="https://arxiv.org/abs/2305.05176">Chen et al., FrugalGPT (2023): cascades of models</a></li>
+  <li><a href="https://arxiv.org/abs/2406.18665">Ong et al., RouteLLM (2024): learned routers</a></li>
+  <li><a href="https://learn.microsoft.com/azure/ai-foundry/openai/concepts/model-retirements">Azure: model deprecations and retirements</a></li>
+  <li><a href="https://platform.openai.com/docs/deprecations">OpenAI: deprecations</a></li>
+</ul>
+</section>
+</main>
+</body>
+</html>

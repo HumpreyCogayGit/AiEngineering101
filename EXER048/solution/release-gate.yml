@@ -1,0 +1,61 @@
+# EXER048 — the release gate as a GitHub Actions workflow (reference solution).
+#
+# To use it, copy this file to .github/workflows/release-gate.yml in your own repository.
+#
+#   pull_request       -> "replay": re-scores the recorded replies. Deterministic, free, no secrets.
+#                         Fails when a category regresses, or when the prompt or tools changed
+#                         without new recordings.
+#   workflow_dispatch  -> "live": runs the real capstone evaluation with the provider's secrets.
+#                         Run it by hand before a release, or on a schedule.
+# Both jobs upload the Markdown report, so a reviewer can read it from the run's page.
+
+name: Release gate
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  replay:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+      - run: uv sync --frozen
+      - name: Gate on the recorded replies
+        run: uv run python EXER048/solution/release_gate.py gate --replay
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: release-gate-replay
+          path: EXER048/solution/output/release_gate.md
+
+  live:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: release          # secrets live in a protected environment, not in the repository
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+      - run: uv sync --frozen
+      - name: Gate on a live evaluation
+        env:
+          AICOURSE_PROVIDER: azure
+          AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          AZURE_OPENAI_CHAT_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_CHAT_DEPLOYMENT }}
+          AZURE_OPENAI_EMBEDDING_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYMENT }}
+        run: uv run python EXER048/solution/release_gate.py gate --live
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: release-gate-live
+          path: |
+            EXER048/solution/output/release_gate.md
+            EXER048/solution/output/last_results.json
