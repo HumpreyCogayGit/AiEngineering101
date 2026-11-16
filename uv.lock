@@ -9,7 +9,7 @@ resolution-markers = [
 
 [[package]]
 name = "aicourse"
-version = "0.1.0"
+version = "11162026"
 source = { editable = "." }
 dependencies = [
     { name = "beautifulsoup4" },

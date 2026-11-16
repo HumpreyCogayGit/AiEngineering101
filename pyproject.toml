@@ -1,6 +1,6 @@
 [project]
 name = "aicourse"
-version = "0.1.0"
+version = "11162026"
 description = "AI Engineer Course: Zero to Hero — shared configuration and helpers for all exercises"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
