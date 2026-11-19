@@ -77,6 +77,8 @@ img, svg { max-width: 100%; }
   border-radius: 6px; height: 34px; min-width: 34px; padding: 0 10px; cursor: pointer; font: inherit; font-size: 14px;
 }
 .icon-btn:hover { border-color: var(--accent); }
+.theme-btn { display: inline-flex; align-items: center; gap: 6px; }
+.theme-btn svg { flex: none; }
 .menu-btn { display: none; }
 
 /* ---------------------------------------------------------------- layout */
@@ -287,6 +289,7 @@ ol.quiz { list-style: none; padding: 0; counter-reset: quiz; }
 }
 @media (max-width: 520px) {
   .topbar .progress { display: none; }
+  .theme-btn .label { display: none; }
   body { font-size: 16px; }
 }
 @media print {

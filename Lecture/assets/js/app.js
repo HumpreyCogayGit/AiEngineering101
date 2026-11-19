@@ -57,7 +57,7 @@
     <div class="progress" title="Lectures marked complete">
       <span class="progress-text"></span><div class="progress-bar"><i></i></div>
     </div>
-    <button class="icon-btn theme-btn" aria-label="Toggle dark mode">◐</button>`;
+    <button class="icon-btn theme-btn" type="button"></button>`;
 
   const sidebar = document.createElement("nav");
   sidebar.className = "sidebar";
@@ -86,12 +86,33 @@
 
   topbar.querySelector(".menu-btn").addEventListener("click", () => body.classList.toggle("nav-open"));
   main.addEventListener("click", () => body.classList.remove("nav-open"));
-  topbar.querySelector(".theme-btn").addEventListener("click", () => {
+  // The button names the mode it switches to: a moon + "Dark" in light mode, a sun + "Light" in dark mode.
+  const SUN = `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor"
+    stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4
+    M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>`;
+  const MOON = `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor"
+    stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg>`;
+  const themeBtn = topbar.querySelector(".theme-btn");
+  function refreshThemeBtn() {
+    const target = isDark() ? "light" : "dark";
+    themeBtn.innerHTML = `${target === "dark" ? MOON : SUN}<span class="label">${target === "dark" ? "Dark" : "Light"}</span>`;
+    themeBtn.setAttribute("aria-label", `Switch to ${target} mode`);
+    themeBtn.title = `Switch to ${target} mode`;
+  }
+  themeBtn.addEventListener("click", () => {
     const next = isDark() ? "light" : "dark";
     document.documentElement.dataset.theme = next;
     store.set("theme", next);
+    refreshThemeBtn();
     renderDiagrams(true);
   });
+  // Until the reader picks a mode, follow the operating system as it changes (e.g. automatic dark at night).
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if (document.documentElement.dataset.theme) return;
+    refreshThemeBtn();
+    renderDiagrams(true);
+  });
+  refreshThemeBtn();
   const activeLink = sidebar.querySelector("a.active");
   if (activeLink) activeLink.scrollIntoView({ block: "center" });
 
